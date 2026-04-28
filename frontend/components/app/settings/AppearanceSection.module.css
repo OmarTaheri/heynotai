@@ -1,0 +1,103 @@
+.themePicker {
+  display: flex;
+  gap: 10px;
+}
+
+.themeWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.theme {
+  width: 64px;
+  height: 44px;
+  border-radius: 8px;
+  border: 2px solid var(--color-line);
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
+}
+
+.themeWrap:hover .theme {
+  transform: translateY(-1px);
+}
+
+.themeActive .theme {
+  border-color: var(--color-fg);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--color-fg) 12%, transparent);
+}
+
+.themeLabel {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.themeActive .themeLabel {
+  color: var(--color-fg);
+}
+
+/* Mini theme previews — pure CSS, no images */
+.theme_paper {
+  background: linear-gradient(135deg, #fbf9f5 50%, #f5f2eb 50%);
+}
+.theme_paper::after,
+.theme_paper::before {
+  content: "";
+  position: absolute;
+  left: 8px;
+  background: #1c1917;
+  border-radius: 1px;
+}
+.theme_paper::after { top: 8px; width: 14px; height: 3px; }
+.theme_paper::before { top: 14px; width: 24px; height: 3px; opacity: 0.45; }
+
+.theme_night {
+  background: linear-gradient(
+    135deg,
+    var(--color-bg) 50%,
+    var(--color-surface-alt) 50%
+  );
+}
+.theme_night::after,
+.theme_night::before {
+  content: "";
+  position: absolute;
+  left: 8px;
+  background: var(--color-fg);
+  border-radius: 1px;
+}
+.theme_night::after { top: 8px; width: 14px; height: 3px; }
+.theme_night::before { top: 14px; width: 24px; height: 3px; opacity: 0.45; }
+
+.theme_system {
+  background: linear-gradient(135deg, #fbf9f5 50%, var(--color-bg) 50%);
+}
+.theme_system::after,
+.theme_system::before {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 3px;
+  border-radius: 1px;
+}
+.theme_system::after {
+  top: 8px;
+  left: 8px;
+  background: #1c1917;
+}
+.theme_system::before {
+  top: 14px;
+  right: 8px;
+  background: var(--color-fg);
+}

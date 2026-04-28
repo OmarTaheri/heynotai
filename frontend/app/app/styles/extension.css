@@ -1,0 +1,21 @@
+/* ─────────────────────────────────────────────
+   /app/extension — page layout primitives.
+   Owns the section stack and any page-wide grids
+   that don't belong inside a single component
+   (the hero's three-column layout, the browser
+   tile row). Per-component look-and-feel lives
+   in component-local CSS modules.
+   ───────────────────────────────────────────── */
+
+.extension-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  min-width: 0;
+}
+
+@media (max-width: 760px) {
+  .extension-stack {
+    gap: 24px;
+  }
+}

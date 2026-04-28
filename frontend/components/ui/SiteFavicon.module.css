@@ -1,0 +1,24 @@
+.fav {
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+  color: #fff;
+  flex-shrink: 0;
+  font-family: var(--font-sans);
+  line-height: 1;
+}
+
+.fallback { background: var(--color-surface-alt); color: var(--color-fg-mid); }
+.x        { background: #0F1419; }
+.yt       { background: #FF0000; }
+.ig       { background: linear-gradient(135deg, #F58529, #DD2A7B 50%, #8134AF); }
+.rd       { background: #FF4500; }
+.bbc      { background: #BB1919; }
+.li       { background: #0A66C2; }
+.med      { background: #000;    }
+.tk       { background: #000;    }

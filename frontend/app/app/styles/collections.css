@@ -1,0 +1,1253 @@
+/* ─────────────────────────────────────────────
+   Collections — page-level layout for the
+   /app/collections route. Reusable visuals live
+   in components/ui/* and components/app/collections/*;
+   this file owns the grid, the tonal cover washes,
+   the sort menu pop-out, and the templates strip.
+
+   All color comes from the existing verdict palette
+   (--color-human, -ai, -mixed, -info, -gold) mixed
+   with --color-surface-alt — no new tokens.
+   ───────────────────────────────────────────── */
+
+/* ── Page rhythm ──────────────────────────────
+   Stack the controls/sections under the page-head
+   with the same gap rhythm the home feed uses.    */
+.coll {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+/* ── Toolbar (search + view + sort) ─────────── */
+.coll-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.coll-controls > label {
+  flex: 1;
+  max-width: 380px;
+}
+
+/* Grouped grid/list toggle. Mirrors the .icon-square pattern from
+   page.css but lives inside one rounded container. */
+.coll-view-toggle {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  border-radius: 9px;
+}
+
+.coll-view-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  border: 0;
+  background: transparent;
+  color: var(--color-fg-dim);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.coll-view-btn:hover {
+  color: var(--color-fg);
+}
+
+.coll-view-btn.is-on {
+  background: var(--color-surface-alt);
+  color: var(--color-fg);
+}
+
+/* Sort menu trigger + pop-out. */
+.coll-sort {
+  position: relative;
+}
+
+.coll-sort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 12px;
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  color: var(--color-fg-mid);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.coll-sort-btn:hover {
+  border-color: var(--color-line-strong);
+  color: var(--color-fg);
+}
+
+.coll-sort-label {
+  color: var(--color-fg-dim);
+}
+
+.coll-sort-value {
+  color: var(--color-fg);
+  font-weight: 600;
+}
+
+.coll-sort-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 10;
+  min-width: 200px;
+  padding: 6px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line-strong);
+  border-radius: 10px;
+  box-shadow: var(--shadow-pop);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.coll-sort-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 0;
+  background: transparent;
+  color: var(--color-fg-mid);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 6px;
+  text-align: left;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.coll-sort-item:hover {
+  background: var(--color-surface-alt);
+  color: var(--color-fg);
+}
+
+.coll-sort-item.is-on {
+  background: var(--color-surface-alt);
+  color: var(--color-fg);
+}
+
+/* ── Section spacing override ─────────────────
+   SectionHead defaults to 14px bottom margin; bump
+   the top a touch so it breathes from the controls
+   row above. */
+.coll-section + .coll-section {
+  margin-top: 4px;
+}
+
+/* ── Grid ─────────────────────────────────────
+   Auto-fill, min 280px tracks. 20px gap matches the
+   home feed. */
+.coll-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+/* ── Card shell ───────────────────────────────
+   Same shape as .card (radius 14, border --color-line)
+   but with cover-on-top split. */
+.coll-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 260px;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.coll-card:hover {
+  border-color: var(--color-line-strong);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-soft);
+}
+
+/* ── Cover ─────────────────────────────────────
+   Tonal wash painted from a verdict color mixed with
+   --color-surface-alt so it sits comfortably on the
+   dark shell. Pinned badge top-right, type-chip thumbs
+   bottom-left. */
+.coll-cover {
+  position: relative;
+  height: 110px;
+  border-bottom: 1px solid var(--color-line);
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 12px 14px;
+  overflow: hidden;
+}
+
+.coll-pin {
+  position: relative;
+  z-index: 2;
+}
+
+.coll-thumbs {
+  position: absolute;
+  left: 14px;
+  bottom: 12px;
+  display: inline-flex;
+  gap: 6px;
+  z-index: 2;
+}
+
+.coll-thumb-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--color-fg-mid);
+  background: color-mix(in oklch, var(--color-bg) 70%, transparent);
+  border: 1px dashed var(--color-line-strong);
+}
+
+/* Tonal washes — mirrored from TypeChip's color-mix recipe. The
+   gradient sits behind a dot/grid/lines pattern overlay. */
+.coll-tone-human .coll-cover {
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in oklch, var(--color-human) 24%, var(--color-surface-alt)) 0%,
+      color-mix(in oklch, var(--color-human) 10%, var(--color-surface)) 100%
+    );
+}
+.coll-tone-ai .coll-cover {
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in oklch, var(--color-ai) 22%, var(--color-surface-alt)) 0%,
+      color-mix(in oklch, var(--color-ai) 8%, var(--color-surface)) 100%
+    );
+}
+.coll-tone-mixed .coll-cover {
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in oklch, var(--color-mixed) 22%, var(--color-surface-alt)) 0%,
+      color-mix(in oklch, var(--color-mixed) 8%, var(--color-surface)) 100%
+    );
+}
+.coll-tone-info .coll-cover {
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in oklch, var(--color-info) 22%, var(--color-surface-alt)) 0%,
+      color-mix(in oklch, var(--color-info) 8%, var(--color-surface)) 100%
+    );
+}
+.coll-tone-gold .coll-cover {
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in oklch, var(--color-gold) 18%, var(--color-surface-alt)) 0%,
+      color-mix(in oklch, var(--color-gold) 6%, var(--color-surface)) 100%
+    );
+}
+.coll-tone-neutral .coll-cover {
+  background:
+    linear-gradient(
+      135deg,
+      var(--color-surface-alt) 0%,
+      var(--color-surface) 100%
+    );
+}
+
+/* Pattern overlays — readable on dark surfaces at low opacity. */
+.coll-cover::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.18;
+}
+.coll-pat-dots::before {
+  background-image: radial-gradient(
+    rgba(255, 255, 255, 0.35) 1px,
+    transparent 1px
+  );
+  background-size: 10px 10px;
+}
+.coll-pat-grid::before {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.18) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.18) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+.coll-pat-lines::before {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent 0,
+    transparent 7px,
+    rgba(255, 255, 255, 0.16) 7px,
+    rgba(255, 255, 255, 0.16) 8px
+  );
+}
+
+/* ── Body ─────────────────────────────────────  */
+.coll-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 14px 16px 16px;
+}
+
+.coll-title {
+  font-size: 16.5px;
+  font-weight: 600;
+  color: var(--color-fg);
+  letter-spacing: -0.2px;
+  line-height: 1.25;
+  margin-bottom: 4px;
+}
+
+.coll-desc {
+  font-size: 12.5px;
+  color: var(--color-fg-mid);
+  line-height: 1.5;
+  flex: 1;
+  /* Two-line clamp keeps every card the same height. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Stat row — three columns, top-bordered to read as a "spec sheet". */
+.coll-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-line);
+}
+
+.coll-stat {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 3px;
+}
+
+.coll-stat dt {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-fg-dim);
+  font-weight: 600;
+}
+
+.coll-stat-n {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-fg);
+  letter-spacing: -0.3px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 1px;
+}
+
+.coll-stat-accent {
+  color: var(--color-warn);
+}
+
+.coll-stat-unit {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-fg-dim);
+  font-weight: 500;
+  margin-left: 2px;
+}
+
+/* Footer — collaborators on the left, "updated" timestamp on the right. */
+.coll-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-line);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.02em;
+}
+
+.coll-shared {
+  display: inline-flex;
+  align-items: center;
+}
+
+.coll-shared-slot {
+  display: inline-flex;
+  /* Ring around each avatar in the surface color so overlapping
+     avatars read as separate discs. */
+  box-shadow: 0 0 0 2px var(--color-surface);
+  border-radius: 999px;
+}
+
+/* ── Create / new tile ───────────────────────  */
+.coll-new {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 260px;
+  border: 1px dashed var(--color-line-strong);
+  border-radius: 14px;
+  background: transparent;
+  color: var(--color-fg-mid);
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease;
+}
+
+.coll-new:hover {
+  background: var(--color-surface);
+  border-color: var(--color-line-medium);
+  color: var(--color-fg);
+}
+
+.coll-new-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  color: inherit;
+}
+
+.coll-new-title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  color: var(--color-fg);
+}
+
+.coll-new-sub {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-fg-dim);
+  font-weight: 600;
+}
+
+/* ── Templates strip ─────────────────────────  */
+.coll-tpl-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.coll-tpl-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-fg);
+  letter-spacing: -0.2px;
+}
+
+.coll-tpl-sub {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-fg-dim);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.coll-tpl-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+}
+
+.coll-tpl {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-line);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--color-fg);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.1s ease;
+}
+
+.coll-tpl:hover {
+  background: var(--color-surface-alt);
+  border-color: var(--color-line-strong);
+  transform: translateY(-1px);
+}
+
+.coll-tpl-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.coll-tpl-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-fg);
+  letter-spacing: -0.1px;
+}
+
+.coll-tpl-desc {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.01em;
+  font-weight: 500;
+}
+
+/* ── Responsive ──────────────────────────────
+   Mirrors shell.css breakpoints. */
+@media (max-width: 960px) {
+  .coll-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+  }
+  .coll-card,
+  .coll-new {
+    min-height: 220px;
+  }
+}
+
+@media (max-width: 600px) {
+  .coll-grid {
+    grid-template-columns: 1fr;
+  }
+  .coll-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .coll-controls > label {
+    max-width: none;
+  }
+  .coll-view-toggle,
+  .coll-sort,
+  .coll-sort-btn {
+    width: auto;
+  }
+  .coll-sort-menu {
+    right: auto;
+    left: 0;
+  }
+}
+
+/* ─────────────────────────────────────────────
+   Collection detail page (/app/collections/[id])
+   Hero band + items table + side panels.
+   Reuses the .coll-tone-* tonal washes and
+   .coll-pat-* patterns from the grid card so the
+   detail page reads as a continuation of the card.
+   ───────────────────────────────────────────── */
+
+.coll-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.coll-detail > nav {
+  margin-bottom: -8px;
+}
+
+/* ── Hero band ───────────────────────────────  */
+.coll-hero {
+  position: relative;
+  isolation: isolate;
+  border: 1px solid var(--color-line);
+  border-radius: 16px;
+  background: var(--color-surface);
+  overflow: hidden;
+  padding: 28px 28px 26px;
+}
+
+.coll-hero-accent {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 160px;
+  pointer-events: none;
+  opacity: 0.85;
+  z-index: 0;
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    #000 0%,
+    #000 30%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    180deg,
+    #000 0%,
+    #000 30%,
+    transparent 100%
+  );
+}
+
+.coll-hero-accent::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.22;
+}
+
+/* Tonal wash — same color-mix recipe as the card cover, slightly
+   more transparent so the larger surface stays calm. */
+.coll-tone-human .coll-hero-accent {
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklch, var(--color-human) 18%, var(--color-surface)) 0%,
+    var(--color-surface) 100%
+  );
+}
+.coll-tone-ai .coll-hero-accent {
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklch, var(--color-ai) 18%, var(--color-surface)) 0%,
+    var(--color-surface) 100%
+  );
+}
+.coll-tone-mixed .coll-hero-accent {
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklch, var(--color-mixed) 18%, var(--color-surface)) 0%,
+    var(--color-surface) 100%
+  );
+}
+.coll-tone-info .coll-hero-accent {
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklch, var(--color-info) 18%, var(--color-surface)) 0%,
+    var(--color-surface) 100%
+  );
+}
+.coll-tone-gold .coll-hero-accent {
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklch, var(--color-gold) 14%, var(--color-surface)) 0%,
+    var(--color-surface) 100%
+  );
+}
+.coll-tone-neutral .coll-hero-accent {
+  background: linear-gradient(
+    180deg,
+    var(--color-surface-alt) 0%,
+    var(--color-surface) 100%
+  );
+}
+
+.coll-hero-inner {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 32px;
+  align-items: flex-end;
+}
+
+.coll-hero-pin {
+  margin-bottom: 14px;
+}
+
+.coll-hero-title {
+  font-size: 36px;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  line-height: 1.05;
+  color: var(--color-fg);
+  margin-bottom: 10px;
+}
+
+.coll-hero-desc {
+  font-size: 14px;
+  color: var(--color-fg-mid);
+  line-height: 1.55;
+  max-width: 620px;
+  margin-bottom: 18px;
+}
+
+.coll-hero-meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.02em;
+}
+
+.coll-hero-meta strong {
+  color: var(--color-fg-mid);
+  font-weight: 600;
+}
+
+.coll-meta-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--color-fg-dim);
+  display: inline-block;
+}
+
+.coll-hero-members {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.coll-hero-avs {
+  display: inline-flex;
+  align-items: center;
+}
+
+.coll-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ── Body grid (main + side rail) ───────────── */
+.coll-detail-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 24px;
+}
+
+.coll-detail-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.coll-detail-side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Stats strip ─────────────────────────────  */
+/* AI rate split bar — sits in the StatTile delta slot. */
+.coll-stats-bar {
+  display: inline-flex;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-line);
+  margin-top: 2px;
+}
+
+.coll-stats-bar-ai {
+  background: var(--color-warn);
+  height: 100%;
+}
+
+.coll-stats-bar-ok {
+  background: var(--color-human);
+  height: 100%;
+}
+
+.coll-stats-frac {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--color-fg-dim);
+  font-weight: 500;
+  margin-left: 4px;
+  letter-spacing: 0;
+}
+
+.coll-stats-italic {
+  font-style: italic;
+  font-weight: 600;
+}
+
+/* ── Filters row ─────────────────────────────  */
+.coll-detail-filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.coll-detail-filters > label {
+  flex: 1;
+  min-width: 220px;
+  max-width: none;
+}
+
+/* ── Items table ─────────────────────────────  */
+.coll-itbl-head,
+.coll-itbl-row {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) 110px 110px 130px 80px;
+  gap: 14px;
+  align-items: center;
+  padding: 12px 18px;
+}
+
+.coll-itbl-head {
+  border-bottom: 1px solid var(--color-line);
+  background: var(--color-surface-sunken);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.coll-itbl-row {
+  border-top: 1px solid var(--color-line);
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.coll-itbl-row:first-of-type {
+  border-top: none;
+}
+
+.coll-itbl-row:hover {
+  background: color-mix(in oklch, white 2.5%, transparent);
+}
+
+.coll-itbl-main {
+  min-width: 0;
+}
+
+.coll-itbl-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--color-fg);
+  line-height: 1.3;
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.coll-itbl-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.01em;
+  min-width: 0;
+}
+
+.coll-itbl-meta > span:not(.coll-itbl-tag) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.coll-itbl-tag {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--color-surface-alt);
+  color: var(--color-fg-mid);
+  border: 1px solid var(--color-line);
+  flex-shrink: 0;
+}
+
+.coll-itbl-conf {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-fg);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.coll-itbl-conf-bar {
+  display: inline-block;
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-line);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.coll-itbl-conf-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--color-fg);
+}
+
+.coll-itbl-model {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--color-fg-mid);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.coll-itbl-time {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.01em;
+  text-align: right;
+}
+
+.coll-itbl-empty {
+  padding: 36px 18px;
+  text-align: center;
+  color: var(--color-fg-dim);
+  font-size: 12.5px;
+}
+
+/* ── Side rail panels ────────────────────────  */
+.coll-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 14px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+}
+
+.coll-panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.coll-panel-link {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font-family: inherit;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--color-fg-mid);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.coll-panel-link:hover {
+  color: var(--color-fg);
+}
+
+/* Members list */
+.coll-member-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.coll-member {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-top: 1px solid var(--color-line);
+}
+
+.coll-member:first-child {
+  border-top: none;
+  padding-top: 4px;
+}
+
+.coll-member-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.coll-member-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-fg);
+  letter-spacing: -0.1px;
+  line-height: 1.2;
+}
+
+.coll-member-role {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.02em;
+  margin-top: 2px;
+}
+
+.coll-member-you {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--color-human-ink);
+  background: color-mix(in oklch, var(--color-human-soft) 70%, transparent);
+  border: 1px solid color-mix(in oklch, var(--color-human) 28%, transparent);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.coll-invite-btn {
+  margin-top: 12px;
+  padding: 9px;
+  border: 1px dashed var(--color-line-strong);
+  background: transparent;
+  border-radius: 8px;
+  color: var(--color-fg-mid);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.coll-invite-btn:hover {
+  background: var(--color-surface-alt);
+  border-color: var(--color-line-medium);
+  color: var(--color-fg);
+}
+
+/* Rules list */
+.coll-rule-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.coll-rule {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--color-line);
+  font-size: 12.5px;
+  color: var(--color-fg);
+}
+
+.coll-rule:first-child {
+  border-top: none;
+  padding-top: 4px;
+}
+
+.coll-rule-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-line);
+  color: var(--color-fg-mid);
+  flex-shrink: 0;
+}
+
+.coll-rule-text {
+  flex: 1;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.coll-rule-toggle {
+  width: 28px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--color-line-strong);
+  border: 0;
+  padding: 0;
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.18s ease;
+}
+
+.coll-rule-toggle::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--color-fg);
+  transition: transform 0.18s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.coll-rule-toggle.is-on {
+  background: var(--color-human);
+}
+
+.coll-rule-toggle.is-on::after {
+  transform: translateX(12px);
+  background: #fff;
+}
+
+/* Activity list */
+.coll-act-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.coll-act {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--color-line);
+  font-size: 12px;
+}
+
+.coll-act:first-child {
+  border-top: none;
+  padding-top: 4px;
+}
+
+.coll-act-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.coll-act-text {
+  color: var(--color-fg-mid);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.coll-act-text strong {
+  color: var(--color-fg);
+  font-weight: 600;
+}
+
+.coll-act-text em {
+  font-style: italic;
+  color: var(--color-fg);
+}
+
+.coll-act-time {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.02em;
+  margin-top: 3px;
+}
+
+/* ── Responsive ──────────────────────────────  */
+@media (max-width: 1100px) {
+  .coll-detail-body {
+    grid-template-columns: 1fr;
+  }
+  .coll-detail-side {
+    order: 2;
+  }
+}
+
+@media (max-width: 820px) {
+  .coll-hero {
+    padding: 22px 20px 22px;
+  }
+  .coll-hero-inner {
+    grid-template-columns: 1fr;
+    gap: 18px;
+    align-items: flex-start;
+  }
+  .coll-hero-title {
+    font-size: 28px;
+  }
+  .coll-itbl-head,
+  .coll-itbl-row {
+    grid-template-columns: 36px minmax(0, 1fr) 100px 80px;
+    gap: 10px;
+    padding: 12px 14px;
+  }
+  .coll-itbl-head > span:nth-child(4),
+  .coll-itbl-row > *:nth-child(4),
+  .coll-itbl-head > span:nth-child(5),
+  .coll-itbl-row > *:nth-child(5) {
+    display: none;
+  }
+}

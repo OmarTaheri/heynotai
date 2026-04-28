@@ -1,0 +1,156 @@
+.row {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto auto auto;
+  gap: 14px;
+  align-items: center;
+  padding: 13px 22px;
+  border-bottom: 1px solid var(--color-line);
+  transition: background 0.12s ease;
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.row:hover {
+  background: color-mix(in oklch, var(--color-surface-alt) 50%, transparent);
+}
+
+.info {
+  min-width: 0;
+}
+
+.domain {
+  font-size: 13px;
+  color: var(--color-fg);
+  font-weight: 600;
+  font-family: var(--font-mono);
+  line-height: 1.2;
+  margin-bottom: 2px;
+  letter-spacing: 0.01em;
+}
+
+.stats {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.02em;
+}
+
+.stats strong {
+  color: var(--color-fg-mid);
+  font-weight: 600;
+}
+
+/* Mode chip — clickable, cycles modes. Tones echo the verdict palette. */
+.mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: filter 0.12s ease, border-color 0.12s ease;
+  white-space: nowrap;
+}
+
+.mode:hover { filter: brightness(1.1); }
+
+.mode_auto {
+  color: var(--color-human-ink);
+  background: color-mix(in oklch, var(--color-human-soft) 70%, transparent);
+  border-color: color-mix(in oklch, var(--color-human) 28%, transparent);
+}
+
+.mode_click {
+  color: var(--color-accent-ink);
+  background: color-mix(in oklch, var(--color-accent-soft) 70%, transparent);
+  border-color: color-mix(in oklch, var(--color-accent) 28%, transparent);
+}
+
+.mode_off {
+  color: var(--color-fg-dim);
+  background: var(--color-surface-alt);
+  border-color: var(--color-line);
+}
+
+/* Content-type chips. */
+.types {
+  display: flex;
+  gap: 3px;
+}
+
+.chip {
+  width: 28px;
+  height: 22px;
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  border: 1px solid transparent;
+}
+
+.chip_txt {
+  color: var(--color-mixed-ink);
+  background: color-mix(in oklch, var(--color-mixed-soft) 70%, transparent);
+}
+.chip_img {
+  color: var(--color-human-ink);
+  background: color-mix(in oklch, var(--color-human-soft) 70%, transparent);
+}
+.chip_aud {
+  color: var(--color-ai-ink);
+  background: color-mix(in oklch, var(--color-ai-soft) 70%, transparent);
+}
+.chip_vid {
+  color: var(--color-warn);
+  background: color-mix(in oklch, var(--color-gold) 18%, transparent);
+}
+.chipOff {
+  color: var(--color-fg-dim);
+  background: var(--color-surface-alt);
+  opacity: 0.55;
+}
+
+/* Overflow action button — kebab menu. */
+.action {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--color-fg-dim);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.action:hover {
+  background: var(--color-surface-alt);
+  color: var(--color-fg);
+}
+
+@media (max-width: 760px) {
+  .row {
+    grid-template-columns: 30px minmax(0, 1fr) auto;
+    grid-auto-rows: auto;
+    gap: 10px;
+  }
+  .types {
+    grid-column: 2 / -1;
+  }
+  .action {
+    grid-row: 1;
+    grid-column: 3;
+  }
+}

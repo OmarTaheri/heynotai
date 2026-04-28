@@ -1,0 +1,29 @@
+.section {
+  scroll-margin-top: 32px;
+}
+
+.head {
+  margin-bottom: 14px;
+}
+
+.title {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--color-fg);
+  letter-spacing: -0.3px;
+  line-height: 1.15;
+  margin-bottom: 5px;
+}
+
+.desc {
+  font-size: 13px;
+  color: var(--color-fg-mid);
+  line-height: 1.55;
+  max-width: 540px;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}

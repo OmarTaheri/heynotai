@@ -1,0 +1,177 @@
+/* ── Update entry — marker + card ──
+   The grid pins a 32px marker column to the timeline rail in
+   UpdatesTimeline; the card itself sits in the second column. */
+.entry {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+/* ── Rail marker ──
+   Big circular badge that overlaps the rail line. Uses the kind color
+   on the inner ring so the rail reads as colored beads, not just dots. */
+.marker {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-bg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+  /* pull marker up so its center aligns with the card's first text row */
+  margin-top: 14px;
+}
+
+.markerInner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.entry[data-kind="new-model"] .markerInner {
+  border-color: var(--color-gold);
+  background: color-mix(in oklch, var(--color-gold) 18%, transparent);
+}
+.entry[data-kind="accuracy"] .markerInner {
+  border-color: var(--color-accent);
+  background: color-mix(in oklch, var(--color-accent) 22%, transparent);
+}
+.entry[data-kind="product"] .markerInner {
+  border-color: var(--color-mixed);
+  background: color-mix(in oklch, var(--color-mixed) 22%, transparent);
+}
+.entry[data-kind="fix"] .markerInner {
+  border-color: var(--color-fg-dim);
+  background: var(--color-surface-alt);
+}
+
+/* ── Card body ── */
+.card {
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color 0.15s ease, transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.card:hover {
+  border-color: var(--color-line-strong);
+  transform: translateX(2px);
+  box-shadow: var(--shadow-soft);
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.tags {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.time {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  flex-shrink: 0;
+  padding-top: 3px;
+}
+
+/* ── Title — borrows the home greeting's dimmed-phrase + full-fg em
+   pattern. No serif. The em accent reads as the line's anchor. ── */
+.title {
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  color: var(--color-fg);
+}
+
+.title em {
+  font-style: normal;
+  font-weight: 500;
+  color: color-mix(in oklch, var(--color-fg) 60%, transparent);
+}
+
+.desc {
+  font-size: 13.5px;
+  color: var(--color-fg-mid);
+  line-height: 1.6;
+}
+
+.desc strong {
+  color: var(--color-fg);
+  font-weight: 600;
+}
+
+.desc em {
+  font-style: normal;
+  color: var(--color-fg);
+  font-weight: 500;
+}
+
+/* ── Footer row ── */
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-line);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.02em;
+  flex-wrap: wrap;
+}
+
+.footMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.footMeta strong {
+  color: var(--color-fg-mid);
+  font-weight: 600;
+}
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  text-decoration: none;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: color 0.12s ease, transform 0.12s ease;
+}
+
+.cta:hover {
+  color: var(--color-cta);
+  transform: translateX(2px);
+}

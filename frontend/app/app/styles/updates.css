@@ -1,0 +1,14 @@
+/* ─────────────────────────────────────────────
+   Updates — changelog feed.
+   Page-level layout glue only. The header,
+   filters, timeline, day markers, update cards,
+   model preview, accuracy compare, stat band,
+   and subscribe footer all live next to their
+   CSS modules under components/app/updates/*.
+   ───────────────────────────────────────────── */
+
+.updates {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}

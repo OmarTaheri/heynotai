@@ -1,0 +1,64 @@
+/* Filter chip — sized to sit inline with .btn / SearchInput in
+   dashboard toolbars. Two states: idle (surface card) and active
+   (inverted, signals a value is currently filtered). */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 11px;
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-fg);
+  border: 1px solid var(--color-line);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.chip:hover {
+  background: var(--color-surface-alt);
+  border-color: var(--color-line-strong);
+}
+
+.label {
+  color: inherit;
+}
+
+.value {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-fg-mid);
+  letter-spacing: 0.02em;
+}
+
+.chip svg {
+  color: var(--color-fg-dim);
+  flex-shrink: 0;
+}
+
+.active {
+  background: var(--color-fg);
+  color: var(--color-bg);
+  border-color: var(--color-fg);
+}
+
+.active:hover {
+  background: var(--color-fg);
+  filter: brightness(1.04);
+}
+
+.active .value {
+  color: var(--color-bg);
+  opacity: 0.65;
+}
+
+.active svg {
+  color: var(--color-bg);
+  opacity: 0.7;
+}

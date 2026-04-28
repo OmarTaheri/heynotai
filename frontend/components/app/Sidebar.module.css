@@ -1,0 +1,494 @@
+/* ─────────────────────────────────────────────
+   Sidebar — module-scoped CSS co-located with
+   Sidebar.tsx. Class names are auto-hashed by
+   Next.js 16's CSS Modules pipeline; only the
+   tokens + logo primitives referenced through
+   :global() stay stable across the app.
+
+   Collapse strategy: the sidebar logo renders in
+   `.is-closed` state from mount (Logo prop), so
+   the strike never replays on toggle. Rows that
+   change layout use flex-wrap — at the wide width
+   everything fits in one line, at the narrow
+   width items wrap onto their own line. No
+   display:none, no flex-direction flips.
+   ───────────────────────────────────────────── */
+
+/* ── Sidebar container ────────────────────────
+   Sticky full-height column. The actual grid width
+   (260px expanded / 72px collapsed) is owned by
+   AppShell's --sb-width variable in shell.css; the
+   sidebar only handles its own inner layout.
+   ───────────────────────────────────────────── */
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface-sunken);
+  border-right: 1px solid var(--color-line);
+  padding: 18px 12px 14px;
+  gap: 4px;
+}
+
+/* Hide the whole sidebar on narrow viewports — the AppShell drops to a
+   single-column grid at the same breakpoint. */
+@media (max-width: 768px) {
+  .sidebar {
+    display: none;
+  }
+}
+
+/* Shared timing — scoped to this module so it doesn't leak to the rest
+   of the app. Easing is ease-out-quart: bit of initial momentum, long
+   gentle settle — reads as smooth rather than quick. */
+.sidebar,
+.sidebar * {
+  --sb-dur: 0.34s;
+  --sb-dur-fade: 0.22s;
+  --sb-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ── Top row ──────────────────────────────────
+   Brand on the left, toggle on the right. When the
+   sidebar collapses, the brand shrinks to ~~ai~~
+   and the toggle wraps onto a second row
+   underneath. Both states share the same flex
+   axis so the transition is a pure width + wrap
+   reflow.
+   ───────────────────────────────────────────── */
+.top {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  column-gap: 6px;
+  padding-bottom: 10px;
+  padding-right: 36px;
+  min-width: 0;
+  transition: padding-right var(--sb-dur) var(--sb-ease);
+
+  .sidebar.isCollapsed & {
+    justify-content: center;
+    padding-right: 0;
+  }
+}
+
+/* The brand anchor — Logo + wordmark live inside it. Layout only. */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  text-decoration: none;
+  color: inherit;
+  min-width: 0;
+  transition: padding var(--sb-dur) var(--sb-ease);
+
+  .sidebar.isCollapsed & {
+    padding: 4px 2px;
+  }
+}
+
+/* Toggle is absolutely positioned in BOTH states so collapse/expand is a
+   pure transform slide — no in-flow ↔ out-of-flow jump. Expanded: pinned
+   to the right inside the .top row. Collapsed: slides outward via
+   translateX so it sits centered on the sidebar's right border. */
+.toggle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--color-fg-mid);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-family: inherit;
+  z-index: 1;
+  transition:
+    transform var(--sb-dur) var(--sb-ease),
+    background var(--sb-dur-fade) var(--sb-ease),
+    color var(--sb-dur-fade) var(--sb-ease),
+    border-color var(--sb-dur-fade) var(--sb-ease);
+
+  &:hover {
+    background: var(--color-surface-alt);
+    color: var(--color-fg);
+    border-color: var(--color-line);
+  }
+
+  .sidebar.isCollapsed & {
+    transform: translateX(85%);
+    background: var(--color-surface-alt);
+    color: var(--color-fg);
+    border-color: var(--color-line);
+  }
+
+  .sidebar.isCollapsed &:hover {
+    background: var(--color-surface);
+    border-color: var(--color-line-strong);
+  }
+}
+
+/* ── Logo primitives ──────────────────────────
+   .logo-hey / .logo-not / .logo-strike are emitted
+   by the global Logo component (see globals.css),
+   so the module reaches them via :global(). Only
+   `hey` actually folds on collapse — `not` and the
+   strike are already in their closed state thanks
+   to the Logo's `startClosed` prop.
+   ───────────────────────────────────────────── */
+.sidebar :global(.logo-hey) {
+  max-width: 3em;
+  overflow: hidden;
+  transition:
+    max-width var(--sb-dur) var(--sb-ease),
+    opacity var(--sb-dur-fade) var(--sb-ease),
+    padding var(--sb-dur) var(--sb-ease);
+}
+
+.sidebar.isCollapsed :global(.logo-hey) {
+  max-width: 0;
+  opacity: 0;
+  padding: 0;
+}
+
+/* Lock out the Logo's hover-undraw while collapsed. The marketing-nav
+   behaviour (`.logo-word.is-closed:hover` re-reveals `not` + un-draws
+   the strike) is fine in the expanded sidebar and nav bar, but here
+   the mark is supposed to read as the permanent AI dash, so hover is
+   a no-op. */
+.sidebar.isCollapsed :global(.logo-word.is-closed):hover :global(.logo-not) {
+  max-width: 0;
+}
+.sidebar.isCollapsed :global(.logo-word.is-closed):hover :global(.logo-not-inner) {
+  opacity: 0;
+  transform: scale(0.3) translateY(-3px);
+}
+.sidebar.isCollapsed :global(.logo-word.is-closed):hover :global(.logo-strike) {
+  animation: none;
+  transform: translateY(-50%) scaleX(1) rotate(-1.2deg);
+  opacity: 1;
+}
+
+/* ── Section labels ─────────────────────────── */
+.sectionLabel {
+  position: relative;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--color-fg-dim);
+  text-transform: uppercase;
+  padding: 14px 12px 6px;
+  max-height: 36px;
+  overflow: hidden;
+  transition:
+    color var(--sb-dur-fade) var(--sb-ease);
+
+  /* Collapsed: keep the same box height so the icons above and below
+     stay on the same vertical line. The text fades to transparent and a
+     thin separator line appears in its place. */
+  &::after {
+    content: "";
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    top: 50%;
+    height: 1px;
+    background: var(--color-line);
+    opacity: 0;
+    transform: translateY(-50%);
+    transition: opacity var(--sb-dur-fade) var(--sb-ease);
+    pointer-events: none;
+  }
+
+  .sidebar.isCollapsed & {
+    color: transparent;
+  }
+
+  .sidebar.isCollapsed &::after {
+    opacity: 1;
+  }
+}
+
+/* ── Nav items ────────────────────────────────
+   Active state gets surface-alt fill; inactive
+   highlights only on hover. Counts / badges sit
+   at the right edge and fold away on collapse.
+   ───────────────────────────────────────────── */
+.item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-fg-mid);
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  text-decoration: none;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    gap var(--sb-dur) var(--sb-ease);
+
+  &:hover {
+    background: color-mix(in oklch, white 4%, transparent);
+    color: var(--color-fg);
+  }
+
+  &.isActive {
+    background: var(--color-surface-alt);
+    color: var(--color-fg);
+  }
+
+  .sidebar.isCollapsed & {
+    gap: 0;
+    justify-content: center;
+  }
+}
+
+.itemIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: currentColor;
+}
+
+.itemLabel {
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition:
+    max-width var(--sb-dur) var(--sb-ease),
+    opacity var(--sb-dur-fade) var(--sb-ease);
+}
+
+.itemCount {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--color-fg-dim);
+  font-weight: 500;
+  flex-shrink: 0;
+  max-width: 4em;
+  overflow: hidden;
+  transition:
+    max-width var(--sb-dur) var(--sb-ease),
+    opacity var(--sb-dur-fade) var(--sb-ease);
+
+  .item.isActive & {
+    color: var(--color-fg-mid);
+  }
+}
+
+/* Collapsed: every right-edge child folds away horizontally.
+   `min-width: 0` is critical — flex items default to `min-width: auto`
+   (= min-content), so without this override the NEW pill's text + its
+   own padding + border would keep it ~40px wide and shove the icon
+   off-center. Clearing padding + border-width shrinks the pill to a
+   true 0 × 0 box. */
+.sidebar.isCollapsed .itemLabel,
+.sidebar.isCollapsed .itemCount,
+.sidebar.isCollapsed .indicator {
+  max-width: 0;
+  min-width: 0;
+  opacity: 0;
+  padding: 0;
+  border-width: 0;
+  pointer-events: none;
+}
+
+/* ── Right-edge indicators ──────────────────── */
+.indicator {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 3em;
+  overflow: hidden;
+  transition:
+    max-width var(--sb-dur) var(--sb-ease),
+    opacity var(--sb-dur-fade) var(--sb-ease);
+
+  &.kindWarning {
+    width: 16px;
+    height: 16px;
+    border-radius: 5px;
+    background: color-mix(in oklch, var(--color-warn) 22%, transparent);
+    color: var(--color-warn);
+  }
+
+  &.kindDot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--color-accent);
+    box-shadow: 0 0 0 2px color-mix(in oklch, var(--color-accent) 25%, transparent);
+  }
+
+  &.kindNew {
+    padding: 1px 5px;
+    border-radius: 5px;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    background: color-mix(in oklch, var(--color-cta) 22%, transparent);
+    color: var(--color-cta);
+    border: 1px solid color-mix(in oklch, var(--color-cta) 35%, transparent);
+  }
+}
+
+/* ── Foot stack (usage card + profile card) ────
+   Pinned to the bottom of the sidebar via margin-
+   top: auto. Stacks UsageCard on top of the
+   profile row with a small gap.
+   ───────────────────────────────────────────── */
+.foot {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* The usage card's wrapper — folds smoothly when the sidebar collapses.
+   max-height + opacity + margin transitions ride the same --sb-dur /
+   --sb-ease as the column-width animation, so it slides shut in sync
+   with everything else in the sidebar. */
+.usageSlot {
+  max-height: 220px;
+  overflow: hidden;
+  transition:
+    max-height var(--sb-dur) var(--sb-ease),
+    opacity var(--sb-dur-fade) var(--sb-ease),
+    margin-bottom var(--sb-dur) var(--sb-ease);
+}
+
+.sidebar.isCollapsed .usageSlot {
+  max-height: 0;
+  opacity: 0;
+  margin-bottom: -8px;
+  pointer-events: none;
+}
+
+/* ── Profile group (bottom of sidebar) ────────
+   Single flex-wrap row: avatar · name+plan · bell
+   · logout. Expanded: all four on one line.
+   Collapsed: text shrinks to max-width 0 and the
+   buttons wrap onto their own lines under the
+   avatar. Wrapped inside a bordered card so the
+   row reads as one self-contained widget.
+   ───────────────────────────────────────────── */
+.profileGroup {
+  padding: 8px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  box-shadow: var(--shadow-soft);
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  column-gap: 10px;
+  row-gap: 6px;
+  min-width: 0;
+  transition:
+    column-gap var(--sb-dur) var(--sb-ease),
+    padding var(--sb-dur) var(--sb-ease),
+    background 0.15s ease,
+    border-color 0.15s ease;
+
+  &:hover {
+    background: var(--color-surface-alt);
+    border-color: var(--color-line-strong);
+  }
+
+  .sidebar.isCollapsed & {
+    justify-content: center;
+    column-gap: 0;
+    padding: 6px;
+  }
+}
+
+.profileText {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  transition:
+    max-width var(--sb-dur) var(--sb-ease),
+    opacity var(--sb-dur-fade) var(--sb-ease);
+
+  .sidebar.isCollapsed & {
+    max-width: 0;
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+.profileName {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--color-fg);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profileAction {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--color-fg-mid);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-family: inherit;
+  flex-shrink: 0;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+
+  &:hover {
+    background: var(--color-surface);
+    color: var(--color-fg);
+    border-color: var(--color-line);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar,
+  .sidebar *,
+  .sidebar :global(.logo-hey) {
+    transition: none !important;
+  }
+}

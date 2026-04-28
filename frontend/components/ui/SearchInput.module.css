@@ -1,0 +1,50 @@
+/* Search input — leading icon + native <input>. Styled to read as
+   sibling of the .btn.secondary in toolbars (same height, same border
+   weight, same radius). */
+.wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  padding: 0 12px;
+  color: var(--color-fg-mid);
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.wrap:hover {
+  border-color: var(--color-line-strong);
+}
+
+.wrap:focus-within {
+  border-color: var(--color-line-medium);
+  background: var(--color-surface-alt);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--color-fg) 6%, transparent);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  padding: 9px 8px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--color-fg);
+}
+
+.input::placeholder {
+  color: var(--color-fg-dim);
+}
+
+.input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}

@@ -1,0 +1,67 @@
+/* Bar-style activity sparkline. Resting bars use a dim fg, flagged
+   bars take the verdict-strike colour so spikes are immediately
+   readable. Used in monitor cards and (later) reports. */
+
+.spark {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.range {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.02em;
+}
+
+.bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 36px;
+}
+
+.bar {
+  flex: 1;
+  background: var(--color-fg-dim);
+  border-radius: 1px;
+  opacity: 0.4;
+  min-height: 2px;
+  transition: opacity 0.15s ease;
+}
+
+.bar.flagged {
+  background: var(--color-strike);
+  opacity: 0.9;
+}
+
+/* When the parent (e.g. a monitor card) is hovered, brighten bars. */
+:global(.mon-card:hover) .bar { opacity: 0.55; }
+:global(.mon-card:hover) .bar.flagged { opacity: 1; }
+
+.foot {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.04em;
+}

@@ -1,0 +1,39 @@
+.foot {
+  margin-top: 24px;
+  padding: 28px 24px;
+  text-align: center;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.title {
+  font-size: clamp(20px, 2.4vw, 26px);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: color-mix(in oklch, var(--color-fg) 55%, transparent);
+}
+
+.title em {
+  font-style: normal;
+  color: var(--color-fg);
+}
+
+.body {
+  font-size: 13.5px;
+  color: var(--color-fg-mid);
+  max-width: 460px;
+  line-height: 1.55;
+}
+
+.actions {
+  display: inline-flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}

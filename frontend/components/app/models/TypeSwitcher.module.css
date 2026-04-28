@@ -1,0 +1,81 @@
+/* 4-up grid of content-type tabs. Collapses to 2-up on narrow screens
+   to match the engine-row breakpoint elsewhere on the page. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  color: var(--color-fg);
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.1s ease,
+    color 0.15s ease;
+}
+
+.tab:hover {
+  background: var(--color-surface-alt);
+  border-color: var(--color-line-strong);
+  transform: translateY(-1px);
+}
+
+.tab.active {
+  background: var(--color-fg);
+  color: var(--color-bg);
+  border-color: var(--color-fg);
+}
+
+.tab.active:hover {
+  filter: brightness(1.04);
+  transform: translateY(-1px);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.label {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  line-height: 1.15;
+}
+
+.caption {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+  color: var(--color-fg-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.active .caption {
+  /* Keep the caption legible against the bright bg without using the
+     literal --color-bg (too dark). Mix toward fg-mid so it still reads
+     as a quieter sibling to the tab label. */
+  color: color-mix(in oklch, var(--color-bg) 60%, var(--color-fg-mid));
+}
+
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}

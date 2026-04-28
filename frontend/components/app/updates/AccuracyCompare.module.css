@@ -1,0 +1,43 @@
+/* Wrapper around two stacked ProgressBar rows. Adds the sunken inset
+   chrome that separates the comparison from the surrounding card body,
+   plus a delta chip on the "after" row. */
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  background: var(--color-surface-sunken);
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+}
+
+/* Dim the "before" row so the "after" row reads as the subject. The
+   ProgressBar inside fills 100% of available width — we just lower its
+   opacity. */
+.before {
+  opacity: 0.55;
+}
+
+.after {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.afterBar {
+  flex: 1;
+  min-width: 0;
+}
+
+.delta {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  border-radius: 6px;
+  color: var(--color-cta-ink);
+  background: color-mix(in oklch, var(--color-cta) 18%, transparent);
+  border: 1px solid color-mix(in oklch, var(--color-cta) 35%, transparent);
+}

@@ -1,0 +1,243 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  animation: fadeIn 0.18s ease-out;
+}
+
+.dialog {
+  position: relative;
+  width: 100%;
+  max-width: 920px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  border-radius: 24px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line-strong);
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.65),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
+  padding: 32px;
+  animation: rise 0.2s ease-out;
+}
+
+.close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: transparent;
+  border: 0;
+  color: var(--color-fg-mid);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.close:hover {
+  background: var(--color-surface-alt);
+  color: var(--color-fg);
+}
+
+.head {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.title {
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.4px;
+  color: var(--color-fg);
+  margin: 0 0 6px;
+}
+
+.subtitle {
+  font-size: 13.5px;
+  color: var(--color-fg-mid);
+  margin: 0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.tier {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 22px 20px;
+  border-radius: 20px;
+}
+
+.tierNeutral {
+  background: var(--color-bg);
+  border: 1px solid var(--color-line-strong);
+  color: var(--color-fg);
+}
+
+.tierGreen {
+  background: #a5c5a8;
+  color: #15171b;
+}
+
+.tierGold {
+  background: #e3c773;
+  color: #15171b;
+}
+
+.popular {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--color-fg);
+  color: #15171b;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.currentTag {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  padding: 3px 7px;
+  border-radius: 4px;
+  background: rgba(21, 23, 27, 0.12);
+  color: #15171b;
+}
+
+.tierNeutral .currentTag {
+  background: color-mix(in oklch, var(--color-fg) 12%, transparent);
+  color: var(--color-fg);
+}
+
+.tierName {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+  margin: 0;
+}
+
+.tierTagline {
+  font-size: 12.5px;
+  line-height: 1.45;
+  margin: 6px 0 0;
+  opacity: 0.75;
+  max-width: 14rem;
+}
+
+.tierPrice {
+  margin-top: 24px;
+  font-size: 34px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+  line-height: 1;
+}
+
+.tierPeriod {
+  font-size: 12.5px;
+  font-weight: 400;
+  margin-left: 4px;
+  opacity: 0.7;
+}
+
+.tierFeatures {
+  list-style: none;
+  padding: 0;
+  margin: 18px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 12.5px;
+  flex: 1;
+}
+
+.tierFeatures li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tierFeatures svg {
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.tierBtn {
+  margin-top: 18px;
+  height: 42px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 0;
+  transition: filter 0.15s ease, background 0.15s ease;
+}
+
+.tierNeutral .tierBtn {
+  background: var(--color-fg);
+  color: #15171b;
+}
+
+.tierGreen .tierBtn,
+.tierGold .tierBtn {
+  background: #15171b;
+  color: #fff;
+}
+
+.tierBtn:hover {
+  filter: brightness(1.05);
+}
+
+.tierBtnDisabled,
+.tierBtnDisabled:hover {
+  background: rgba(21, 23, 27, 0.18);
+  color: rgba(21, 23, 27, 0.6);
+  cursor: default;
+  filter: none;
+}
+
+.tierNeutral .tierBtnDisabled,
+.tierNeutral .tierBtnDisabled:hover {
+  background: var(--color-surface-alt);
+  color: var(--color-fg-mid);
+}
+
+@media (max-width: 760px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  .dialog {
+    padding: 24px 20px;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}

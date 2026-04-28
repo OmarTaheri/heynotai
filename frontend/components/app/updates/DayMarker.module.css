@@ -1,0 +1,61 @@
+.row {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  gap: 16px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.row:first-child { margin-top: 0; }
+
+/* Big solid bead anchored on the rail. Sits in the same 32px gutter as
+   UpdateCard markers so the rail line passes through the center. */
+.bead {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-bg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  position: relative;
+}
+
+.beadInner {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--color-fg);
+  border: 2px solid var(--color-bg);
+  box-shadow: 0 0 0 1px var(--color-fg);
+}
+
+.body {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.title {
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: color-mix(in oklch, var(--color-fg) 55%, transparent);
+}
+
+.title em {
+  font-style: normal;
+  color: var(--color-fg);
+}
+
+.range {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-weight: 600;
+}

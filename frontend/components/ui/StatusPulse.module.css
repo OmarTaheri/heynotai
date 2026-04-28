@@ -1,0 +1,32 @@
+.dot {
+  position: relative;
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dot::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.25;
+  animation: pulse-ring 2s infinite;
+}
+
+@keyframes pulse-ring {
+  0%   { transform: scale(0.8); opacity: 0.3; }
+  100% { transform: scale(2.2);  opacity: 0;   }
+}
+
+.ok   { background: var(--color-human); color: var(--color-human); }
+.ai   { background: var(--color-ai);    color: var(--color-ai);    }
+.warn { background: var(--color-warn);  color: var(--color-warn);  }
+.info { background: var(--color-accent); color: var(--color-accent); }
+
+@media (prefers-reduced-motion: reduce) {
+  .dot::after { animation: none; }
+}

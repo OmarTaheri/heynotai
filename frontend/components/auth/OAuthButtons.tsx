@@ -1,0 +1,68 @@
+"use client";
+
+import type { ReactNode } from "react";
+
+export function OAuthButtons({
+  className = "",
+  onGoogle,
+  disabled,
+}: {
+  className?: string;
+  onGoogle: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className={`grid gap-2.5 ${className}`}>
+      <Button onClick={onGoogle} disabled={disabled} icon={<GoogleIcon />}>
+        Continue with Google
+      </Button>
+    </div>
+  );
+}
+
+function Button({
+  onClick,
+  disabled,
+  icon,
+  children,
+}: {
+  onClick: () => void;
+  disabled?: boolean;
+  icon: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="inline-flex h-10 items-center justify-center gap-2 rounded-[10px] border border-[var(--color-line-strong)] bg-[var(--color-surface-alt)] text-[13px] font-medium text-[var(--color-fg)] transition-colors hover:bg-[var(--color-card-alt)] disabled:opacity-60"
+    >
+      {icon}
+      {children}
+    </button>
+  );
+}
+
+function GoogleIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden>
+      <path
+        fill="#4285F4"
+        d="M22 12.3c0-.7-.1-1.5-.2-2.2H12v4.1h5.6c-.2 1.3-1 2.4-2 3.1v2.5h3.3c1.9-1.8 3.1-4.4 3.1-7.5z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 22c2.7 0 5-1 6.7-2.4l-3.3-2.5c-.9.6-2 1-3.4 1-2.6 0-4.8-1.8-5.6-4.1H2.9V16C4.6 19.6 8 22 12 22z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M6.4 14c-.2-.6-.3-1.3-.3-2s.1-1.4.3-2V7.5H2.9C2.3 8.8 2 10.4 2 12s.3 3.2.9 4.5L6.4 14z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 5.9c1.5 0 2.8.5 3.8 1.5l2.9-2.9C16.9 2.9 14.7 2 12 2 8 2 4.6 4.4 2.9 7.5L6.4 10c.8-2.4 3-4.1 5.6-4.1z"
+      />
+    </svg>
+  );
+}

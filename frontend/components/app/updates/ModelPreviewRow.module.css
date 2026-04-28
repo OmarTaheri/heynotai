@@ -1,0 +1,99 @@
+.row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  background: var(--color-surface-sunken);
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+}
+
+.logo {
+  width: 46px;
+  height: 46px;
+  border-radius: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: -0.02em;
+  color: #fff;
+  /* Each vendor gets its own background — keeps the logo column readable
+     at a glance. Backgrounds use OKLCH so they sit on the dark surface
+     without screaming. */
+  background: var(--color-surface-alt);
+}
+
+.logo[data-vendor="openai"]    { background: oklch(0.55 0.12 165); }
+.logo[data-vendor="google"]    {
+  background: linear-gradient(135deg,
+    oklch(0.55 0.18 250),
+    oklch(0.55 0.18 305),
+    oklch(0.6 0.2 30));
+}
+.logo[data-vendor="flux"]      { background: linear-gradient(135deg, #1c1f25, #3a3d44); }
+.logo[data-vendor="anthropic"] { background: oklch(0.6 0.13 50); }
+.logo[data-vendor="eleven"]    { background: #1f1f1f; }
+
+.info {
+  flex: 1;
+  min-width: 0;
+}
+
+.name {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--color-fg);
+  letter-spacing: -0.15px;
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+
+.meta {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.02em;
+}
+
+.acc {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.accVal {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-fg);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.accVal em {
+  font-style: normal;
+  font-weight: 500;
+  color: var(--color-cta);
+  font-size: 13px;
+  margin-left: 2px;
+}
+
+.accVal[data-warn="true"] em {
+  color: var(--color-warn);
+}
+
+.accLbl {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 600;
+}

@@ -1,0 +1,546 @@
+/* ─────────────────────────────────────────────
+   Home — dashboard cold-open. Dark surface, same
+   tokens as the rest of the app + the extension
+   popup. Layout glue only; reusable visuals live
+   in components/ui/* with co-located CSS modules.
+
+   The page splits into two visual zones:
+     1. .home-hero  — full-bleed editorial top with
+                      aurora backdrop, big serif
+                      greeting, and the drop card
+     2. .home-feed  — the rest (stats, last scan,
+                      recent activity) on the
+                      standard dark surface
+   ───────────────────────────────────────────── */
+
+.home {
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+  /* Page padding lives at the shell level (.app-shell-main); we just
+     need a max content width inside the hero so super-wide screens
+     don't stretch the prose. The feed below uses the full width. */
+}
+
+/* ── Hero zone ────────────────────────────────
+   Editorial top — big greeting + the drop card.
+   Inherits width from .app-shell-main so the home
+   matches every other dashboard page.
+   ───────────────────────────────────────────── */
+.home-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+/* ── Greeting (hero headline) ──────────────── */
+.home-greet {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.home-greet-h1 {
+  font-weight: 600;
+  font-size: clamp(28px, 3.4vw, 38px);
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  color: color-mix(in oklch, var(--color-fg) 55%, transparent);
+}
+
+/* The accentName slot — full opacity so it reads as the line's anchor,
+   the way the marketing hero's "human." sits inside the dimmed phrase. */
+.home-greet-h1 em {
+  font-style: normal;
+  color: var(--color-fg);
+}
+
+.home-greet-sub {
+  font-size: 14px;
+  color: var(--color-fg-mid);
+  margin-top: 12px;
+  max-width: 540px;
+  line-height: 1.55;
+}
+
+/* ── Drop card ──────────────────────────────── */
+.home-drop {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 22px 24px 24px;
+}
+
+.home-drop-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.home-drop-title {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.2px;
+  color: var(--color-fg);
+}
+
+.home-drop-title em {
+  font-style: normal;
+  font-weight: 500;
+  color: var(--color-fg-mid);
+}
+
+.home-drop-help {
+  font-size: 11.5px;
+  color: var(--color-fg-dim);
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+  text-align: right;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* ── Textbox-style verifier ──────────────────
+   The drop zone is a textarea wrapped in a sunken
+   surface with a toolbar pinned to the bottom — same
+   shape as the marketing hero's detector card, but
+   sized for the dashboard. */
+.home-drop-box {
+  border: 1px solid var(--color-line);
+  border-radius: 140px;
+  corner-shape: superellipse(3);
+  background: var(--color-surface-sunken);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.home-drop-box:focus-within {
+  border-color: color-mix(in oklch, var(--color-accent) 60%, var(--color-line-strong));
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--color-accent) 18%, transparent);
+}
+
+.home-drop-textarea {
+  width: 100%;
+  min-height: 140px;
+  resize: vertical;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 22px 26px 12px;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--color-fg);
+}
+
+.home-drop-textarea::placeholder {
+  color: var(--color-fg-dim);
+}
+
+.home-drop-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 18px 18px;
+  flex-wrap: wrap;
+}
+
+.home-drop-tabs {
+  display: inline-flex;
+  gap: 2px;
+  background: var(--color-surface);
+  padding: 3px;
+  border-radius: 9px;
+  border: 1px solid var(--color-line);
+  flex-shrink: 0;
+}
+
+.home-drop-tab {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--color-fg-mid);
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.home-drop-tab:hover { color: var(--color-fg); }
+
+.home-drop-tab.is-active {
+  background: var(--color-fg);
+  color: var(--color-bg);
+  font-weight: 600;
+}
+
+.home-drop-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 22px;
+  margin-left: auto;
+}
+
+.home-drop-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: color-mix(in oklch, var(--color-fg-dim) 75%, transparent);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  opacity: 0;
+  transform: translateX(8px);
+  pointer-events: none;
+  transition: opacity 0.28s ease, transform 0.28s ease;
+}
+
+.home-drop-count.is-visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.home-drop-count strong {
+  color: color-mix(in oklch, var(--color-fg) 70%, transparent);
+  font-weight: 600;
+}
+
+/* Smooth the glow on/off when the Verify button toggles enabled.
+   The marketing Button only animates colors; we layer a slower, eased
+   box-shadow + a subtle opacity/scale lift so the CTA ring blooms in
+   instead of popping. The shadow itself is rebuilt locally so we can
+   ease it from 0 to full intensity. */
+.home-drop-verify-btn {
+  box-shadow: 0 0 0 0 transparent !important;
+  transform: scale(0.985);
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.2s ease;
+}
+
+.home-drop-verify-btn:not(:disabled) {
+  box-shadow:
+    0 8px 22px var(--color-cta-ring),
+    0 0 0 1px color-mix(in oklch, var(--color-cta) 35%, transparent) !important;
+  transform: scale(1);
+}
+
+.home-drop-verify-btn:not(:disabled):hover {
+  box-shadow:
+    0 10px 28px var(--color-cta-ring),
+    0 0 0 1px color-mix(in oklch, var(--color-cta) 55%, transparent) !important;
+}
+
+.home-drop-verify-btn:disabled {
+  filter: saturate(0.6);
+}
+
+
+/* ── Feed zone (everything below the hero) ──── */
+.home-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+/* ── Last-scan detail card body ─────────────── */
+.home-detail-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--color-line);
+  background: var(--color-surface-sunken);
+  gap: 12px;
+}
+
+.home-detail-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.home-detail-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-fg);
+  letter-spacing: -0.1px;
+}
+
+.home-detail-meta {
+  font-size: 11px;
+  color: var(--color-fg-dim);
+  margin-top: 2px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+}
+
+.home-detail-body {
+  display: grid;
+  grid-template-columns: 1.45fr 1fr;
+}
+
+@media (max-width: 900px) {
+  .home-detail-body { grid-template-columns: 1fr; }
+}
+
+.home-detail-content {
+  padding: 26px 28px;
+  border-right: 1px solid var(--color-line);
+}
+
+@media (max-width: 900px) {
+  .home-detail-content {
+    border-right: none;
+    border-bottom: 1px solid var(--color-line);
+  }
+}
+
+.home-tiny-lbl {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 600;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.home-tiny-lbl::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--color-line);
+}
+
+.home-prose {
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--color-fg);
+}
+
+.home-prose p { margin-bottom: 10px; }
+
+.home-hl-ai {
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    transparent 45%,
+    color-mix(in oklch, var(--color-strike) 25%, transparent) 45%,
+    color-mix(in oklch, var(--color-strike) 25%, transparent) 90%,
+    transparent 90%
+  );
+  border-bottom: 1.5px solid color-mix(in oklch, var(--color-strike) 60%, transparent);
+  padding: 1px 2px;
+}
+
+.home-hl-human {
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    transparent 55%,
+    color-mix(in oklch, var(--color-human) 22%, transparent) 55%,
+    color-mix(in oklch, var(--color-human) 22%, transparent) 90%,
+    transparent 90%
+  );
+  padding: 1px 2px;
+}
+
+.home-detail-analysis {
+  padding: 26px 28px;
+  background: var(--color-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.home-score {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.home-score-meta { flex: 1; min-width: 0; }
+
+.home-score-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-strike);
+  margin-bottom: 4px;
+}
+
+.home-score-label.is-human { color: var(--color-human); }
+
+.home-score-model {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.15px;
+  color: var(--color-fg);
+  line-height: 1.2;
+}
+
+.home-score-model em {
+  font-style: normal;
+  font-weight: 500;
+  color: var(--color-fg-mid);
+}
+
+.home-score-ci {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--color-fg-dim);
+  margin-top: 4px;
+}
+
+.home-bd { display: flex; flex-direction: column; gap: 10px; }
+
+.home-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ── Recent activity table ──────────────────── */
+.home-act-scroll {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-color: var(--color-line) transparent;
+  scrollbar-width: thin;
+}
+
+.home-act-scroll::-webkit-scrollbar { height: 8px; }
+.home-act-scroll::-webkit-scrollbar-track { background: transparent; }
+.home-act-scroll::-webkit-scrollbar-thumb {
+  background: var(--color-line);
+  border-radius: 999px;
+}
+.home-act-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--color-fg-dim);
+}
+
+.home-act-table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.home-act-head,
+.home-act-row {
+  display: grid;
+  grid-template-columns: 48px minmax(220px, 1fr) 100px 150px 90px;
+  gap: 16px;
+  padding: 14px 20px;
+  align-items: center;
+}
+
+.home-act-head {
+  border-bottom: 1px solid var(--color-line);
+  background: var(--color-surface-sunken);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 600;
+  text-align: left;
+}
+
+.home-act-head th {
+  font-weight: inherit;
+}
+
+.home-act-row {
+  border-top: 1px solid var(--color-line);
+  background: transparent;
+  color: inherit;
+  transition: background 0.12s ease;
+}
+
+.home-act-table tbody tr:first-child.home-act-row {
+  border-top: none;
+}
+
+.home-act-row:hover {
+  background: color-mix(in oklch, white 2.5%, transparent);
+}
+
+.home-act-empty {
+  padding: 36px 20px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--color-fg-dim);
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+}
+
+.home-act-name {
+  font-size: 13.5px;
+  color: var(--color-fg);
+  font-weight: 600;
+  line-height: 1.3;
+  margin-bottom: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-act-meta {
+  font-size: 11px;
+  color: var(--color-fg-dim);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-act-conf {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-fg);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.home-act-time {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-fg-dim);
+  text-align: right;
+  letter-spacing: 0.01em;
+}
+
+@media (max-width: 720px) {
+  .home-act-head,
+  .home-act-row {
+    padding: 12px 14px;
+    gap: 12px;
+  }
+}

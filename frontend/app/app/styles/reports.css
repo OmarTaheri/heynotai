@@ -1,0 +1,50 @@
+/* ─────────────────────────────────────────────
+   /app/reports — page-level layout primitives.
+   Component-specific styling lives in colocated
+   .module.css files; this file owns the page
+   container, the filter-bar layout, and the
+   shared `--reports-cols` grid template that
+   keeps the table header + body rows aligned at
+   each breakpoint.
+   ───────────────────────────────────────────── */
+
+.reports-page {
+  --reports-cols: 44px minmax(0, 1fr) 130px 100px 130px 130px 36px;
+}
+
+/* Filter bar — search expands, chips wrap. */
+.reports-filterbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.reports-filterbar > :first-child {
+  flex: 1;
+  min-width: 240px;
+}
+
+/* Drop optional columns at narrow viewports. We can't reference CSS
+   Module class names from this global file, so we target the cells by
+   their position within each row (.reports-grid wraps the header row
+   and every body row; each row is itself a grid with 7 children). */
+@media (max-width: 1100px) {
+  .reports-page {
+    --reports-cols: 44px minmax(0, 1fr) 120px 100px 36px;
+  }
+  .reports-page .reports-grid > * > :nth-child(5),
+  .reports-page .reports-grid > * > :nth-child(6) {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .reports-page {
+    --reports-cols: 44px minmax(0, 1fr) 100px 36px;
+  }
+  .reports-page .reports-grid > * > :nth-child(3) {
+    display: none;
+  }
+}

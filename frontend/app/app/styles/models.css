@@ -1,0 +1,19 @@
+/* ─────────────────────────────────────────────
+   Models — detection-engine picker.
+   Page-level layout glue only. Reusable visuals
+   (PageHeader, Pill, Button) live in components/ui/*;
+   page-specific compositions (TokenUsageBand,
+   TypeSwitcher, EngineRow, EngineSection,
+   SuggestEngine) live next to their CSS modules
+   under components/app/models/*.
+   ───────────────────────────────────────────── */
+
+.models {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.models > .page-head {
+  margin-bottom: 0;
+}

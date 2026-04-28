@@ -1,0 +1,133 @@
+/* Single report row. Grid columns are owned by the parent table via
+   the .reports-grid class on the wrapper so header + rows stay
+   aligned across the breakpoints defined in reports.css. */
+.row {
+  display: grid;
+  grid-template-columns: var(--reports-cols);
+  gap: 14px;
+  align-items: center;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--color-line);
+  transition: background 0.12s ease;
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.row:hover {
+  background: var(--color-surface-alt);
+}
+
+.row:hover .action {
+  opacity: 1;
+}
+
+/* ── Title block ───────────────────────────────────────────── */
+.info {
+  min-width: 0;
+}
+
+.title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-fg);
+  letter-spacing: -0.2px;
+  line-height: 1.25;
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.01em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.source {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-line);
+  color: var(--color-fg-mid);
+  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+
+.source svg {
+  color: var(--color-fg-dim);
+}
+
+/* ── Stats column ──────────────────────────────────────────── */
+.stats {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-fg-mid);
+}
+
+.statRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.statRow svg {
+  color: var(--color-fg-dim);
+  flex-shrink: 0;
+}
+
+/* ── Time column ───────────────────────────────────────────── */
+.time {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-fg-dim);
+  text-align: right;
+  letter-spacing: 0.01em;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.time strong {
+  color: var(--color-fg-mid);
+  font-weight: 600;
+}
+
+/* ── Action button ─────────────────────────────────────────── */
+.action {
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-fg-dim);
+  opacity: 0;
+  transition:
+    opacity 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease;
+  font-family: inherit;
+}
+
+.action:hover {
+  background: var(--color-surface);
+  color: var(--color-fg);
+}

@@ -1,0 +1,818 @@
+/* ─────────────────────────────────────────────
+   Team — workspace identity, members table, shared
+   collections, and right-rail (billing / roles /
+   audit log). Dark surface, same tokens as the rest
+   of the dashboard. Layout glue only — primitives
+   (Avatar, Pill, Button, Card, StatTile, …) live in
+   components/ui and bring their own styles.
+   ───────────────────────────────────────────── */
+
+.team {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ── Workspace identity card ─────────────────── */
+.team-ws {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 24px;
+  align-items: center;
+  padding: 22px 26px;
+  position: relative;
+  overflow: hidden;
+}
+
+.team-ws::before {
+  content: "";
+  position: absolute;
+  top: -80px;
+  right: -80px;
+  width: 240px;
+  height: 240px;
+  background: radial-gradient(
+    circle,
+    color-mix(in oklch, var(--color-human) 12%, transparent),
+    transparent 70%
+  );
+  pointer-events: none;
+}
+
+.team-ws-emblem {
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  background: linear-gradient(
+    135deg,
+    var(--color-surface-alt),
+    var(--color-surface-sunken)
+  );
+  border: 1px solid var(--color-line);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 28px;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+  box-shadow:
+    inset 0 -2px 0 rgba(255, 255, 255, 0.04),
+    0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.team-ws-info {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
+
+.team-ws-name {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  color: var(--color-fg);
+  margin-bottom: 8px;
+}
+
+.team-ws-tag {
+  font-weight: 500;
+  color: var(--color-fg-mid);
+}
+
+.team-ws-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.02em;
+}
+
+.team-ws-meta strong {
+  color: var(--color-fg-mid);
+  font-weight: 600;
+}
+
+.team-ws-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--color-fg-dim);
+  display: inline-block;
+}
+
+.team-ws-actions {
+  display: flex;
+  gap: 6px;
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 960px) {
+  .team-ws {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+  .team-ws-name { justify-content: center; }
+  .team-ws-meta { justify-content: center; }
+  .team-ws-actions { justify-content: center; }
+}
+
+/* ── Two-column body (main + right rail) ─────── */
+.team-body {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 28px;
+  margin-top: 8px;
+}
+
+.team-main {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}
+
+.team-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+@media (max-width: 1100px) {
+  .team-body { grid-template-columns: 1fr; }
+}
+
+/* ── Members panel ───────────────────────────── */
+.team-panel {
+  /* Override the default Card padding — this panel hosts a full-bleed
+     table, so the children handle their own insets. */
+  padding: 0;
+}
+
+.team-mtabs {
+  display: flex;
+  gap: 4px;
+  background: var(--color-surface-sunken);
+  border-bottom: 1px solid var(--color-line);
+  padding: 6px;
+}
+
+.team-mtab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-fg-mid);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.team-mtab:hover { color: var(--color-fg); }
+
+.team-mtab.is-active {
+  background: var(--color-surface);
+  color: var(--color-fg);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+}
+
+.team-mtab-count {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-fg-dim);
+  font-weight: 500;
+  padding: 1px 7px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+}
+
+.team-mtab.is-active .team-mtab-count { color: var(--color-fg-mid); }
+
+.team-invite {
+  display: flex;
+  gap: 8px;
+  padding: 14px 18px;
+  background: var(--color-surface-sunken);
+  border-bottom: 1px solid var(--color-line);
+}
+
+.team-invite input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 14px;
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  background: var(--color-surface);
+  font-size: 13px;
+  color: var(--color-fg);
+  font-family: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.team-invite input::placeholder { color: var(--color-fg-dim); }
+
+.team-invite input:focus {
+  outline: none;
+  border-color: color-mix(in oklch, var(--color-accent) 60%, var(--color-line-strong));
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--color-accent) 18%, transparent);
+}
+
+.team-role-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-line-strong);
+  background: var(--color-surface);
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-fg-mid);
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.team-role-pick:hover {
+  border-color: var(--color-line-medium);
+  color: var(--color-fg);
+}
+
+@media (max-width: 720px) {
+  .team-invite { flex-direction: column; }
+}
+
+/* ── Pending strip ───────────────────────────── */
+.team-pending {
+  margin: 14px 18px;
+  padding: 10px 14px;
+  background: color-mix(in oklch, var(--color-warn-soft) 60%, transparent);
+  border: 1px solid color-mix(in oklch, var(--color-warn) 35%, transparent);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.team-pending-l {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+  color: var(--color-warn);
+  font-weight: 600;
+}
+
+.team-pending-l strong { font-weight: 700; }
+
+.team-pending-action {
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid color-mix(in oklch, var(--color-warn) 35%, transparent);
+  background: var(--color-surface);
+  color: var(--color-warn);
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.team-pending-action:hover {
+  background: color-mix(in oklch, var(--color-warn-soft) 80%, transparent);
+}
+
+/* ── Members table ───────────────────────────── */
+.team-mem-head,
+.team-mem {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) 130px 130px 130px 36px;
+  gap: 14px;
+  align-items: center;
+  padding: 12px 18px;
+}
+
+.team-mem-head {
+  background: var(--color-surface-sunken);
+  border-bottom: 1px solid var(--color-line);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.team-mem-head-r { text-align: right; }
+
+.team-mem-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.team-mem {
+  border-top: 1px solid var(--color-line);
+  transition: background 0.12s ease;
+}
+
+.team-mem:first-child { border-top: none; }
+
+.team-mem:hover {
+  background: color-mix(in oklch, white 2.5%, transparent);
+}
+
+.team-mem-avatar {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.team-mem-presence {
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--color-surface);
+}
+
+.team-presence-online  { background: var(--color-human); }
+.team-presence-away    { background: var(--color-warn); }
+.team-presence-offline { background: var(--color-fg-dim); }
+
+.team-mem-info { min-width: 0; }
+
+.team-mem-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 13.5px;
+  color: var(--color-fg);
+  font-weight: 600;
+  line-height: 1.2;
+  margin-bottom: 3px;
+}
+
+.team-mem-name-muted { color: var(--color-fg-mid); }
+
+.team-mem-you {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--color-human-ink);
+  background: color-mix(in oklch, var(--color-human-soft) 70%, transparent);
+  border: 1px solid color-mix(in oklch, var(--color-human) 28%, transparent);
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.team-mem-email {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.team-mem-cell { min-width: 0; }
+
+.team-mem-usage {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--color-fg-mid);
+  font-variant-numeric: tabular-nums;
+}
+
+.team-mem-usage strong {
+  color: var(--color-fg);
+  font-weight: 600;
+}
+
+.team-mem-usage-muted { color: var(--color-fg-dim); }
+
+.team-mem-usage-bar {
+  height: 3px;
+  background: var(--color-surface-sunken);
+  border-radius: 2px;
+  overflow: hidden;
+  border: 1px solid var(--color-line);
+  margin-top: 5px;
+}
+
+.team-mem-usage-bar > div {
+  height: 100%;
+  background: var(--color-fg);
+}
+
+.team-mem-time {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-fg-dim);
+  text-align: right;
+  letter-spacing: 0.01em;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.team-mem-time strong {
+  color: var(--color-fg-mid);
+  font-weight: 600;
+}
+
+.team-mem-action {
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-fg-dim);
+  opacity: 0;
+  transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.team-mem:hover .team-mem-action { opacity: 1; }
+
+.team-mem-action:hover {
+  background: var(--color-surface-alt);
+  color: var(--color-fg);
+}
+
+@media (max-width: 1100px) {
+  .team-mem-head,
+  .team-mem {
+    grid-template-columns: 36px minmax(0, 1fr) 130px 36px;
+  }
+  .team-mem-head > :nth-child(4),
+  .team-mem-head > :nth-child(5),
+  .team-mem > :nth-child(4),
+  .team-mem > :nth-child(5) {
+    display: none;
+  }
+}
+
+/* ── Role pill (used in table + roles legend) ── */
+.team-role {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.team-role svg { opacity: 0.8; }
+
+.team-role-owner {
+  background: color-mix(in oklch, var(--color-gold-soft) 35%, transparent);
+  color: var(--color-gold-ink);
+  border-color: color-mix(in oklch, var(--color-gold) 35%, transparent);
+}
+
+.team-role-admin {
+  background: color-mix(in oklch, var(--color-info-soft) 80%, transparent);
+  color: var(--color-accent-ink);
+  border-color: color-mix(in oklch, var(--color-info) 28%, transparent);
+}
+
+.team-role-member {
+  background: var(--color-surface-alt);
+  color: var(--color-fg-mid);
+  border-color: var(--color-line);
+}
+
+.team-role-viewer {
+  background: var(--color-surface-alt);
+  color: var(--color-fg-dim);
+  border-color: var(--color-line);
+}
+
+.team-role-pending {
+  background: color-mix(in oklch, var(--color-warn-soft) 60%, transparent);
+  color: var(--color-warn);
+  border-color: color-mix(in oklch, var(--color-warn) 35%, transparent);
+}
+
+/* ── Shared collections grid ─────────────────── */
+.team-sc-panel {
+  padding: 0;
+}
+
+.team-sc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+  padding: 16px;
+}
+
+.team-sc {
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-line);
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+  cursor: pointer;
+}
+
+.team-sc:hover {
+  border-color: var(--color-line-strong);
+  background: var(--color-surface);
+  transform: translateY(-1px);
+}
+
+.team-sc-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.team-sc-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-fg-mid);
+  flex-shrink: 0;
+}
+
+.team-sc-tone-ai {
+  background: color-mix(in oklch, var(--color-ai-soft) 70%, transparent);
+  border-color: color-mix(in oklch, var(--color-ai) 28%, transparent);
+  color: var(--color-ai-ink);
+}
+
+.team-sc-tone-human {
+  background: color-mix(in oklch, var(--color-human-soft) 70%, transparent);
+  border-color: color-mix(in oklch, var(--color-human) 28%, transparent);
+  color: var(--color-human-ink);
+}
+
+.team-sc-tone-info {
+  background: color-mix(in oklch, var(--color-info-soft) 70%, transparent);
+  border-color: color-mix(in oklch, var(--color-info) 28%, transparent);
+  color: var(--color-accent-ink);
+}
+
+.team-sc-tone-mixed {
+  background: color-mix(in oklch, var(--color-mixed-soft) 70%, transparent);
+  border-color: color-mix(in oklch, var(--color-mixed) 28%, transparent);
+  color: var(--color-mixed-ink);
+}
+
+.team-sc-text { min-width: 0; }
+
+.team-sc-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-fg);
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  margin-bottom: 2px;
+}
+
+.team-sc-meta {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.02em;
+}
+
+.team-sc-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-line);
+  margin-top: auto;
+}
+
+.team-sc-avs { display: flex; }
+
+.team-sc-av {
+  display: inline-flex;
+  border: 2px solid var(--color-surface-alt);
+  border-radius: 50%;
+}
+
+.team-sc:hover .team-sc-av { border-color: var(--color-surface); }
+
+.team-sc-permission {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+/* ── Right rail panels ───────────────────────── */
+.team-rail-card {
+  padding: 18px;
+}
+
+.team-rail-title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 600;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.team-rail-link {
+  font-size: 11px;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  color: var(--color-fg-mid);
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-transform: none;
+  letter-spacing: 0;
+  transition: color 0.15s ease;
+}
+
+.team-rail-link:hover { color: var(--color-fg); }
+
+/* ── Billing panel ───────────────────────────── */
+.team-bill {
+  display: flex;
+  flex-direction: column;
+}
+
+.team-bill-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--color-line);
+  font-size: 12.5px;
+  gap: 12px;
+}
+
+.team-bill-row:last-child { border-bottom: none; }
+
+.team-bill-l { color: var(--color-fg-mid); }
+
+.team-bill-r {
+  color: var(--color-fg);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-align: right;
+}
+
+.team-bill-big {
+  font-family: var(--font-sans);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.team-bill-big em {
+  font-style: normal;
+  color: var(--color-fg-dim);
+  font-weight: 500;
+  font-size: 13px;
+  margin-left: 2px;
+}
+
+.team-bill-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 14px;
+  margin-top: 8px;
+  border-top: 1px solid var(--color-line);
+}
+
+.team-bill-actions > * {
+  width: 100%;
+  justify-content: center;
+}
+
+/* ── Roles legend ────────────────────────────── */
+.team-roles-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.team-roles-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.team-roles-row p {
+  font-size: 11.5px;
+  color: var(--color-fg-mid);
+  line-height: 1.5;
+  margin: 0;
+  padding-top: 1px;
+}
+
+/* ── Audit log ───────────────────────────────── */
+.team-audit-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.team-audit-item {
+  display: flex;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-line);
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.team-audit-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.team-audit-item:first-child { padding-top: 0; }
+
+.team-audit-content { flex: 1; min-width: 0; }
+
+.team-audit-text { color: var(--color-fg-mid); }
+
+.team-audit-text strong {
+  color: var(--color-fg);
+  font-weight: 600;
+}
+
+.team-audit-text em {
+  font-style: normal;
+  color: var(--color-fg);
+  font-weight: 500;
+}
+
+.team-audit-meta {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-fg-dim);
+  margin-top: 3px;
+  letter-spacing: 0.02em;
+}

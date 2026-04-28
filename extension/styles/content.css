@@ -1,0 +1,645 @@
+/* ============================================
+   heynotai – Content Overlay Styles
+   Injected into YouTube pages
+   ============================================ */
+
+/* Animated scanning border around the video player */
+#heynotai-border {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 9998;
+  border-radius: 12px;
+  transition: box-shadow 0.6s ease, border-color 0.6s ease;
+  border: 3px solid transparent;
+}
+
+/* State: Scanning */
+#heynotai-border.hn-scanning {
+  border-color: rgba(120, 120, 255, 0.5);
+  box-shadow:
+    inset 0 0 20px rgba(120, 120, 255, 0.08),
+    0 0 15px rgba(120, 120, 255, 0.15),
+    0 0 40px rgba(120, 120, 255, 0.06);
+  animation: hn-pulse-scan 1.8s ease-in-out infinite;
+}
+
+/* State: Authentic (Green) */
+#heynotai-border.hn-authentic {
+  border-color: rgba(34, 197, 94, 0.7);
+  box-shadow:
+    inset 0 0 25px rgba(34, 197, 94, 0.07),
+    0 0 18px rgba(34, 197, 94, 0.2),
+    0 0 50px rgba(34, 197, 94, 0.06);
+  animation: hn-glow-green 3s ease-in-out infinite;
+}
+
+/* State: Suspicious (Yellow/Amber) */
+#heynotai-border.hn-suspicious {
+  border-color: rgba(245, 158, 11, 0.7);
+  box-shadow:
+    inset 0 0 25px rgba(245, 158, 11, 0.07),
+    0 0 18px rgba(245, 158, 11, 0.2),
+    0 0 50px rgba(245, 158, 11, 0.06);
+  animation: hn-glow-yellow 2.5s ease-in-out infinite;
+}
+
+/* State: AI-Generated (Red) */
+#heynotai-border.hn-ai-generated {
+  border-color: rgba(239, 68, 68, 0.7);
+  box-shadow:
+    inset 0 0 30px rgba(239, 68, 68, 0.08),
+    0 0 20px rgba(239, 68, 68, 0.25),
+    0 0 60px rgba(239, 68, 68, 0.08);
+  animation: hn-glow-red 2s ease-in-out infinite;
+}
+
+/* Scanning sweep animation line */
+#heynotai-border.hn-scanning::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(120, 120, 255, 0.06), transparent);
+  animation: hn-sweep 2s ease-in-out infinite;
+}
+
+@keyframes hn-sweep {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+@keyframes hn-pulse-scan {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes hn-glow-green {
+  0%, 100% {
+    box-shadow:
+      inset 0 0 25px rgba(34, 197, 94, 0.07),
+      0 0 18px rgba(34, 197, 94, 0.15),
+      0 0 50px rgba(34, 197, 94, 0.05);
+  }
+  50% {
+    box-shadow:
+      inset 0 0 30px rgba(34, 197, 94, 0.1),
+      0 0 25px rgba(34, 197, 94, 0.25),
+      0 0 60px rgba(34, 197, 94, 0.08);
+  }
+}
+
+@keyframes hn-glow-yellow {
+  0%, 100% {
+    box-shadow:
+      inset 0 0 25px rgba(245, 158, 11, 0.07),
+      0 0 18px rgba(245, 158, 11, 0.15),
+      0 0 50px rgba(245, 158, 11, 0.05);
+  }
+  50% {
+    box-shadow:
+      inset 0 0 30px rgba(245, 158, 11, 0.1),
+      0 0 25px rgba(245, 158, 11, 0.3),
+      0 0 60px rgba(245, 158, 11, 0.08);
+  }
+}
+
+@keyframes hn-glow-red {
+  0%, 100% {
+    box-shadow:
+      inset 0 0 30px rgba(239, 68, 68, 0.08),
+      0 0 20px rgba(239, 68, 68, 0.2),
+      0 0 60px rgba(239, 68, 68, 0.06);
+  }
+  50% {
+    box-shadow:
+      inset 0 0 35px rgba(239, 68, 68, 0.12),
+      0 0 30px rgba(239, 68, 68, 0.35),
+      0 0 70px rgba(239, 68, 68, 0.1);
+  }
+}
+
+/* ---- heynotai Badge (top-left of video) ---- */
+#heynotai-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px 7px 10px;
+  border-radius: 20px;
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  cursor: pointer;
+  backdrop-filter: blur(12px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: auto;
+  user-select: none;
+  opacity: 0;
+  transform: translateY(-6px);
+  animation: hn-badge-enter 0.4s 0.3s ease forwards;
+}
+
+@keyframes hn-badge-enter {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+#heynotai-badge:hover {
+  transform: scale(1.04);
+  filter: brightness(1.1);
+}
+
+#heynotai-badge .hn-badge-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Badge states */
+#heynotai-badge.hn-scanning {
+  background: rgba(30, 30, 50, 0.75);
+  color: rgba(180, 180, 255, 0.95);
+  border: 1px solid rgba(120, 120, 255, 0.25);
+}
+#heynotai-badge.hn-scanning .hn-badge-dot {
+  background: rgba(120, 120, 255, 0.9);
+  animation: hn-dot-pulse 1.2s ease-in-out infinite;
+}
+
+#heynotai-badge.hn-authentic {
+  background: rgba(10, 40, 20, 0.78);
+  color: rgba(134, 239, 172, 0.95);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+#heynotai-badge.hn-authentic .hn-badge-dot {
+  background: #22c55e;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.5);
+}
+
+#heynotai-badge.hn-suspicious {
+  background: rgba(50, 35, 10, 0.78);
+  color: rgba(253, 224, 137, 0.95);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+#heynotai-badge.hn-suspicious .hn-badge-dot {
+  background: #f59e0b;
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.5);
+  animation: hn-dot-pulse 2s ease-in-out infinite;
+}
+
+#heynotai-badge.hn-ai-generated {
+  background: rgba(55, 15, 15, 0.8);
+  color: rgba(252, 165, 165, 0.95);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+#heynotai-badge.hn-ai-generated .hn-badge-dot {
+  background: #ef4444;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+  animation: hn-dot-pulse 1s ease-in-out infinite;
+}
+
+@keyframes hn-dot-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.35); opacity: 0.7; }
+}
+
+/* ---- Backdrop ---- */
+#heynotai-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999999;
+  background: rgba(8, 8, 14, 0.48);
+  backdrop-filter: blur(6px) saturate(1.1);
+  -webkit-backdrop-filter: blur(6px) saturate(1.1);
+  opacity: 0;
+  animation: hn-backdrop-in 0.35s ease forwards;
+  pointer-events: auto;
+}
+#heynotai-backdrop.hn-closing {
+  animation: hn-backdrop-out 0.3s ease forwards;
+}
+@keyframes hn-backdrop-in {
+  to { opacity: 1; }
+}
+@keyframes hn-backdrop-out {
+  to { opacity: 0; }
+}
+
+/* ---- Detail Panel (full-height drawer sliding from right) ---- */
+#heynotai-detail-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10000000;
+  width: min(420px, 92vw);
+  height: 100vh;
+  background: #F8F4EC;
+  border-left: 1px solid #D9D2C7;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  color: #2A1F12;
+  overflow-y: auto;
+  overflow-x: hidden;
+  pointer-events: auto;
+  box-shadow: -24px 0 60px rgba(0, 0, 0, 0.35), -4px 0 12px rgba(0, 0, 0, 0.18);
+  transform: translateX(100%);
+  opacity: 0;
+  animation: hn-panel-open 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: transform, opacity;
+}
+
+@keyframes hn-panel-open {
+  0%   { transform: translateX(100%) scale(0.98); opacity: 0; filter: blur(6px); }
+  60%  { opacity: 1; filter: blur(0); }
+  100% { transform: translateX(0) scale(1); opacity: 1; filter: blur(0); }
+}
+
+#heynotai-detail-panel.hn-closing {
+  animation: hn-panel-close 0.32s cubic-bezier(0.5, 0, 0.75, 0) forwards;
+}
+
+@keyframes hn-panel-close {
+  0%   { transform: translateX(0); opacity: 1; }
+  100% { transform: translateX(100%); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #heynotai-detail-panel,
+  #heynotai-detail-panel.hn-closing,
+  #heynotai-backdrop,
+  #heynotai-backdrop.hn-closing {
+    animation-duration: 0.01ms !important;
+  }
+}
+
+.hn-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #D9D2C7;
+  position: sticky;
+  top: 0;
+  background: #F8F4EC;
+  z-index: 2;
+}
+
+.hn-panel-header .hn-logo-text {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: #2A1F12;
+}
+
+.hn-panel-header .hn-logo-text .hn-icon {
+  width: 20px;
+  height: 20px;
+  color: #B24A1B;
+}
+
+/* Animated wordmark inside the panel header — mirrors the marketing
+   site's Logo: holds "heynotai" on mount, then collapses `[not]` and
+   draws a strike across `ai`. Hovering the closed wordmark re-opens
+   it (max-width restores, strike undraws right-to-left). */
+.hn-logo-word {
+  display: inline-flex;
+  align-items: baseline;
+  line-height: 1.1;
+  letter-spacing: -0.2px;
+  color: inherit;
+}
+.hn-logo-hey,
+.hn-logo-not,
+.hn-logo-ai {
+  display: inline-block;
+  white-space: pre;
+}
+
+.hn-logo-not {
+  overflow: hidden;
+  max-width: 3em;
+  transition: max-width 0.55s cubic-bezier(0.6, 0, 0.3, 1);
+}
+.hn-logo-not-inner {
+  display: inline-block;
+  transform-origin: center;
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  transition:
+    opacity 0.35s ease-out,
+    transform 0.35s ease-out;
+}
+.hn-logo-word.is-closed .hn-logo-not {
+  max-width: 0;
+}
+.hn-logo-word.is-closed .hn-logo-not-inner {
+  opacity: 0;
+  transform: scale(0.3) translateY(-3px);
+}
+.hn-logo-word.is-closed:hover .hn-logo-not {
+  max-width: 3em;
+}
+.hn-logo-word.is-closed:hover .hn-logo-not-inner {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+
+.hn-logo-ai { position: relative; }
+.hn-logo-strike {
+  position: absolute;
+  left: -3px;
+  right: -3px;
+  top: 50%;
+  height: 2.5px;
+  border-radius: 2px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklch, #B24A1B 45%, transparent) 0%,
+    #B24A1B 10%,
+    #B24A1B 88%,
+    color-mix(in oklch, #B24A1B 55%, transparent) 100%
+  );
+  filter: drop-shadow(
+    0 0.5px 0 color-mix(in oklch, #B24A1B 35%, transparent)
+  );
+  transform-origin: right center;
+  transform: translateY(-50%) scaleX(0) rotate(-1.4deg);
+  opacity: 0;
+}
+html[dark] .hn-logo-strike {
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklch, #d4795a 45%, transparent) 0%,
+    #d4795a 10%,
+    #d4795a 88%,
+    color-mix(in oklch, #d4795a 55%, transparent) 100%
+  );
+  filter: drop-shadow(
+    0 0.5px 0 color-mix(in oklch, #d4795a 35%, transparent)
+  );
+}
+
+.hn-logo-word.is-closed .hn-logo-strike {
+  animation: hn-logo-strike-draw 0.45s cubic-bezier(0.45, 0.05, 0.25, 1) forwards;
+}
+
+@keyframes hn-logo-strike-draw {
+  0%   { transform: translateY(-54%) scaleX(0)    rotate(-3.4deg); opacity: 0;    }
+  6%   { transform: translateY(-50%) scaleX(0.04) rotate(-2.8deg); opacity: 0.55; }
+  18%  { transform: translateY(-47%) scaleX(0.18) rotate(-2.1deg); opacity: 0.88; }
+  34%  { transform: translateY(-52%) scaleX(0.38) rotate(-1.2deg); opacity: 1;    }
+  52%  { transform: translateY(-48%) scaleX(0.6)  rotate(-0.4deg); opacity: 1;    }
+  68%  { transform: translateY(-52%) scaleX(0.78) rotate(-1.1deg); opacity: 1;    }
+  82%  { transform: translateY(-49%) scaleX(0.94) rotate(-1.7deg); opacity: 1;    }
+  92%  { transform: translateY(-50.5%) scaleX(1.07) rotate(-0.8deg); opacity: 1;  }
+  100% { transform: translateY(-50%) scaleX(1)    rotate(-1.2deg); opacity: 1;    }
+}
+
+.hn-logo-word.is-closed:hover .hn-logo-strike {
+  animation: hn-logo-strike-undraw 0.22s cubic-bezier(0.55, 0, 0.5, 1) forwards;
+}
+
+@keyframes hn-logo-strike-undraw {
+  0%   { transform: translateY(-50%) scaleX(1)    rotate(-1.2deg); opacity: 1;    }
+  35%  { transform: translateY(-49%) scaleX(0.72) rotate(-1.6deg); opacity: 1;    }
+  70%  { transform: translateY(-51%) scaleX(0.32) rotate(-2.3deg); opacity: 0.85; }
+  100% { transform: translateY(-52%) scaleX(0)    rotate(-2.8deg); opacity: 0;    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hn-logo-not,
+  .hn-logo-not-inner,
+  .hn-logo-strike {
+    transition: none;
+    animation: none;
+  }
+  .hn-logo-word.is-closed .hn-logo-not { max-width: 0; }
+  .hn-logo-word.is-closed .hn-logo-not-inner { opacity: 0; }
+  .hn-logo-word.is-closed .hn-logo-strike {
+    transform: translateY(-50%) scaleX(1) rotate(-1.2deg);
+    opacity: 1;
+  }
+}
+
+.hn-panel-close-btn {
+  background: #EEEAD2;
+  border: none;
+  color: #6D6050;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+.hn-panel-close-btn svg {
+  width: 14px;
+  height: 14px;
+}
+.hn-panel-close-btn:hover {
+  background: #E4DFD0;
+  color: #2A1F12;
+}
+
+.hn-panel-body {
+  padding: 22px 24px 28px;
+}
+
+.hn-panel-verdict {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.hn-verdict-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.hn-verdict-icon svg {
+  width: 20px;
+  height: 20px;
+}
+.hn-verdict-icon.hn-green { background: #E4F3EA; color: #1A7D3F; }
+.hn-verdict-icon.hn-yellow { background: #FBF2DC; color: #8B5A08; }
+.hn-verdict-icon.hn-red { background: #FCEAEA; color: #B42020; }
+
+.hn-verdict-text h3 {
+  margin: 0 0 2px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #2A1F12;
+}
+.hn-verdict-text p {
+  margin: 0;
+  font-size: 13px;
+  color: #6D6050;
+  line-height: 1.35;
+}
+
+/* Trust Score Bar */
+.hn-trust-section {
+  margin-bottom: 14px;
+}
+
+.hn-trust-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 12px;
+  color: #6D6050;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.hn-trust-score-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: #2A1F12;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.hn-trust-bar {
+  width: 100%;
+  height: 6px;
+  background: #E2DDD5;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.hn-trust-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.hn-trust-bar-fill.hn-green { background: #1A7D3F; }
+.hn-trust-bar-fill.hn-yellow { background: #B07A0A; }
+.hn-trust-bar-fill.hn-red { background: #B42020; }
+
+/* Detection Details List */
+.hn-details-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.hn-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  padding: 8px 0;
+  border-bottom: 1px solid #E8E3DA;
+}
+.hn-detail-row:last-child { border-bottom: none; }
+
+.hn-detail-label {
+  color: #6D6050;
+}
+.hn-detail-value {
+  color: #2A1F12;
+  font-weight: 600;
+}
+
+/* ---- Dark mode (YouTube dark theme) ---- */
+html[dark] #heynotai-detail-panel {
+  background: #141414;
+  border-left-color: #2a2a2a;
+  color: #e8e8e8;
+  box-shadow: -30px 0 80px rgba(0, 0, 0, 0.65), -6px 0 16px rgba(0, 0, 0, 0.4);
+}
+html[dark] .hn-panel-header {
+  border-bottom-color: #2a2a2a;
+  background: #141414;
+}
+html[dark] .hn-panel-header .hn-logo-text {
+  color: #e8e8e8;
+}
+html[dark] .hn-panel-header .hn-logo-text .hn-icon {
+  color: #d4795a;
+}
+html[dark] .hn-panel-close-btn {
+  background: #2e2e2e;
+  color: #aaa;
+}
+html[dark] .hn-panel-close-btn:hover {
+  background: #3a3a3a;
+  color: #e8e8e8;
+}
+html[dark] .hn-verdict-icon.hn-green { background: rgba(34, 197, 94, 0.15); color: #4ade80; }
+html[dark] .hn-verdict-icon.hn-yellow { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+html[dark] .hn-verdict-icon.hn-red { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+html[dark] .hn-verdict-text h3 {
+  color: #e8e8e8;
+}
+html[dark] .hn-verdict-text p {
+  color: #aaa;
+}
+html[dark] .hn-trust-label {
+  color: #aaa;
+}
+html[dark] .hn-trust-score-value {
+  color: #e8e8e8;
+}
+html[dark] .hn-trust-bar {
+  background: #3a3a3a;
+}
+html[dark] .hn-trust-bar-fill.hn-green { background: #22c55e; }
+html[dark] .hn-trust-bar-fill.hn-yellow { background: #f59e0b; }
+html[dark] .hn-trust-bar-fill.hn-red { background: #ef4444; }
+html[dark] .hn-detail-row {
+  border-bottom-color: #333;
+}
+html[dark] .hn-detail-label {
+  color: #aaa;
+}
+html[dark] .hn-detail-value {
+  color: #e8e8e8;
+}
+
+/* Ensure video player container is positioned for overlay */
+.hn-video-container-positioned {
+  position: relative !important;
+}
+
+/* ---- Fade-out for authentic videos (auto-hide after 3s) ---- */
+#heynotai-border.hn-hidden,
+#heynotai-badge.hn-hidden {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity 0.6s ease !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #heynotai-border.hn-hidden,
+  #heynotai-badge.hn-hidden {
+    transition-duration: 0.01ms !important;
+  }
+}

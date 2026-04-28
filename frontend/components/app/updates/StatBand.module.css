@@ -1,0 +1,57 @@
+/* Three-up label/value strip used by product updates to advertise the
+   shape of a change ("1-click", "Pooled", "Free"). Sits inside a sunken
+   inset that matches the model preview / accuracy compare chrome so the
+   variant slots all read as part of the card body. */
+.band {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 12px 16px;
+  background: var(--color-surface-sunken);
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.value {
+  font-family: var(--font-sans);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1;
+  color: var(--color-fg);
+  font-variant-numeric: tabular-nums;
+}
+
+.value[data-tone="up"]   { color: var(--color-cta); }
+.value[data-tone="down"] { color: var(--color-strike); }
+
+.label {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.divider {
+  width: 1px;
+  align-self: stretch;
+  background: var(--color-line);
+  flex-shrink: 0;
+}
+
+@media (max-width: 540px) {
+  .band {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .divider { display: none; }
+}

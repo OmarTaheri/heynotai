@@ -1,0 +1,20 @@
+{
+  "name": "heynotai",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev:frontend": "pnpm --filter @heynotai/frontend dev",
+    "dev:extension": "pnpm --filter @heynotai/extension dev",
+    "dev:api": "pnpm --filter @heynotai/api dev",
+    "build:frontend": "pnpm --filter @heynotai/frontend build",
+    "build:extension": "pnpm --filter @heynotai/extension build",
+    "build:api": "pnpm --filter @heynotai/api build",
+    "typecheck": "pnpm -r --parallel typecheck",
+    "pb:up": "docker-compose up -d pocketbase",
+    "pb:down": "docker-compose down"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  },
+  "packageManager": "pnpm@9.15.0"
+}

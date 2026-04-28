@@ -1,0 +1,28 @@
+/* ─────────────────────────────────────────────
+   /app stylesheet entry point.
+   Each file owns one concern; this index just
+   pulls them in. Import order matters only when
+   two files target the same selector — which they
+   shouldn't, since each owns a disjoint slice.
+
+   Sidebar and NotificationsDrawer have migrated
+   to co-located CSS Modules (next to their
+   components). Their styles are no longer imported
+   here — Next.js ships them alongside the route
+   that renders the component.
+   ───────────────────────────────────────────── */
+@import "./loader.css";
+@import "./shell.css";
+@import "./page.css";
+@import "./login.css";
+@import "./home.css";
+@import "./library.css";
+@import "./collections.css";
+@import "./monitors.css";
+@import "./models.css";
+@import "./team.css";
+@import "./reports.css";
+@import "./updates.css";
+@import "./settings.css";
+@import "./api.css";
+@import "./extension.css";

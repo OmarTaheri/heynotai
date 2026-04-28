@@ -1,0 +1,29 @@
+/* The timeline owns the vertical rail. The rail is a 1px line drawn
+   under the marker column (left: 16px = half of the 32px gutter) so
+   every UpdateCard / DayMarker bead sits on it cleanly. */
+.timeline {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.timeline::before {
+  content: "";
+  position: absolute;
+  left: 16px;
+  top: 14px;
+  bottom: 14px;
+  width: 1px;
+  background: var(--color-line);
+}
+
+.empty {
+  padding: 60px 24px;
+  text-align: center;
+  color: var(--color-fg-mid);
+  font-size: 13.5px;
+  background: var(--color-surface);
+  border: 1px dashed var(--color-line-strong);
+  border-radius: 14px;
+}

@@ -1,0 +1,57 @@
+.wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 24px;
+  border-radius: 5px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  flex-shrink: 0;
+  border: 1px solid transparent;
+}
+
+.text {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--color-fg);
+  letter-spacing: 0.02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.pdf {
+  background: color-mix(in oklch, var(--color-ai-soft) 65%, transparent);
+  color: var(--color-ai-ink);
+  border-color: color-mix(in oklch, var(--color-ai) 28%, transparent);
+}
+
+.link {
+  background: color-mix(in oklch, var(--color-accent-soft) 70%, transparent);
+  color: var(--color-accent-ink);
+  border-color: color-mix(in oklch, var(--color-accent) 28%, transparent);
+}
+
+.team {
+  background: color-mix(in oklch, var(--color-human-soft) 65%, transparent);
+  color: var(--color-human-ink);
+  border-color: color-mix(in oklch, var(--color-human) 28%, transparent);
+}
+
+.csv {
+  background: color-mix(in oklch, var(--color-gold-soft) 35%, transparent);
+  color: var(--color-gold-ink);
+  border-color: color-mix(in oklch, var(--color-gold) 35%, transparent);
+}

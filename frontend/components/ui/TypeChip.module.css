@@ -1,0 +1,99 @@
+/* Square chip — base media (txt/img/aud/vid/web/soc) uses a subtle
+   tinted treatment; platform variants (fb-/ig-/yt-) use full brand
+   color so they read instantly as Facebook / Instagram / YouTube. */
+.chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  flex-shrink: 0;
+  border: 1px solid transparent;
+}
+
+.md {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  font-size: 9px;
+}
+
+.lg {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  font-size: 11px;
+}
+
+.txt {
+  background: color-mix(in oklch, var(--color-mixed) 18%, var(--color-surface-alt));
+  color: var(--color-mixed);
+  border-color: color-mix(in oklch, var(--color-mixed) 22%, transparent);
+}
+
+.img {
+  background: color-mix(in oklch, var(--color-human) 18%, var(--color-surface-alt));
+  color: var(--color-human);
+  border-color: color-mix(in oklch, var(--color-human) 22%, transparent);
+}
+
+.aud {
+  background: color-mix(in oklch, var(--color-gold) 22%, var(--color-surface-alt));
+  color: var(--color-gold-soft);
+  border-color: color-mix(in oklch, var(--color-gold) 28%, transparent);
+}
+
+.vid {
+  background: color-mix(in oklch, var(--color-strike) 16%, var(--color-surface-alt));
+  color: oklch(0.78 0.16 27);
+  border-color: color-mix(in oklch, var(--color-strike) 22%, transparent);
+}
+
+.web {
+  background: color-mix(in oklch, var(--color-info) 18%, var(--color-surface-alt));
+  color: var(--color-info);
+  border-color: color-mix(in oklch, var(--color-info) 22%, transparent);
+}
+
+/* Social — tinted with the same purple family as TXT but shifted toward
+   --color-mixed-ink so it reads as a sibling, not a duplicate. */
+.soc {
+  background: color-mix(in oklch, var(--color-mixed) 22%, var(--color-surface-alt));
+  color: var(--color-mixed-ink);
+  border-color: color-mix(in oklch, var(--color-mixed) 32%, transparent);
+}
+
+/* Platform variants share a treatment: solid brand fill, white glyph,
+   matching darker border. The --p custom property lets each platform
+   set its color once. */
+.fb-vid,
+.fb-reel,
+.fb-post,
+.ig-reel,
+.ig-post-img,
+.ig-post-vid,
+.yt-vid,
+.yt-reel {
+  background: var(--p);
+  color: #ffffff;
+  border-color: color-mix(in oklch, var(--p) 80%, #000);
+}
+
+.fb-vid,
+.fb-reel,
+.fb-post {
+  --p: var(--color-facebook);
+}
+
+.ig-reel,
+.ig-post-img,
+.ig-post-vid {
+  --p: var(--color-instagram);
+}
+
+.yt-vid,
+.yt-reel {
+  --p: var(--color-youtube);
+}

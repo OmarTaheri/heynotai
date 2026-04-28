@@ -1,0 +1,16 @@
+/* Soft icon-in-square — used as the "what is this surface" mark on
+   drop zones, empty states, settings cards, etc. */
+.tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-line);
+  color: var(--color-fg-mid);
+  flex-shrink: 0;
+}
+
+.sm { width: 32px; height: 32px; border-radius: 8px; }
+.md { width: 44px; height: 44px; border-radius: 10px; }
+.lg { width: 56px; height: 56px; border-radius: 14px; }

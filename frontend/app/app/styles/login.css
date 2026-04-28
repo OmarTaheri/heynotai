@@ -1,0 +1,95 @@
+/* ─────────────────────────────────────────────
+   Login page — full-screen card on a quiet aurora
+   backdrop. Mostly used by the legacy /app/login
+   redirect; the modal on the marketing home is the
+   primary login surface now.
+   ───────────────────────────────────────────── */
+
+.login-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--color-bg);
+  position: relative;
+  overflow: hidden;
+}
+
+/* A very faint version of the marketing aurora so the login page reads
+   as part of the same product but doesn't compete with the form. */
+.login-aurora {
+  position: absolute;
+  inset: -10% -20% 0% -20%;
+  z-index: 0;
+  pointer-events: none;
+  filter: blur(120px);
+  opacity: 0.45;
+  background:
+    radial-gradient(ellipse 40% 40% at 30% 30%, oklch(0.55 0.2 250 / 0.5), transparent 70%),
+    radial-gradient(ellipse 35% 35% at 75% 60%, oklch(0.6 0.18 235 / 0.45), transparent 70%);
+}
+
+.login-card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 420px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line-strong);
+  border-radius: 22px;
+  padding: 34px 32px 28px;
+  box-shadow: var(--shadow-elevated);
+}
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+
+.login-title {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--color-fg);
+  letter-spacing: -0.3px;
+  text-align: center;
+}
+
+.login-sub {
+  font-size: 13.5px;
+  color: var(--color-fg-mid);
+  text-align: center;
+  margin-top: 6px;
+}
+
+.login-hint {
+  margin-top: 18px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--color-surface-alt);
+  border: 1px dashed var(--color-line-strong);
+  font-size: 12px;
+  color: var(--color-fg-mid);
+  font-family: var(--font-mono);
+  line-height: 1.6;
+  text-align: center;
+}
+
+.login-hint strong {
+  color: var(--color-fg);
+  font-weight: 600;
+}
+
+.login-error {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: color-mix(in oklch, var(--color-ai-soft) 80%, transparent);
+  border: 1px solid color-mix(in oklch, var(--color-ai) 28%, transparent);
+  color: var(--color-ai-ink);
+  font-size: 12.5px;
+  text-align: center;
+}

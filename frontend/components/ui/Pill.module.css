@@ -1,0 +1,89 @@
+/* Inline status pill used for verdict labels, tags, and small chips.
+   Tone classes pull color from the verdict palette so they're visually
+   consistent across the app + the extension popup. */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  letter-spacing: -0.1px;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  flex-shrink: 0;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.compact {
+  padding: 3px 8px;
+  font-size: 11px;
+}
+
+.ai {
+  color: var(--color-ai-ink);
+  background: color-mix(in oklch, var(--color-ai-soft) 70%, transparent);
+  border-color: color-mix(in oklch, var(--color-ai) 28%, transparent);
+}
+
+.human {
+  color: var(--color-human-ink);
+  background: color-mix(in oklch, var(--color-human-soft) 70%, transparent);
+  border-color: color-mix(in oklch, var(--color-human) 28%, transparent);
+}
+
+.mixed {
+  color: var(--color-mixed-ink);
+  background: color-mix(in oklch, var(--color-mixed-soft) 70%, transparent);
+  border-color: color-mix(in oklch, var(--color-mixed) 28%, transparent);
+}
+
+.info {
+  color: var(--color-accent-ink);
+  background: color-mix(in oklch, var(--color-accent-soft) 70%, transparent);
+  border-color: color-mix(in oklch, var(--color-accent) 28%, transparent);
+}
+
+.warn {
+  color: var(--color-warn);
+  background: color-mix(in oklch, var(--color-gold) 18%, transparent);
+  border-color: color-mix(in oklch, var(--color-gold) 35%, transparent);
+}
+
+.neutral {
+  color: var(--color-fg-mid);
+  background: var(--color-surface-alt);
+  border-color: var(--color-line);
+}
+
+/* Bring-your-own-key — purple, distinguishes from the blue `info` so a
+   row carrying both badges still reads two distinct things. */
+.byok {
+  color: var(--color-mixed-ink);
+  background: color-mix(in oklch, var(--color-mixed-soft) 70%, transparent);
+  border-color: color-mix(in oklch, var(--color-mixed) 28%, transparent);
+}
+
+/* On-device / runs locally — green, signals "no data leaves device". */
+.local {
+  color: var(--color-human-ink);
+  background: color-mix(in oklch, var(--color-human-soft) 70%, transparent);
+  border-color: color-mix(in oklch, var(--color-human) 28%, transparent);
+}
+
+/* Premium tier (Team plan, Enterprise) — gold, used on locked rows and
+   the upgrade button bg. */
+.gold {
+  color: var(--color-gold-ink);
+  background: color-mix(in oklch, var(--color-gold-soft) 35%, transparent);
+  border-color: color-mix(in oklch, var(--color-gold) 35%, transparent);
+}

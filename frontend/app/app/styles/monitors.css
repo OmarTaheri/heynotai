@@ -1,0 +1,590 @@
+/* ─────────────────────────────────────────────
+   Monitors — automated-watch dashboard. Same dark
+   surface, tokens, and chrome as the rest of /app.
+   Reuses ui/{Card, Pill, Button, SectionHead,
+   StatusDot, Sparkline} for everything that's
+   shared; this file is layout glue + a couple of
+   tiny page-only flourishes (live bar, alert row
+   grid, monitor card composition, templates grid,
+   plan upsell).
+   ───────────────────────────────────────────── */
+
+.monitors {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ── Live status bar ─────────────────────────── */
+.mon-live {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 14px;
+  padding: 14px 18px;
+  gap: 12px;
+}
+
+.mon-live-l {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.mon-live-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-fg);
+  letter-spacing: -0.2px;
+}
+
+.mon-live-text em {
+  font-style: normal;
+  font-weight: 500;
+  color: var(--color-fg-mid);
+}
+
+.mon-live-meta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.04em;
+  border-left: 1px solid var(--color-line);
+  padding-left: 14px;
+}
+
+.mon-live-r {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.mon-live-btn {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-fg-mid);
+  background: transparent;
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  padding: 7px 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.mon-live-btn:hover {
+  color: var(--color-fg);
+  border-color: var(--color-line-strong);
+  background: var(--color-surface-alt);
+}
+
+/* ── Recent alerts ───────────────────────────── */
+.mon-alert-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mon-alert {
+  display: grid;
+  grid-template-columns: 32px 1fr auto auto;
+  gap: 14px;
+  align-items: center;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-left: 3px solid var(--color-strike);
+  border-radius: 10px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease,
+    box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.mon-alert:hover {
+  border-color: var(--color-line-strong);
+  border-left-color: var(--color-strike);
+  background: var(--color-surface-alt);
+  transform: translateX(2px);
+  box-shadow: var(--shadow-soft);
+}
+
+.mon-alert-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in oklch, var(--color-strike) 18%, transparent);
+  color: var(--color-strike);
+  border: 1px solid color-mix(in oklch, var(--color-strike) 28%, transparent);
+}
+
+.mon-alert-body { min-width: 0; }
+
+.mon-alert-title {
+  font-size: 13.5px;
+  color: var(--color-fg);
+  font-weight: 600;
+  line-height: 1.3;
+  margin-bottom: 3px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mon-alert-from {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--color-fg-mid);
+  background: var(--color-surface-alt);
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: 1px solid var(--color-line);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.mon-alert-meta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mon-alert-time {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-fg-dim);
+  text-align: right;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+
+@media (max-width: 720px) {
+  .mon-alert {
+    grid-template-columns: 32px 1fr auto;
+    gap: 10px;
+  }
+  .mon-alert > *:nth-child(3) { display: none; }
+}
+
+/* ── Active monitor list ─────────────────────── */
+.mon-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.mon-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 14px;
+  overflow: hidden;
+  transition: border-color 0.18s ease, transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.mon-card:hover {
+  border-color: var(--color-line-strong);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-soft);
+}
+
+.mon-card-paused { opacity: 0.6; }
+
+.mon-card-head {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 18px;
+}
+
+.mon-card:not(.mon-card-paused) .mon-card-head {
+  border-bottom: 1px solid var(--color-line);
+}
+
+/* Type tile (square brand-coloured icon) */
+.mon-fav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  flex-shrink: 0;
+  color: #fff;
+}
+
+.mon-fav-youtube  { background: #FF0000; }
+.mon-fav-x        { background: #0F1419; }
+.mon-fav-rss      { background: linear-gradient(135deg, #F26522, #E76F00); }
+.mon-fav-folder   { background: linear-gradient(135deg, #F4B400, #DB9C00); color: #5A3F00; }
+.mon-fav-url      { background: linear-gradient(135deg, color-mix(in oklch, var(--color-human) 70%, #1c1f25), var(--color-human)); }
+.mon-fav-telegram { background: #229ED9; }
+
+.mon-card-info { min-width: 0; }
+
+.mon-card-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-fg);
+  letter-spacing: -0.2px;
+  line-height: 1.25;
+  margin-bottom: 3px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Tiny mono uppercase chip — same recipe as alert-from but with a
+   neutral palette. Reused by templates would-be type label too. */
+.mon-card-type {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: var(--color-surface-alt);
+  color: var(--color-fg-mid);
+  border: 1px solid var(--color-line);
+  border-radius: 4px;
+  padding: 2px 7px;
+  flex-shrink: 0;
+}
+
+.mon-card-target {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mon-card-actions { display: inline-flex; gap: 4px; }
+
+.mon-card-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  border: 1px solid var(--color-line);
+  background: transparent;
+  color: var(--color-fg-dim);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font: inherit;
+  transition: border-color 0.12s ease, color 0.12s ease, background 0.12s ease;
+}
+
+.mon-card-btn:hover {
+  border-color: var(--color-line-strong);
+  color: var(--color-fg);
+  background: var(--color-surface-alt);
+}
+
+/* ── Card body — 4 stats + sparkline ─────────── */
+.mon-card-body {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr) 1.4fr;
+  background: var(--color-surface-sunken);
+}
+
+.mon-card-stat {
+  padding: 14px 16px;
+  border-right: 1px solid var(--color-line);
+  min-width: 0;
+}
+
+.mon-card-stat:last-of-type { border-right: 1px solid var(--color-line); }
+
+.mon-card-stat-lbl {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.mon-card-stat-val {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--color-fg);
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 3px;
+}
+
+.mon-card-stat-val-accent { color: var(--color-strike); }
+
+.mon-card-stat-val-sm {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.mon-card-stat-sub {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.01em;
+}
+
+.mon-card-spark {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+@media (max-width: 1100px) {
+  .mon-card-head { grid-template-columns: auto 1fr auto; }
+  .mon-card-actions { display: none; }
+  .mon-card-body {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .mon-card-stat { border-bottom: 1px solid var(--color-line); }
+  .mon-card-stat:nth-child(2n) { border-right: none; }
+  .mon-card-spark {
+    grid-column: 1 / -1;
+    border-top: 1px solid var(--color-line);
+  }
+}
+
+/* ── Create monitor / templates ─────────────── */
+.mon-create {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 14px;
+  padding: 28px;
+  position: relative;
+  overflow: hidden;
+}
+
+.mon-create::before {
+  content: "";
+  position: absolute;
+  top: -120px;
+  right: -120px;
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(
+    circle,
+    color-mix(in oklch, var(--color-accent) 14%, transparent),
+    transparent 70%
+  );
+  pointer-events: none;
+}
+
+.mon-create-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  position: relative;
+}
+
+.mon-create-title {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--color-fg);
+  letter-spacing: -0.3px;
+}
+
+.mon-create-title em {
+  font-style: normal;
+  font-weight: 500;
+  color: var(--color-fg-mid);
+}
+
+.mon-create-sub {
+  font-size: 13.5px;
+  color: var(--color-fg-mid);
+  margin-bottom: 22px;
+  max-width: 540px;
+  line-height: 1.5;
+  position: relative;
+}
+
+.mon-tpl-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.mon-tpl {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-line);
+  border-radius: 10px;
+  background: var(--color-surface-sunken);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  color: var(--color-fg);
+  transition: border-color 0.15s ease, transform 0.15s ease,
+    background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.mon-tpl:hover {
+  border-color: var(--color-line-strong);
+  background: var(--color-surface-alt);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-soft);
+}
+
+.mon-tpl-info { min-width: 0; }
+
+.mon-tpl-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-fg);
+  line-height: 1.2;
+  margin-bottom: 2px;
+}
+
+.mon-tpl-desc {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.01em;
+}
+
+.mon-create-divider {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 22px 0 16px;
+  position: relative;
+}
+
+.mon-create-divider::before,
+.mon-create-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--color-line);
+}
+
+.mon-create-divider span {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.mon-url-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  background: var(--color-surface-sunken);
+  border: 1px solid var(--color-line-strong);
+  border-radius: 10px;
+  padding: 6px;
+  position: relative;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.mon-url-bar:focus-within {
+  border-color: color-mix(in oklch, var(--color-accent) 60%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--color-accent) 18%, transparent);
+}
+
+.mon-url-bar input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 8px 12px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--color-fg);
+  outline: none;
+  min-width: 0;
+}
+
+.mon-url-bar input::placeholder {
+  color: var(--color-fg-dim);
+  font-family: var(--font-sans);
+}
+
+/* ── Plan upsell ─────────────────────────────── */
+.mon-plan {
+  margin-top: 12px;
+  padding: 18px 20px;
+  background: linear-gradient(
+    135deg,
+    var(--color-surface-alt),
+    var(--color-surface)
+  );
+  border: 1px solid var(--color-line);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.mon-plan-l {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.mon-plan-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--color-fg);
+  color: var(--color-bg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.mon-plan-text {
+  font-size: 13px;
+  color: var(--color-fg-mid);
+  line-height: 1.5;
+}
+
+.mon-plan-text strong {
+  color: var(--color-fg);
+  font-weight: 600;
+}
+
+.mon-plan-text em {
+  font-style: normal;
+  font-weight: 600;
+  color: color-mix(in oklch, var(--color-accent-ink) 80%, var(--color-fg));
+}

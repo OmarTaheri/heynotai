@@ -1,0 +1,50 @@
+/* Mini document thumbnail. Folded-corner rendered with a layered
+   background so we don't need an extra DOM node. */
+.icon {
+  position: relative;
+  width: 44px;
+  height: 56px;
+  border-radius: 6px;
+  background:
+    linear-gradient(225deg, var(--color-surface-alt) 50%, transparent 50%) top right /
+      10px 10px no-repeat,
+    var(--color-surface);
+  border: 1px solid var(--color-line);
+  padding: 6px 5px 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+}
+
+.line {
+  height: 2px;
+  border-radius: 1px;
+  background: var(--color-fg-dim);
+  opacity: 0.45;
+}
+
+.line.short { width: 65%; }
+.line.med { width: 85%; }
+
+.band {
+  height: 9px;
+  border-radius: 2px;
+  margin: 1px 0;
+}
+
+.band.ai {
+  background: color-mix(in oklch, var(--color-ai-soft) 90%, transparent);
+}
+.band.human {
+  background: color-mix(in oklch, var(--color-human-soft) 90%, transparent);
+}
+.band.mixed {
+  background: color-mix(in oklch, var(--color-mixed-soft) 90%, transparent);
+}
+
+.dim {
+  opacity: 0.55;
+}

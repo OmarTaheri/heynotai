@@ -1,0 +1,92 @@
+/* ─────────────────────────────────────────────
+   Brand loader + goodbye splash
+   Both are full-screen scene-changes that own their
+   own fade-out. Token values come from globals.css.
+   ───────────────────────────────────────────── */
+
+/* ── Brand loader ─────────────────────────────
+   Cold-open splash for the dashboard. Renders the nav's Logo at "xl"
+   size and lets the Logo own its own choreography (show "heynotai",
+   hold, collapse "not" + strike "ai"). This stage only handles
+   centering and the final fade-out once the Logo's animation finishes.
+     0 – ~1.55s   Logo plays its heynotai → hey~~ai~~ animation
+     ~1.8 – 2.2s  stage fades out, dashboard appears
+   ───────────────────────────────────────────── */
+.brand-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg);
+  animation: loader-stage-out 0.35s 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Splash-sized strike: the header's 3px stroke looks too thin at 72px
+   type. Bump the height + end overshoot so the mark reads as a thick
+   pen stroke — the hand-drawn keyframes in globals.css (rotation wobble,
+   Y jitter, tapered gradient) already give it the pen feel, so here we
+   only scale the physical dimensions. */
+.brand-loader .logo-strike {
+  height: 8px;
+  left: -8px;
+  right: -8px;
+  border-radius: 4px;
+  filter: drop-shadow(0 1px 0 color-mix(in oklch, var(--color-strike) 45%, transparent));
+}
+
+/* Splash strike is faster than the header's — reads as a quick confident
+   scratch "crossing AI out" rather than a slow draw. Reuses the same
+   logo-strike-draw keyframes from globals.css, just compressed. */
+.brand-loader .logo-word.is-closed .logo-strike {
+  animation-duration: 0.26s;
+  animation-timing-function: cubic-bezier(0.3, 0.2, 0.2, 1);
+}
+
+@keyframes loader-stage-out {
+  0%   { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.02); }
+}
+
+/* ── Goodbye splash ───────────────────────────
+   Plays when the user hits "Sign out" from the sidebar profile card.
+   Same stage as .brand-loader but fades earlier — the logout flow only
+   holds for 1.7s total (set by GOODBYE_MS in lib/auth.tsx). The word
+   itself is picked at random in auth.tsx and passed in via props.
+   ───────────────────────────────────────────── */
+.goodbye-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg);
+  animation: loader-stage-out 0.35s 1.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.goodbye-word {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 72px;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: var(--color-fg);
+  animation: goodbye-word-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes goodbye-word-in {
+  0%   { opacity: 0; transform: translateY(10px) scale(0.96); filter: blur(5px); }
+  60%  { opacity: 1; filter: blur(0); }
+  100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-loader,
+  .goodbye-splash,
+  .goodbye-word {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+  }
+}

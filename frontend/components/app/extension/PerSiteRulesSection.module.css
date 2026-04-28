@@ -1,0 +1,48 @@
+.modeBar {
+  background: var(--color-surface-alt);
+  border-bottom: 1px solid var(--color-line);
+  padding: 14px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.modeBarL {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.modeQ {
+  font-size: 13px;
+  color: var(--color-fg);
+  font-weight: 600;
+}
+
+.modeHelp {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.02em;
+}
+
+.addRow {
+  padding: 14px 22px;
+  background: color-mix(in oklch, var(--color-surface-alt) 35%, transparent);
+  border-bottom: 1px solid var(--color-line);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.addInput {
+  flex: 1;
+}
+
+@media (max-width: 760px) {
+  .modeBar { padding: 12px 18px; }
+  .addRow { padding: 12px 18px; flex-wrap: wrap; }
+}

@@ -1,0 +1,17 @@
+/* Generic surface — bordered container that hosts grouped content
+   (drop area, last-scan body, activity table, etc.). Sits on the dark
+   shell; uses --color-surface so it floats above --color-bg. */
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.padded {
+  padding: 16px 18px;
+}
+
+.elevated {
+  box-shadow: var(--shadow-soft);
+}

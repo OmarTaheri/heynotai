@@ -1,0 +1,36 @@
+/* Editorial page header — eyebrow + dimmed h1 + subtitle. Mirrors
+   .home-greet-h1 so the dashboard reads as one product. No serif. */
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 640px;
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.title {
+  font-weight: 600;
+  font-size: clamp(28px, 3.4vw, 38px);
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  color: color-mix(in oklch, var(--color-fg) 55%, transparent);
+}
+
+.title em {
+  font-style: normal;
+  color: var(--color-fg);
+}
+
+.subtitle {
+  font-size: 14.5px;
+  color: var(--color-fg-mid);
+  line-height: 1.55;
+}

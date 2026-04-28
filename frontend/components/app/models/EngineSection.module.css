@@ -1,0 +1,51 @@
+/* One engine type's section. Header reuses the dashboard's
+   .section-title size (18px / 600), so headings on this page match
+   /app/library and /app home. */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-fg);
+  letter-spacing: -0.2px;
+  line-height: 1.2;
+}
+
+.meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.02em;
+}
+
+.meta strong {
+  color: var(--color-fg-mid);
+  font-weight: 600;
+}
+
+.dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--color-fg-dim);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}

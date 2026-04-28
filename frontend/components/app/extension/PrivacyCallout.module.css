@@ -1,0 +1,34 @@
+.box {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 18px 22px;
+  background: color-mix(in oklch, var(--color-human-soft) 55%, transparent);
+  border: 1px solid color-mix(in oklch, var(--color-human) 30%, transparent);
+  border-radius: 14px;
+}
+
+.icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: var(--color-surface);
+  border: 1px solid color-mix(in oklch, var(--color-human) 35%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-human-ink);
+  flex-shrink: 0;
+}
+
+.text {
+  font-size: 13px;
+  color: var(--color-human-ink);
+  line-height: 1.55;
+  margin: 0;
+}
+
+.text strong {
+  color: var(--color-fg);
+  font-weight: 700;
+}

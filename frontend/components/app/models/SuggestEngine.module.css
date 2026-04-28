@@ -1,0 +1,47 @@
+/* Quiet footer card. The gradient is a flatter take on the dashboard's
+   card surface — slight surface-alt → surface so the panel reads as a
+   different beat from the engine rows above. */
+.card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 24px;
+  align-items: center;
+  padding: 22px 24px;
+  background: linear-gradient(
+    135deg,
+    var(--color-surface-alt),
+    var(--color-surface)
+  );
+  border: 1px solid var(--color-line);
+  border-radius: 14px;
+}
+
+.copy {
+  min-width: 0;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-fg);
+  letter-spacing: -0.2px;
+  line-height: 1.2;
+  margin-bottom: 6px;
+}
+
+.body {
+  font-size: 13px;
+  color: var(--color-fg-mid);
+  line-height: 1.5;
+  max-width: 520px;
+}
+
+.action {
+  flex-shrink: 0;
+}
+
+@media (max-width: 720px) {
+  .card {
+    grid-template-columns: 1fr;
+  }
+}

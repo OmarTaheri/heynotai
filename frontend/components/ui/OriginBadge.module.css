@@ -1,0 +1,46 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: var(--color-surface-alt);
+  color: var(--color-fg-mid);
+  border: 1px solid var(--color-line);
+  flex-shrink: 0;
+}
+
+.ext {
+  background: color-mix(in oklch, var(--color-info) 16%, var(--color-surface-alt));
+  color: var(--color-info);
+  border-color: color-mix(in oklch, var(--color-info) 25%, transparent);
+}
+
+.up {
+  background: color-mix(in oklch, var(--color-gold) 18%, var(--color-surface-alt));
+  color: var(--color-gold-soft);
+  border-color: color-mix(in oklch, var(--color-gold) 30%, transparent);
+}
+
+.url {
+  background: color-mix(in oklch, var(--color-mixed) 18%, var(--color-surface-alt));
+  color: var(--color-mixed);
+  border-color: color-mix(in oklch, var(--color-mixed) 25%, transparent);
+}
+
+.mon {
+  background: color-mix(in oklch, var(--color-human) 18%, var(--color-surface-alt));
+  color: var(--color-human);
+  border-color: color-mix(in oklch, var(--color-human) 25%, transparent);
+}
+
+/* Paste-as-source — quiet warm-grey so it doesn't compete with the
+   color-coded origins above; the action itself is intrinsically neutral. */
+.paste {
+  background: color-mix(in oklch, var(--color-fg) 8%, var(--color-surface-alt));
+  color: var(--color-fg);
+  border-color: var(--color-line-strong);
+}

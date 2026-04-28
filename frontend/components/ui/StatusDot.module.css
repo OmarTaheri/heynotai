@@ -1,0 +1,39 @@
+/* Small coloured disc that signals a live state. Optional pulse ring
+   reads as "active / streaming". Tone classes ride the verdict palette
+   so the same green/amber/red language carries everywhere. */
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: currentColor;
+  position: relative;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.sm { width: 6px; height: 6px; }
+
+.ok    { color: var(--color-human); }
+.warn  { color: var(--color-warn); }
+.alert { color: var(--color-strike); }
+.muted { color: var(--color-fg-dim); }
+
+.pulse::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.25;
+  animation: status-pulse 2s ease-out infinite;
+}
+
+@keyframes status-pulse {
+  0%   { transform: scale(0.8); opacity: 0.3; }
+  100% { transform: scale(2);   opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse::after { animation: none; }
+}

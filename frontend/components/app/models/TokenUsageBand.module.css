@@ -1,0 +1,153 @@
+/* Token-usage card. Mirrors the dashboard's card surface
+   (--color-surface, 1px --color-line, radius 14) with a soft inner
+   ambient lift to read as the page's primary header card. */
+.band {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 14px;
+  padding: 20px 22px 18px;
+  box-shadow: var(--shadow-soft);
+}
+
+.head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.headLeft {
+  min-width: 0;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-fg);
+  letter-spacing: -0.2px;
+  line-height: 1.2;
+}
+
+.meta {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-fg-mid);
+  margin-top: 5px;
+  letter-spacing: 0.01em;
+}
+
+.meta strong {
+  color: var(--color-fg);
+  font-weight: 600;
+}
+
+/* Right-aligned balance block. */
+.balance {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.balanceLabel {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+
+.balanceValue {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--color-fg);
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.balanceUnit {
+  font-size: 14px;
+  color: var(--color-fg-dim);
+  font-weight: 500;
+  margin-left: 2px;
+}
+
+.balanceSub {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--color-fg-dim);
+  margin-top: 4px;
+  letter-spacing: 0.02em;
+}
+
+/* Multi-segment usage bar. The free portion is just the bare track
+   (no segment), so we don't need a fifth coloured fill. */
+.bar {
+  height: 8px;
+  background: var(--color-surface-sunken);
+  border: 1px solid var(--color-line);
+  border-radius: 5px;
+  overflow: hidden;
+  display: flex;
+  margin-bottom: 12px;
+}
+
+.segment {
+  height: 100%;
+  display: block;
+}
+
+.segment + .segment {
+  border-left: 1px solid color-mix(in oklch, var(--color-bg) 60%, transparent);
+}
+
+.segTxt {
+  background: var(--color-mixed);
+}
+
+.segImg {
+  background: var(--color-human);
+}
+
+.segAud {
+  background: var(--color-ai);
+}
+
+.segVid {
+  background: var(--color-info);
+}
+
+/* Legend row — small mono labels with a square dot leading each. */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  list-style: none;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-fg-mid);
+  letter-spacing: 0.01em;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.legendDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.legendItem strong {
+  color: var(--color-fg);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}

@@ -1,0 +1,1269 @@
+@import "tailwindcss";
+
+/* ─────────────────────────────────────────────
+   heynotai — frontend design tokens
+   Dark-first marketing surface. Shares the
+   extension's palette language (warm neutral +
+   OKLCH accents) but takes its own visual voice.
+   ───────────────────────────────────────────── */
+
+/* Values mirror extension/styles/tokens.css (body.theme-dark) so the
+   marketing site and the extension popup share one palette. The cream
+   result-strip locally overrides to the extension's light-mode values. */
+@theme {
+  --color-bg: #0f1013;
+  --color-surface: #17191e;
+  --color-surface-alt: #1c1f25;
+  --color-surface-sunken: #0b0c0f;
+  --color-card: #1c1f25;
+  --color-card-alt: #23262d;
+
+  --color-fg: #ecebe5;
+  --color-fg-mid: #a5a39a;
+  --color-fg-dim: #6d6b63;
+
+  --color-line: rgba(255, 255, 255, 0.07);
+  --color-line-strong: rgba(255, 255, 255, 0.14);
+
+  /* Warm-cream surface tokens used inside the result strip and any other
+     light-mode islands. Kept as explicit tokens (not magic hex). */
+  --color-cream-bg: #f3f0e8;
+  --color-cream-surface: #ffffff;
+  --color-cream-surface-alt: #faf8f2;
+  --color-cream-surface-sunken: #f1ede4;
+  --color-cream-fg: #1a1916;
+  --color-cream-fg-mid: #5b5749;
+  --color-cream-fg-dim: #8a8576;
+  --color-cream-line: rgba(26, 25, 22, 0.09);
+  --color-cream-line-strong: rgba(26, 25, 22, 0.16);
+
+  /* Accent family — blue, used for primary CTA + focus ring. */
+  --color-accent: oklch(0.70 0.12 265);
+  --color-accent-soft: oklch(0.26 0.05 265);
+  --color-accent-ink: oklch(0.9 0.1 265);
+
+  /* Shared verdict tokens — identical values to the extension. */
+  --color-human: oklch(0.74 0.14 165);
+  --color-human-soft: oklch(0.28 0.06 165);
+  --color-human-ink: oklch(0.88 0.10 165);
+  --color-ai: oklch(0.76 0.15 55);
+  --color-ai-soft: oklch(0.30 0.06 55);
+  --color-ai-ink: oklch(0.90 0.12 60);
+  --color-mixed: oklch(0.72 0.13 290);
+  --color-mixed-soft: oklch(0.28 0.06 290);
+  --color-mixed-ink: oklch(0.88 0.10 290);
+  --color-info: oklch(0.70 0.12 265);
+  --color-info-soft: oklch(0.26 0.05 265);
+
+  /* Yellow-green used by the frontend's primary CTA + process accent.
+     Kept distinct from --color-human (which is teal-green, 165). */
+  --color-cta: oklch(0.72 0.17 150);
+  --color-cta-deep: oklch(0.58 0.16 155);
+  --color-cta-ring: oklch(0.6 0.18 150 / 0.4);
+  --color-cta-soft: oklch(0.95 0.04 150);
+  --color-cta-ink: oklch(0.35 0.10 150);
+  --color-cta-line: oklch(0.60 0.12 150 / 0.45);
+
+  --color-gold: oklch(0.85 0.13 85);
+  --color-gold-soft: oklch(0.92 0.11 85);
+  --color-gold-ink: oklch(0.45 0.12 85);
+
+  /* Amber "needs attention" — a touch cooler than gold (hue 70 vs 85).
+     Used by the sidebar warning indicator and the notifications drawer's
+     `alert` row. Semantic token so the palette stays consistent. */
+  --color-warn: oklch(0.85 0.16 70);
+  --color-warn-soft: oklch(0.30 0.08 70);
+
+  --color-strike: oklch(0.62 0.22 27);
+
+  /* Platform brand colors — used by TypeChip variants for social-media
+     content. Saturated enough to be unmistakable as Facebook blue /
+     Instagram magenta / YouTube red, but tuned in OKLCH to sit on the
+     dark surface without vibrating. */
+  --color-facebook: oklch(0.56 0.20 260);
+  --color-instagram: oklch(0.62 0.22 350);
+  --color-youtube: oklch(0.56 0.22 25);
+
+  /* Line variants used for focus rings / elevated borders — sits between
+     --color-line (.07) and --color-line-strong (.14). */
+  --color-line-medium: rgba(255, 255, 255, 0.22);
+
+  /* Font stacks read from next/font's auto-injected CSS variables
+     (set in app/layout.tsx). Falls back to system fonts if next/font
+     fails to load — though that should never happen since the fonts
+     are self-hosted alongside the JS bundle. */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, SFMono-Regular, Menlo,
+    Consolas, monospace;
+
+  --shadow-pop: 0 20px 60px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
+
+  /* Directional shadow for right-side drawers — the offset spreads
+     leftward so the drawer reads as floating above the content it
+     covers. Matches the extension's popup chrome depth. */
+  --shadow-drawer: -24px 0 60px rgba(0, 0, 0, 0.45);
+
+  /* Elevated-card shadow for floating surfaces (auth card, result strip
+     overlay). Stronger than --shadow-pop because these sit over
+     brand-colored backdrops. */
+  --shadow-elevated: 0 30px 80px rgba(0, 0, 0, 0.45);
+
+  /* Quiet shadow under small resting elements (pills, chips). */
+  --shadow-soft: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+
+html,
+body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+*::selection {
+  background: color-mix(in oklch, var(--color-accent) 40%, transparent);
+}
+
+/* ── Brand logo: hey[not]ai with animated strike ── */
+.logo-word {
+  display: inline-flex;
+  align-items: baseline;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+  color: var(--color-fg);
+}
+
+.logo-hey,
+.logo-not,
+.logo-ai {
+  display: inline-block;
+  white-space: pre;
+}
+
+/* Logo state machine — controlled by Logo.tsx toggling `.is-closed`
+   on the wrapper after a short hold:
+     mount            → open     ("heynotai" fully visible)
+     +1s              → closed   ("not" collapses, strike draws across "ai")
+     :hover on closed → open     (temporarily re-expands)
+   "not" uses CSS transitions on max-width/opacity/transform. The strike
+   uses a multi-step keyframe animation so the draw looks pen-like
+   (slight rotation wobble and a Y-axis jitter) instead of a clean scale. */
+
+/* ── "not" word — open by default, transitions to closed. ── */
+.logo-not {
+  overflow: hidden;
+  max-width: 3em;
+  transition: max-width 0.55s cubic-bezier(0.6, 0, 0.3, 1);
+}
+
+.logo-not-inner {
+  display: inline-block;
+  transform-origin: center;
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  transition:
+    opacity 0.35s ease-out,
+    transform 0.35s ease-out;
+}
+
+.logo-word.is-closed .logo-not {
+  max-width: 0;
+}
+
+.logo-word.is-closed .logo-not-inner {
+  opacity: 0;
+  transform: scale(0.3) translateY(-3px);
+}
+
+/* Hover while closed re-opens the wordmark. */
+.logo-word.is-closed:hover .logo-not {
+  max-width: 3em;
+}
+
+.logo-word.is-closed:hover .logo-not-inner {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+
+/* ── Strike: slightly taped ends + off-axis rotation so it reads as a
+   real pen stroke rather than a clean rectangle. Default state is
+   hidden (not drawn); applying `.is-closed` triggers the draw animation,
+   and removing it (un-hover / initial open) plays the undraw. ── */
+.logo-ai {
+  position: relative;
+}
+
+.logo-strike {
+  position: absolute;
+  left: -3px;
+  right: -3px;
+  top: 50%;
+  height: 3px;
+  border-radius: 2px;
+  /* Subtle taper at each end so the stroke looks like an ink trail
+     starting and finishing rather than a block. The stroke now draws
+     right-to-left, so the RIGHT side is where the pen first touches
+     down — slightly lighter there to read as the ink "catching". */
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklch, var(--color-strike) 45%, transparent) 0%,
+    var(--color-strike) 10%,
+    var(--color-strike) 88%,
+    color-mix(in oklch, var(--color-strike) 55%, transparent) 100%
+  );
+  filter: drop-shadow(
+    0 0.5px 0 color-mix(in oklch, var(--color-strike) 35%, transparent)
+  );
+  /* Right-origin scaling: scaleX(0) collapses toward the RIGHT edge,
+     so growing to scaleX(1) reads as drawing from right to left. */
+  transform-origin: right center;
+  transform: translateY(-50%) scaleX(0) rotate(-1.4deg);
+  opacity: 0;
+}
+
+/* Draw-in: quick 0.45s pen stroke — still goes through the full set of
+   jitter/rotation keyframes so it reads as hand-drawn, just whipped
+   through at speed. */
+.logo-word.is-closed .logo-strike {
+  animation: logo-strike-draw 0.45s cubic-bezier(0.45, 0.05, 0.25, 1) forwards;
+}
+
+@keyframes logo-strike-draw {
+  0% {
+    transform: translateY(-54%) scaleX(0) rotate(-3.4deg);
+    opacity: 0;
+  }
+  6% {
+    /* pen just made contact; a tiny flat moment before it moves */
+    transform: translateY(-50%) scaleX(0.04) rotate(-2.8deg);
+    opacity: 0.55;
+  }
+  18% {
+    transform: translateY(-47%) scaleX(0.18) rotate(-2.1deg);
+    opacity: 0.88;
+  }
+  34% {
+    transform: translateY(-52%) scaleX(0.38) rotate(-1.2deg);
+    opacity: 1;
+  }
+  52% {
+    transform: translateY(-48%) scaleX(0.6) rotate(-0.4deg);
+    opacity: 1;
+  }
+  68% {
+    transform: translateY(-52%) scaleX(0.78) rotate(-1.1deg);
+    opacity: 1;
+  }
+  82% {
+    transform: translateY(-49%) scaleX(0.94) rotate(-1.7deg);
+    opacity: 1;
+  }
+  92% {
+    /* small overshoot past the left edge — the lift-off flick */
+    transform: translateY(-50.5%) scaleX(1.07) rotate(-0.8deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-50%) scaleX(1) rotate(-1.2deg);
+    opacity: 1;
+  }
+}
+
+/* Un-draw on hover — quick retract back toward the right. */
+.logo-word.is-closed:hover .logo-strike {
+  animation: logo-strike-undraw 0.22s cubic-bezier(0.55, 0, 0.5, 1) forwards;
+}
+
+@keyframes logo-strike-undraw {
+  0% {
+    transform: translateY(-50%) scaleX(1) rotate(-1.2deg);
+    opacity: 1;
+  }
+  35% {
+    transform: translateY(-49%) scaleX(0.72) rotate(-1.6deg);
+    opacity: 1;
+  }
+  70% {
+    transform: translateY(-51%) scaleX(0.32) rotate(-2.3deg);
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateY(-52%) scaleX(0) rotate(-2.8deg);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logo-not,
+  .logo-not-inner,
+  .logo-strike {
+    transition: none;
+    animation: none;
+  }
+  .logo-word.is-closed .logo-not {
+    max-width: 0;
+  }
+  .logo-word.is-closed .logo-not-inner {
+    opacity: 0;
+  }
+  .logo-word.is-closed .logo-strike {
+    transform: translateY(-50%) scaleX(1) rotate(-1.2deg);
+    opacity: 1;
+  }
+}
+
+/* ── Hero aurora backdrop (edge-to-edge blue→green bloom with drifting
+   sub-blobs and dark "holes" punched into the light) ── */
+.hero-aurora {
+  position: absolute;
+  /* Extend well past the viewport on left/right so blurred blobs never
+     hit a crisp container edge (that's what was creating the vertical
+     lines near the nav bar). overflow is removed for the same reason. */
+  inset: -20% -30% 15% -30%;
+  pointer-events: none;
+  z-index: 0;
+  /* Contain mix-blend-mode to this subtree so the hole "erasers" punch
+     through the blue blobs but don't affect anything outside the aurora. */
+  isolation: isolate;
+  mask-image: radial-gradient(
+    ellipse 75% 75% at 50% 40%,
+    black 45%,
+    transparent 100%
+  );
+  -webkit-mask-image: radial-gradient(
+    ellipse 75% 75% at 50% 40%,
+    black 45%,
+    transparent 100%
+  );
+
+}
+
+.hero-aurora::before,
+.hero-aurora::after,
+.hero-aurora > span {
+  content: "";
+  position: absolute;
+  filter: blur(90px);
+  border-radius: 50%;
+  opacity: 0.85;
+  will-change: transform, filter, border-radius;
+}
+
+/* Primary blue bloom — stays in the blue family (oklch hue 230–250).
+   Small hue oscillation only, so the bloom never drifts into purple
+   (>275) or deep green (<190). */
+.hero-aurora::before {
+  width: 80%;
+  height: 130%;
+  top: -20%;
+  left: -10%;
+  background: radial-gradient(
+    closest-side,
+    oklch(0.6 0.22 248 / 0.95),
+    transparent 72%
+  );
+  animation: aurora-drift-a 22s ease-in-out infinite;
+}
+
+.hero-aurora::after {
+  width: 75%;
+  height: 120%;
+  top: -15%;
+  right: -10%;
+  background: radial-gradient(
+    closest-side,
+    oklch(0.6 0.2 235 / 0.9),
+    transparent 72%
+  );
+  animation: aurora-drift-b 28s ease-in-out infinite;
+}
+
+/* ── Span children ──
+   :nth-child(1) / (2)   small green accents at the edges (hue 165 only)
+   :nth-child(3..8)      drifting dark "holes" that fade in and out so the
+                         bloom looks like a fluid with bubbles rising and
+                         popping across the field */
+
+.hero-aurora > span:nth-child(1) {
+  width: 28%;
+  height: 45%;
+  top: 8%;
+  left: -3%;
+  background: radial-gradient(
+    closest-side,
+    oklch(0.7 0.17 170 / 0.7),
+    transparent 70%
+  );
+  animation: aurora-drift-c 24s ease-in-out infinite;
+}
+
+.hero-aurora > span:nth-child(2) {
+  width: 26%;
+  height: 42%;
+  top: 35%;
+  right: -4%;
+  background: radial-gradient(
+    closest-side,
+    oklch(0.68 0.16 165 / 0.65),
+    transparent 70%
+  );
+  animation: aurora-drift-d 28s ease-in-out infinite;
+}
+
+/* Dark "holes" — use mix-blend-mode: destination-out so they literally
+   erase the blue bloom beneath them (regardless of paint order — the
+   blue ::after pseudo-element was previously painting on top of the
+   holes on the right side and hiding them). The alpha of the radial
+   gradient controls how much erasing happens, so each hole is a soft
+   dark bubble with feathered edges. z-index keeps them above both
+   primary blobs even without destination-out support. */
+.hero-aurora > span:nth-child(n + 3) {
+  z-index: 2;
+  mix-blend-mode: destination-out;
+  background: radial-gradient(
+    closest-side,
+    rgba(0, 0, 0, 1),
+    transparent 80%
+  );
+}
+
+/* Holes are scattered across the full aurora box and each has a very
+   large drift range (35–60% translate), so their "distribution" keeps
+   shifting — no two moments look the same. Sizes are mixed (tiny
+   bubbles through big voids) and everything is a notch larger than
+   the previous pass. */
+.hero-aurora > span:nth-child(3) {
+  width: 22%;
+  height: 36%;
+  top: 4%;
+  left: 2%;
+  animation: aurora-drift-hole-a 19s ease-in-out infinite,
+    aurora-fade-a 11s ease-in-out infinite;
+}
+
+.hero-aurora > span:nth-child(4) {
+  width: 15%;
+  height: 26%;
+  top: 68%;
+  left: 58%;
+  animation: aurora-drift-hole-b 23s ease-in-out infinite,
+    aurora-fade-b 9s ease-in-out infinite;
+}
+
+.hero-aurora > span:nth-child(5) {
+  width: 30%;
+  height: 44%;
+  top: 36%;
+  left: 68%;
+  animation: aurora-drift-hole-c 27s ease-in-out infinite,
+    aurora-fade-c 13s ease-in-out infinite;
+}
+
+.hero-aurora > span:nth-child(6) {
+  width: 11%;
+  height: 18%;
+  top: 14%;
+  left: 86%;
+  animation: aurora-drift-hole-d 16s ease-in-out infinite,
+    aurora-fade-d 7s ease-in-out infinite;
+}
+
+.hero-aurora > span:nth-child(7) {
+  width: 18%;
+  height: 30%;
+  top: 58%;
+  left: 8%;
+  animation: aurora-drift-hole-e 21s ease-in-out infinite,
+    aurora-fade-a 10s ease-in-out -3s infinite;
+}
+
+.hero-aurora > span:nth-child(8) {
+  width: 13%;
+  height: 22%;
+  top: 6%;
+  left: 46%;
+  animation: aurora-drift-hole-f 18s ease-in-out infinite,
+    aurora-fade-b 8s ease-in-out -2s infinite;
+}
+
+/* Slow, organic drift + shape morph of the two aurora blobs. Counter-
+   phased so the bloom constantly re-composes. Non-uniform scaleX/scaleY
+   plus shifting border-radius keeps the blobs looking like they're being
+   stretched by an invisible current instead of just panning. */
+@keyframes aurora-drift-a {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1, 1);
+    border-radius: 50% 50% 50% 50%;
+  }
+  25% {
+    transform: translate3d(-7%, 5%, 0) scale(1.15, 0.95);
+    border-radius: 60% 40% 55% 45%;
+  }
+  50% {
+    transform: translate3d(5%, -4%, 0) scale(0.9, 1.12);
+    border-radius: 45% 55% 40% 60%;
+  }
+  75% {
+    transform: translate3d(-3%, 7%, 0) scale(1.08, 1.05);
+    border-radius: 55% 45% 60% 40%;
+  }
+}
+
+@keyframes aurora-drift-b {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1, 1);
+    border-radius: 50% 50% 50% 50%;
+  }
+  25% {
+    transform: translate3d(6%, 6%, 0) scale(0.92, 1.14);
+    border-radius: 40% 60% 50% 50%;
+  }
+  50% {
+    transform: translate3d(-6%, -5%, 0) scale(1.18, 0.9);
+    border-radius: 55% 45% 60% 40%;
+  }
+  75% {
+    transform: translate3d(4%, -7%, 0) scale(1.02, 1.08);
+    border-radius: 60% 40% 45% 55%;
+  }
+}
+
+/* Green edge accents — wander along the outer rim of the hero so the
+   green never pushes into the center where the blue should dominate. */
+@keyframes aurora-drift-c {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    border-radius: 50%;
+  }
+  33% {
+    transform: translate3d(6%, -12%, 0) scale(1.12);
+    border-radius: 60% 40% 55% 45%;
+  }
+  66% {
+    transform: translate3d(-4%, 10%, 0) scale(0.9);
+    border-radius: 45% 55% 40% 60%;
+  }
+}
+
+@keyframes aurora-drift-d {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    border-radius: 50%;
+  }
+  40% {
+    transform: translate3d(-5%, 12%, 0) scale(1.15);
+    border-radius: 45% 55% 60% 40%;
+  }
+  70% {
+    transform: translate3d(4%, -10%, 0) scale(0.92);
+    border-radius: 55% 45% 40% 60%;
+  }
+}
+
+/* ── Hole drifts ──
+   Each hole traverses a large arc across the aurora (±35–60% translate)
+   so the overall *distribution* of bubbles visibly redistributes over
+   time — holes that started in the left sector migrate right, etc.,
+   and since each path is different the whole field constantly reshuffles. */
+@keyframes aurora-drift-hole-a {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1, 1); border-radius: 50%; }
+  25%      { transform: translate3d(45%, -15%, 0) scale(1.2, 0.85); border-radius: 60% 40% 45% 55%; }
+  55%      { transform: translate3d(30%, 30%, 0) scale(0.8, 1.1); border-radius: 45% 55% 55% 45%; }
+  80%      { transform: translate3d(-10%, 18%, 0) scale(1.1, 0.95); border-radius: 55% 45% 50% 50%; }
+}
+
+@keyframes aurora-drift-hole-b {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1, 1); border-radius: 50%; }
+  30%      { transform: translate3d(-40%, -22%, 0) scale(0.85, 1.25); border-radius: 55% 45% 60% 40%; }
+  60%      { transform: translate3d(20%, -35%, 0) scale(1.15, 0.9); border-radius: 40% 60% 45% 55%; }
+  85%      { transform: translate3d(-10%, 15%, 0) scale(1.05, 1.1); border-radius: 50% 50% 55% 45%; }
+}
+
+@keyframes aurora-drift-hole-c {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1, 1); border-radius: 50%; }
+  20%      { transform: translate3d(-30%, 25%, 0) scale(1.3, 0.8); border-radius: 65% 35% 50% 50%; }
+  50%      { transform: translate3d(-50%, -18%, 0) scale(0.9, 1.2); border-radius: 40% 60% 55% 45%; }
+  75%      { transform: translate3d(-20%, -5%, 0) scale(1.1, 1.05); border-radius: 55% 45% 60% 40%; }
+}
+
+@keyframes aurora-drift-hole-d {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); border-radius: 50%; }
+  35%      { transform: translate3d(-55%, 35%, 0) scale(1.4); border-radius: 50% 50% 45% 55%; }
+  70%      { transform: translate3d(-35%, 60%, 0) scale(0.75); border-radius: 60% 40% 55% 45%; }
+}
+
+@keyframes aurora-drift-hole-e {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1, 1); border-radius: 50%; }
+  30%      { transform: translate3d(50%, -25%, 0) scale(0.9, 1.15); border-radius: 55% 45% 40% 60%; }
+  65%      { transform: translate3d(30%, -45%, 0) scale(1.2, 0.85); border-radius: 45% 55% 55% 45%; }
+}
+
+@keyframes aurora-drift-hole-f {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); border-radius: 50%; }
+  40%      { transform: translate3d(-35%, 45%, 0) scale(1.35); border-radius: 60% 40% 50% 50%; }
+  75%      { transform: translate3d(40%, 30%, 0) scale(0.8); border-radius: 40% 60% 45% 55%; }
+}
+
+/* ── Fade cycles ──
+   Four independent opacity/blur cycles. Out-of-phase, so at any moment
+   some holes are fully present, some are fading in, others are fading
+   out — like bubbles rising and popping in a fluid. Blur varies too,
+   so the hole edges soften as they dissolve. */
+@keyframes aurora-fade-a {
+  0%, 100% { opacity: 0; filter: blur(120px); }
+  50%      { opacity: 0.9; filter: blur(80px); }
+}
+
+@keyframes aurora-fade-b {
+  0%, 100% { opacity: 0.85; filter: blur(80px); }
+  50%      { opacity: 0.1; filter: blur(140px); }
+}
+
+@keyframes aurora-fade-c {
+  0%, 40%  { opacity: 0; filter: blur(130px); }
+  60%      { opacity: 0.9; filter: blur(85px); }
+  100%     { opacity: 0; filter: blur(130px); }
+}
+
+@keyframes aurora-fade-d {
+  0%, 100% { opacity: 0.5; filter: blur(100px); }
+  30%      { opacity: 0.95; filter: blur(70px); }
+  70%      { opacity: 0.15; filter: blur(130px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-aurora::before,
+  .hero-aurora::after {
+    animation: none;
+  }
+}
+
+/* ── Pill button shared style ── */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.pill-primary {
+  background: linear-gradient(180deg, var(--color-cta), var(--color-cta-deep));
+  color: white;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.25) inset,
+    0 4px 14px var(--color-cta-ring);
+}
+
+.pill-primary:hover {
+  filter: brightness(1.08);
+}
+
+.pill-ghost {
+  background: transparent;
+  color: var(--color-fg);
+  border: 1px solid var(--color-line-strong);
+}
+
+.pill-ghost:hover {
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+.pill-soft {
+  background: color-mix(in oklch, var(--color-accent-soft) 80%, transparent);
+  color: var(--color-accent-ink);
+  border: 1px solid color-mix(in oklch, var(--color-accent) 25%, transparent);
+}
+
+/* ── Section tag label (small badge above headings) ── */
+.section-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--color-fg);
+  background: color-mix(in oklch, white 6%, transparent);
+  border: 1px solid var(--color-line);
+  letter-spacing: 0.2px;
+}
+
+/* ── Subtle grid noise texture for cards ── */
+.card {
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklch, white 3%, transparent) 0%,
+    transparent 100%
+  ),
+  var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 20px;
+}
+
+.card-inset {
+  background: var(--color-surface-sunken);
+  border: 1px solid var(--color-line);
+  border-radius: 16px;
+}
+
+/* ── Gradient heading highlight ── */
+.grad-highlight {
+  background: linear-gradient(
+    90deg,
+    oklch(0.8 0.18 305) 0%,
+    oklch(0.75 0.18 265) 50%,
+    oklch(0.78 0.18 210) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ── Squircle (iOS-style continuous corner) shapes ──
+   Uses an aggressive border-radius so the curve reads as continuous
+   on wide rectangles. `corner-shape: superellipse()` (Chromium 137+ /
+   Safari TP) is a progressive enhancement — where supported, corners
+   become a true superellipse; elsewhere the large radius still gives
+   the pronounced iOS-like curve. */
+.squircle {
+  border-radius: 420px;
+  corner-shape: superellipse(3.2);
+}
+
+.squircle-md {
+  border-radius: 140px;
+  corner-shape: superellipse(3);
+}
+
+/* Blue CTA gradient (kept out of inline style to avoid SSR shorthand/longhand
+   hydration mismatches when a browser extension expands `background`). */
+.cta-blue {
+  background-image: linear-gradient(
+    180deg,
+    oklch(0.7 0.16 230),
+    oklch(0.55 0.2 245)
+  );
+}
+
+/* Bump wrapper — sits only around the AI Detector tab. Draws the same dark
+   fill as the card but with a big top-only radius, then uses two radial-
+   gradient pseudo-elements at its bottom corners to draw convex "flares"
+   that blend outward into the card's top edge (instead of meeting the card
+   in a sharp right angle). */
+.tab-bump {
+  position: relative;
+  display: inline-flex;
+  align-items: flex-end;
+  padding: 10px 14px 18px;
+  margin-bottom: -16px;
+  background: var(--color-surface);
+  border-radius: 160px 160px 0 0;
+  corner-shape: superellipse(3);
+}
+
+/* Outward flare on the LEFT base of the bump: a quarter-ring of card color
+   that curves from the bump's left side down onto the card's top surface. */
+.tab-bump::before {
+  content: "";
+  position: absolute;
+  left: -28px;
+  bottom: 0;
+  width: 28px;
+  height: 28px;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at 0 0,
+    transparent 28px,
+    var(--color-surface) 28px
+  );
+}
+
+/* Mirror flare on the RIGHT base of the bump. */
+.tab-bump::after {
+  content: "";
+  position: absolute;
+  right: -28px;
+  bottom: 0;
+  width: 28px;
+  height: 28px;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at 100% 0,
+    transparent 28px,
+    var(--color-surface) 28px
+  );
+}
+
+/* ── Hero CTA tabs ──
+   Fully-rounded squircle pills that overlap the top edge of the demo card
+   by a few pixels. The squircle `corner-shape` + the card's squircle give
+   the characteristic "continuous curve" look from the reference. */
+.hero-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 14px 22px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
+  border-radius: 999px;
+  corner-shape: superellipse(2.8);
+  transition: filter 0.15s ease;
+}
+
+/* Equal-width tabs — both "Get Started for free" and "AI Detector" render
+   at the same fixed width so the header row reads as a balanced pair. */
+.hero-tab-equal {
+  min-width: 240px;
+}
+
+/* Lift the entire tab row up so the pair sits higher relative to the card. */
+.tab-row {
+  top: -12px;
+}
+
+.hero-tab-blue {
+  color: white;
+  background: linear-gradient(180deg, var(--color-cta), var(--color-cta-deep));
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.3) inset,
+    0 8px 24px var(--color-cta-ring);
+  /* Keep the active tab above the bump's flares so its green glow renders
+     on top of them (they read as part of the card's surface beneath). */
+  z-index: 2;
+}
+
+.hero-tab-blue:hover {
+  filter: brightness(1.08);
+}
+
+/* Plain-text tab: no pill background, just a text link with an icon. The
+   "Get Started for free" slot uses this so only the active AI Detector
+   tab reads as an actual button. */
+.hero-tab-text {
+  color: rgba(255, 255, 255, 0.85);
+  background: transparent;
+  box-shadow: none;
+}
+
+.hero-tab-text:hover {
+  color: white;
+}
+
+/* Kept for back-compat with any other component still using these names. */
+.hero-tab-ghost {
+  color: white;
+  background: transparent;
+}
+
+.hero-tab-primary {
+  color: white;
+  background: linear-gradient(180deg, var(--color-cta), var(--color-cta-deep));
+}
+
+/* ── Gradient-bordered result strip at the bottom of the demo card ── */
+.result-strip {
+  position: relative;
+  padding: 1.5px;
+  border-radius: 64px;
+  corner-shape: superellipse(3.2);
+  background: linear-gradient(
+    90deg,
+    oklch(0.75 0.18 145),
+    oklch(0.8 0.18 85),
+    oklch(0.75 0.22 25),
+    oklch(0.7 0.22 320),
+    oklch(0.65 0.2 260)
+  );
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+}
+
+.result-strip-inner {
+  border-radius: 63px;
+  corner-shape: superellipse(3.2);
+  background: var(--color-cream-bg);
+  color: var(--color-cream-fg);
+  padding: 16px 20px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  /* Flip the shared tokens inside this cream island so any descendant
+     (including <Button>) that references --color-fg / --color-bg reads
+     the light-mode values. */
+  --color-fg: var(--color-cream-fg);
+  --color-fg-mid: var(--color-cream-fg-mid);
+  --color-fg-dim: var(--color-cream-fg-dim);
+  --color-bg: var(--color-cream-bg);
+  --color-line: var(--color-cream-line);
+  --color-line-strong: var(--color-cream-line-strong);
+  --color-surface-alt: rgba(26, 25, 22, 0.06);
+}
+
+
+/* ── Action bar (above the demo textbox) ──
+   Same cream-island treatment as .result-strip-inner but without the
+   rainbow gradient border — a quieter, plain cream pill. Drops a soft
+   shadow so it lifts off the page above the textbox. */
+.action-bar {
+  position: relative;
+  /* iOS-style continuous corner — toned down from the .squircle parent
+     so the inner bar reads as a quieter, more rectangular slot rather
+     than competing with the card it sits inside. */
+  border-radius: 28px;
+  corner-shape: superellipse(2.4);
+  /* Dark surface — slightly lifted from the card's --color-surface so it
+     reads as its own panel without introducing a second cream island. */
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-line);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+}
+
+.action-bar-inner {
+  border-radius: 28px;
+  corner-shape: superellipse(2.4);
+  padding: 14px 18px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  /* No token flipping — inherits the page's dark theme so text reads
+     white via --color-fg and borders use the white-tint --color-line. */
+}
+
+/* ── Animated marquee for "trusted by" row ──
+   Two identical .marquee-track children sit side-by-side inside one
+   .marquee. The outer element animates from translateX(0) to -50%, which
+   moves the start of track 2 onto the start of track 1 — a perfect
+   handoff with no visible jump. The trailing `padding-right` on each
+   track equals the inter-item gap, so the seam between track 1 and
+   track 2 reads as just another gap rather than a tighter or looser
+   spacing. */
+.marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 80s linear infinite;
+  will-change: transform;
+}
+
+.marquee:hover {
+  animation-play-state: paused;
+}
+
+.marquee-track {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 64px;
+  padding-right: 64px;
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee {
+    animation: none;
+  }
+}
+
+/* ── Accordion item ── */
+.acc-item {
+  background: var(--color-card);
+  border-radius: 14px;
+  border: 1px solid var(--color-line);
+  overflow: hidden;
+}
+
+.acc-item[open] {
+  background: var(--color-card-alt);
+}
+
+.acc-item summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-fg);
+}
+
+.acc-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.acc-item summary::before {
+  content: "+";
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  line-height: 16px;
+  text-align: center;
+  border-radius: 6px;
+  background: color-mix(in oklch, white 8%, transparent);
+  color: var(--color-fg);
+  font-weight: 500;
+  transition: transform 0.15s ease;
+}
+
+.acc-item[open] summary::before {
+  content: "−";
+}
+
+.acc-item .acc-body {
+  padding: 0 18px 16px;
+  color: var(--color-fg-mid);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+/* ── Social proof card ── */
+.tweet {
+  width: 280px;
+  flex-shrink: 0;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-line);
+  border-radius: 14px;
+  padding: 14px;
+  font-size: 12.5px;
+  color: var(--color-fg);
+}
+
+/* ── Aurora "spots" ──
+   Each .aurora-spot is a wrapper containing three child blobs (.lobe).
+   The blobs are colored only with the brand palette — hero blue
+   (oklch 0.6 0.22 245) and a touch of brand green (oklch 0.7 0.17 170)
+   — and each one independently pans, scales, rotates, and morphs its
+   border-radius. The composite outline is the union of three blobs in
+   constant relative motion, so the silhouette is genuinely
+   unpredictable: sometimes a tri-lobed cluster, sometimes a long arc,
+   sometimes a kidney, sometimes nearly disjoint. No hue-rotate, no
+   crescent mask — pure brand color and pure geometric drift. */
+.aurora-field {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.aurora-spot {
+  position: absolute;
+  width: var(--spot-size, 480px);
+  height: var(--spot-size, 480px);
+  top: var(--spot-y, 50%);
+  left: var(--spot-x, 50%);
+  transform: translate(-50%, -50%) rotate(var(--spot-tilt, 0deg));
+  pointer-events: none;
+  opacity: var(--spot-opacity, 0.5);
+  /* The wrapper itself does the heavy blur so all three child lobes
+     fuse into one soft, organic blob instead of reading as 3 circles. */
+  filter: blur(90px);
+}
+
+.aurora-spot .lobe {
+  position: absolute;
+  border-radius: 50%;
+  /* Each lobe runs three animations on different timings so the
+     wrapper's silhouette is a moving union of three asynchronous
+     shapes — never a clean circle, never the same outline twice. */
+  animation:
+    lobe-drift var(--lobe-drift, 22s) ease-in-out infinite,
+    lobe-morph var(--lobe-morph, 18s) ease-in-out infinite,
+    lobe-pulse var(--lobe-pulse, 14s) ease-in-out infinite;
+  animation-delay: var(--lobe-delay, 0s);
+  will-change: transform, border-radius;
+}
+
+/* Lobe color/shape variants — only blue and green from the brand
+   palette. The blue one is the dominant tone; green is a small accent
+   that drifts in and out as the green lobe pulses. */
+.aurora-spot .lobe-a {
+  width: 70%;
+  height: 75%;
+  top: 5%;
+  left: 0%;
+  background: radial-gradient(
+    closest-side,
+    oklch(0.6 0.22 245 / 0.95),
+    transparent 70%
+  );
+  --lobe-drift: 24s;
+  --lobe-morph: 19s;
+  --lobe-pulse: 17s;
+  --lobe-delay: 0s;
+}
+
+.aurora-spot .lobe-b {
+  width: 60%;
+  height: 65%;
+  top: 25%;
+  right: -8%;
+  background: radial-gradient(
+    closest-side,
+    oklch(0.55 0.2 250 / 0.85),
+    transparent 70%
+  );
+  --lobe-drift: 28s;
+  --lobe-morph: 21s;
+  --lobe-pulse: 13s;
+  --lobe-delay: -6s;
+}
+
+.aurora-spot .lobe-c {
+  width: 55%;
+  height: 60%;
+  bottom: 0%;
+  left: 22%;
+  background: radial-gradient(
+    closest-side,
+    oklch(0.7 0.17 170 / 0.7),
+    transparent 70%
+  );
+  --lobe-drift: 26s;
+  --lobe-morph: 23s;
+  --lobe-pulse: 19s;
+  --lobe-delay: -11s;
+}
+
+/* Drift — pan + non-uniform scale + rotation. Each lobe moves
+   independently inside the wrapper, so their overlap geometry keeps
+   changing. */
+@keyframes lobe-drift {
+  0%, 100% {
+    transform: translate(0, 0) scale(1, 1) rotate(0deg);
+  }
+  25% {
+    transform: translate(18%, -12%) scale(1.18, 0.86) rotate(45deg);
+  }
+  50% {
+    transform: translate(-14%, 16%) scale(0.84, 1.22) rotate(-30deg);
+  }
+  75% {
+    transform: translate(8%, 14%) scale(1.1, 1.04) rotate(25deg);
+  }
+}
+
+/* Morph — eight independent corner radii cycle through very
+   asymmetric values, so each lobe is itself an irregular blob,
+   not a uniform circle. */
+@keyframes lobe-morph {
+  0%, 100% {
+    border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%;
+  }
+  20% {
+    border-radius: 30% 70% 70% 30% / 65% 35% 60% 40%;
+  }
+  40% {
+    border-radius: 75% 25% 40% 60% / 35% 65% 30% 70%;
+  }
+  60% {
+    border-radius: 40% 60% 70% 30% / 55% 45% 70% 30%;
+  }
+  80% {
+    border-radius: 65% 35% 30% 70% / 70% 30% 50% 50%;
+  }
+}
+
+/* Pulse — opacity + slight scale jitter, so individual lobes fade in
+   and out of dominance over time. When the green lobe pulses up the
+   composite picks up a green tint; when the blue lobes do, it returns
+   to brand blue. */
+@keyframes lobe-pulse {
+  0%, 100% { opacity: 0.85; }
+  35%      { opacity: 0.55; }
+  70%      { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aurora-spot .lobe {
+    animation: none;
+  }
+}
+
+/* ── Auth modal ──
+   Overlay = darkened, blurred backdrop. Card = soft card with entry
+   animation (gentle fade + scale). Inputs share one consistent style
+   so login + signup feel like one product. */
+.auth-overlay {
+  background: color-mix(in oklch, black 65%, transparent);
+  backdrop-filter: blur(8px) saturate(120%);
+  -webkit-backdrop-filter: blur(8px) saturate(120%);
+  animation: auth-overlay-in 0.2s ease-out;
+}
+
+@keyframes auth-overlay-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.auth-card {
+  animation: auth-card-in 0.28s cubic-bezier(0.2, 0.7, 0.2, 1);
+  transform-origin: center;
+}
+
+@keyframes auth-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.auth-input {
+  width: 100%;
+  height: 40px;
+  padding: 0 14px;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-line-strong);
+  border-radius: 10px;
+  color: var(--color-fg);
+  font-size: 14px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease,
+    background 0.15s ease;
+}
+
+.auth-input::placeholder {
+  color: var(--color-fg-dim);
+}
+
+.auth-input:hover {
+  background: color-mix(in oklch, var(--color-card-alt) 70%, transparent);
+}
+
+.auth-input:focus {
+  outline: none;
+  border-color: color-mix(in oklch, var(--color-accent) 60%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--color-accent) 22%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-overlay,
+  .auth-card {
+    animation: none;
+  }
+}

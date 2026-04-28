@@ -1,0 +1,82 @@
+/* ─────────────────────────────────────────────
+   App shell layout
+   Two-column grid: sidebar on the left (owned by
+   the Sidebar module), scrollable main pane on
+   the right. The shell only owns the grid + the
+   one `:has()` trigger that shrinks the left
+   column when the sidebar is collapsed.
+   ───────────────────────────────────────────── */
+
+/* Register the sidebar-width custom property as a length so the browser
+   can interpolate it frame-by-frame. Animating a registered scalar is
+   noticeably smoother than animating `grid-template-columns` (which has
+   to interpolate track definitions). */
+@property --sb-width {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 260px;
+}
+
+.app-shell {
+  display: grid;
+  --sb-width: 260px;
+  grid-template-columns: var(--sb-width) 1fr;
+  min-height: 100vh;
+  background: var(--color-bg);
+  color: var(--color-fg);
+  transition: --sb-width 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Shrink the left column when the sidebar is collapsed. The sidebar
+   owns its collapse state and exposes it as a `data-sidebar-collapsed`
+   attribute on the <aside> — that attribute is the cross-module
+   channel, so nothing here has to reach into the sidebar's hashed
+   class names. 72px is the narrowest width that still fits brand
+   ("ai") + toggle in one row. */
+.app-shell:has([data-sidebar-collapsed]) {
+  --sb-width: 72px;
+}
+
+@media (max-width: 768px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+}
+
+.app-shell-main {
+  min-width: 0;
+  padding: 32px 44px 56px;
+  max-width: 1200px;
+  width: 100%;
+  margin-inline: auto;
+}
+
+@media (max-width: 720px) {
+  .app-shell-main {
+    padding: 20px 16px 32px;
+  }
+}
+
+/* ── Panel reveal: staggered cascade on every page mount ──────────
+   Mirrors the extension drawer's tab-switch animation. Applies to
+   direct children of any container with `.panel-reveal`. */
+.panel-reveal > * {
+  animation: reveal-stagger 0.42s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.panel-reveal > *:nth-child(1) { animation-delay: 0ms;   }
+.panel-reveal > *:nth-child(2) { animation-delay: 60ms;  }
+.panel-reveal > *:nth-child(3) { animation-delay: 120ms; }
+.panel-reveal > *:nth-child(4) { animation-delay: 180ms; }
+.panel-reveal > *:nth-child(5) { animation-delay: 240ms; }
+.panel-reveal > *:nth-child(6) { animation-delay: 300ms; }
+.panel-reveal > *:nth-child(n+7) { animation-delay: 360ms; }
+
+@keyframes reveal-stagger {
+  0%   { opacity: 0; transform: translateY(8px) scale(0.985); }
+  100% { opacity: 1; transform: translateY(0)   scale(1);     }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel-reveal > * { animation: none; }
+}
+

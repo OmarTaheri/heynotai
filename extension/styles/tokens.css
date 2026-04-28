@@ -1,0 +1,58 @@
+/* ─────────────────────────────────────────────
+   heynotai design tokens (Veritas-inspired)
+   Warm-neutral base · OKLCH accents · dark+light
+   ───────────────────────────────────────────── */
+
+html, body { background: var(--bg); }
+
+:root, body.theme-light {
+  --bg: #f3f0e8;
+  --surface: #ffffff;
+  --surface-alt: #faf8f2;
+  --surface-sunken: #f1ede4;
+  --fg: #1a1916;
+  --fg-mid: #5b5749;
+  --fg-dim: #8a8576;
+  --line: rgba(26,25,22,0.09);
+  --line-strong: rgba(26,25,22,0.16);
+
+  --human: oklch(0.68 0.13 165);
+  --human-soft: oklch(0.94 0.04 165);
+  --human-ink: oklch(0.38 0.08 165);
+  --ai: oklch(0.70 0.14 55);
+  --ai-soft: oklch(0.95 0.04 70);
+  --ai-ink: oklch(0.40 0.10 45);
+  --mixed: oklch(0.68 0.12 290);
+  --mixed-soft: oklch(0.95 0.03 290);
+  --mixed-ink: oklch(0.38 0.08 290);
+  --info: oklch(0.55 0.13 265);
+  --info-soft: oklch(0.95 0.03 265);
+  --shadow-pop: 0 20px 60px rgba(20,18,10,0.18), 0 2px 6px rgba(20,18,10,0.06);
+  --toggle-off-bg: rgba(26,25,22,0.18);
+}
+
+body.theme-dark {
+  --bg: #0f1013;
+  --surface: #17191e;
+  --surface-alt: #1c1f25;
+  --surface-sunken: #0b0c0f;
+  --fg: #ecebe5;
+  --fg-mid: #a5a39a;
+  --fg-dim: #6d6b63;
+  --line: rgba(255,255,255,0.07);
+  --line-strong: rgba(255,255,255,0.14);
+
+  --human: oklch(0.74 0.14 165);
+  --human-soft: oklch(0.28 0.06 165);
+  --human-ink: oklch(0.88 0.10 165);
+  --ai: oklch(0.76 0.15 55);
+  --ai-soft: oklch(0.30 0.06 55);
+  --ai-ink: oklch(0.90 0.12 60);
+  --mixed: oklch(0.72 0.13 290);
+  --mixed-soft: oklch(0.28 0.06 290);
+  --mixed-ink: oklch(0.88 0.10 290);
+  --info: oklch(0.70 0.12 265);
+  --info-soft: oklch(0.26 0.05 265);
+  --shadow-pop: 0 20px 60px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.04);
+  --toggle-off-bg: rgba(255,255,255,0.18);
+}

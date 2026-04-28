@@ -1,0 +1,247 @@
+/* ─────────────────────────────────────────────
+   Usage / checks-remaining card — sits above the
+   profile group at the foot of the sidebar.
+
+   Visual voice is borrowed from the extension
+   popup's .card chrome (same surface + line + 14px
+   radius) so the frontend and extension read as
+   the same product. The battery meter is an
+   equalizer-style row of bars with per-bar heights
+   and a gradient that runs across only the filled
+   portion — reads as "energy left", not just a
+   flat progress bar.
+   ───────────────────────────────────────────── */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  box-shadow: var(--shadow-soft);
+  /* Subtle cosmic wash in the corner — just enough texture to break
+     the flat dark surface without competing with sidebar content. */
+  background-image:
+    radial-gradient(
+      ellipse 60% 80% at 100% 0%,
+      color-mix(in oklch, var(--color-accent) 22%, transparent) 0%,
+      transparent 70%
+    );
+  overflow: hidden;
+}
+
+/* ── Head row: count + plan badge ────────────── */
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.count {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-fg);
+  letter-spacing: -0.3px;
+  line-height: 1;
+  min-width: 0;
+}
+
+.countIcon {
+  color: var(--color-accent-ink);
+  flex-shrink: 0;
+  display: inline-flex;
+}
+
+/* Plan badge — matches the extension's detection-mode badge (popup.css
+   `.mode-badge.mode-*`) so the two apps use one vocabulary / one look.
+     check   → neutral grey (entry tier)
+     verify  → cyan/teal (mid tier, reuses --color-human)
+     certify → gold with soft glow (premium tier)
+   Colors are tuned for the dark surface; the extension's light-theme
+   values aren't used because the frontend is dark-first. */
+.plan {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  border: 1px solid transparent;
+  flex-shrink: 0;
+  font-family: inherit;
+  text-transform: capitalize;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+
+  &.tierCheck {
+    background: var(--color-surface-sunken);
+    border-color: var(--color-line-strong);
+    color: var(--color-fg-mid);
+  }
+
+  &.tierVerify {
+    background: var(--color-human-soft);
+    border-color: color-mix(in oklch, var(--color-human) 25%, transparent);
+    color: var(--color-human-ink);
+  }
+
+  &.tierCertify {
+    background: oklch(0.32 0.08 85);
+    border-color: oklch(0.55 0.14 85);
+    color: oklch(0.90 0.15 88);
+    box-shadow: 0 0 0 2px oklch(0.55 0.14 85 / 0.20);
+  }
+}
+
+.label {
+  font-size: 10.5px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+  margin-top: -4px;
+}
+
+/* ── Battery meter ────────────────────────────
+   Fixed track of bars (each one fills a fraction
+   of the total). Bar heights are staggered so the
+   meter reads as an equalizer rather than a flat
+   progress pill. The filled bars share a single
+   linear-gradient painted across the whole row via
+   `background-clip: text` on a sibling — we avoid
+   that complication by applying the gradient to
+   each filled bar individually with a calculated
+   color-stop. Simpler + smoother.
+   ───────────────────────────────────────────── */
+.battery {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 26px;
+  padding: 4px 6px;
+  border-radius: 8px;
+  background: var(--color-surface-sunken);
+  border: 1px solid var(--color-line);
+  position: relative;
+}
+
+.bar {
+  flex: 1;
+  min-width: 0;
+  border-radius: 2px;
+  background: var(--color-line-strong);
+  transition:
+    background 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+
+  &[data-filled="true"] {
+    background: linear-gradient(
+      180deg,
+      color-mix(in oklch, var(--color-accent) 95%, white 10%),
+      var(--color-accent)
+    );
+  }
+
+  &[data-edge="true"] {
+    box-shadow:
+      0 0 6px color-mix(in oklch, var(--color-accent) 70%, transparent),
+      0 0 14px color-mix(in oklch, var(--color-accent) 40%, transparent);
+  }
+}
+
+/* Bar heights — 20 bars with varying peaks so the track has rhythm.
+   Height deltas kept small (65-100%) so it still reads as "one meter"
+   not a random chart. */
+.bar:nth-child(1)  { height: 80%; }
+.bar:nth-child(2)  { height: 90%; }
+.bar:nth-child(3)  { height: 100%; }
+.bar:nth-child(4)  { height: 85%; }
+.bar:nth-child(5)  { height: 75%; }
+.bar:nth-child(6)  { height: 95%; }
+.bar:nth-child(7)  { height: 100%; }
+.bar:nth-child(8)  { height: 85%; }
+.bar:nth-child(9)  { height: 90%; }
+.bar:nth-child(10) { height: 100%; }
+.bar:nth-child(11) { height: 95%; }
+.bar:nth-child(12) { height: 80%; }
+.bar:nth-child(13) { height: 90%; }
+.bar:nth-child(14) { height: 100%; }
+.bar:nth-child(15) { height: 85%; }
+.bar:nth-child(16) { height: 70%; }
+.bar:nth-child(17) { height: 90%; }
+.bar:nth-child(18) { height: 100%; }
+.bar:nth-child(19) { height: 80%; }
+.bar:nth-child(20) { height: 75%; }
+
+/* Low-fuel recoloring — applied when the container carries
+   `data-level="low"` or `"critical"` so the caller can shift the whole
+   meter to warn / strike without re-authoring per-bar rules. */
+.card[data-level="low"] .bar[data-filled="true"] {
+  background: linear-gradient(180deg, var(--color-warn), color-mix(in oklch, var(--color-warn) 80%, black));
+}
+.card[data-level="low"] .bar[data-edge="true"] {
+  box-shadow:
+    0 0 6px color-mix(in oklch, var(--color-warn) 70%, transparent),
+    0 0 14px color-mix(in oklch, var(--color-warn) 40%, transparent);
+}
+.card[data-level="critical"] .bar[data-filled="true"] {
+  background: linear-gradient(180deg, var(--color-strike), color-mix(in oklch, var(--color-strike) 80%, black));
+}
+.card[data-level="critical"] .bar[data-edge="true"] {
+  box-shadow:
+    0 0 6px color-mix(in oklch, var(--color-strike) 75%, transparent),
+    0 0 14px color-mix(in oklch, var(--color-strike) 45%, transparent);
+}
+
+/* ── Upgrade button ───────────────────────────
+   Sits at the bottom of the card. Flat surface by
+   default, lifts to the CTA gradient on hover so
+   only the "Upgrade" affordance pulls focus.
+   ───────────────────────────────────────────── */
+.upgrade {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--color-surface-sunken);
+  border: 1px solid var(--color-line);
+  color: var(--color-fg);
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease,
+    transform 0.18s ease;
+
+  &:hover {
+    background: linear-gradient(180deg, var(--color-cta), var(--color-cta-deep));
+    border-color: transparent;
+    color: white;
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+.upgradeIcon {
+  display: inline-flex;
+}
