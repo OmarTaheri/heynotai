@@ -1,0 +1,30 @@
+.ring {
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.ring svg {
+  display: block;
+}
+
+.num {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-fg);
+  font-variant-numeric: tabular-nums;
+}
+
+.ringTrack {
+  transition: stroke 0.25s ease;
+}
+
+.ringFg {
+  transition: stroke-dashoffset 0.8s cubic-bezier(0.6, 0, 0.3, 1), stroke 0.25s ease;
+}

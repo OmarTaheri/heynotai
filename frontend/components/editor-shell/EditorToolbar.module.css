@@ -1,0 +1,186 @@
+.toolbar {
+  position: fixed;
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(calc(-50% - 210px));
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: #0b0c0f;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
+  z-index: 30;
+  font-family: var(--font-sans);
+}
+
+@media (max-width: 1080px) {
+  .toolbar {
+    transform: translateX(calc(-50% - 180px));
+  }
+}
+
+@media (max-width: 900px) {
+  .toolbar {
+    transform: translateX(-50%);
+  }
+}
+
+.btn {
+  height: 40px;
+  min-width: 40px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--color-fg-mid);
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-fg);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btnInfoActive {
+  background: var(--color-info);
+  color: #0b0c0f;
+}
+.btnInfoActive:hover {
+  filter: brightness(1.05);
+  background: var(--color-info);
+  color: #0b0c0f;
+}
+
+.sep {
+  width: 1px;
+  height: 22px;
+  background: var(--color-line-strong);
+  margin: 0 3px;
+}
+
+.flagct {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  padding: 0 8px;
+  height: 40px;
+}
+
+.flagctN {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-fg);
+}
+
+.flagctL {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+.textsize {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.textsize span {
+  color: var(--color-fg-dim);
+}
+
+/* Primary CTA — green/scanning state */
+.scanBtn {
+  position: relative;
+  height: 40px;
+  width: 44px;
+  padding: 0;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, var(--color-cta), var(--color-cta-deep));
+  color: #0b0c0f;
+  border: none;
+  cursor: pointer;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.25) inset,
+    0 4px 12px var(--color-cta-ring);
+}
+
+.scanBtn:hover {
+  filter: brightness(1.08);
+}
+
+.scanBtn:disabled {
+  cursor: progress;
+}
+
+.scanBtnScanning {
+  background: linear-gradient(180deg, oklch(0.7 0.12 265), oklch(0.55 0.14 265));
+  color: #fff;
+  box-shadow: 0 0 0 4px color-mix(in oklch, var(--color-info) 20%, transparent);
+}
+
+.scanPulse {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #0b0c0f;
+  opacity: 0.5;
+}
+
+.scanBtnScanning .scanPulse {
+  background: #fff;
+  animation: scan-pulse 0.9s ease-in-out infinite;
+}
+
+@keyframes scan-pulse {
+  0%, 100% { opacity: 0.5; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+
+/* Tooltip — appears above buttons with [data-tip]. */
+.toolbar [data-tip] {
+  position: relative;
+}
+.toolbar [data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1a1916;
+  color: #ecebe5;
+  padding: 5px 9px;
+  border-radius: 6px;
+  font-size: 11px;
+  white-space: nowrap;
+  pointer-events: none;
+  border: 1px solid var(--color-line-strong);
+  font-family: var(--font-sans);
+  font-weight: 500;
+  z-index: 10;
+}

@@ -1,0 +1,56 @@
+/* Generic editor shell — reusable across text, audio, image, video.
+   Owns the 4-slot grid (topbar, canvas, inspector, floating toolbar). */
+
+.app {
+  display: grid;
+  grid-template-columns: 1fr 420px;
+  grid-template-rows: 56px 1fr;
+  grid-template-areas:
+    "topbar topbar"
+    "main panel";
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background: var(--color-bg);
+  color: var(--color-fg);
+}
+
+@media (max-width: 1080px) {
+  .app {
+    grid-template-columns: 1fr 360px;
+  }
+}
+
+@media (max-width: 900px) {
+  .app {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "topbar"
+      "main";
+  }
+  .panel {
+    display: none;
+  }
+}
+
+.topbar {
+  grid-area: topbar;
+}
+
+.main {
+  grid-area: main;
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(1200px 600px at 50% -200px, rgba(255, 255, 255, 0.025), transparent 60%),
+    var(--color-bg);
+}
+
+.panel {
+  grid-area: panel;
+  position: relative;
+  border-left: 1px solid var(--color-line);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.015), transparent 320px),
+    var(--color-bg);
+  overflow: hidden;
+}
