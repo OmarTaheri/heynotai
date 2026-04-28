@@ -18,11 +18,13 @@ import {
   WEBHOOK_EVENTS,
   WEBHOOKS,
 } from "@/lib/api-data";
+import { ComingSoon } from "@/components/ui/ComingSoon";
 
 export const metadata: Metadata = { title: "API & webhooks" };
 
 export default function ApiPage() {
   return (
+    <ComingSoon feature="API & webhooks" subtitle="Programmatic access is landing soon.">
     <div className="api panel-reveal">
       <PageHeader
         title="API & webhooks"
@@ -86,5 +88,6 @@ export default function ApiPage() {
         <EventsReferenceCard events={WEBHOOK_EVENTS} />
       </div>
     </div>
+    </ComingSoon>
   );
 }

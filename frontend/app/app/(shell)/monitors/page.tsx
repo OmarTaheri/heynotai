@@ -8,6 +8,7 @@ import { MonitorAlertList } from "@/components/app/monitors/MonitorAlertList";
 import { MonitorCard } from "@/components/app/monitors/MonitorCard";
 import { MonitorTemplates } from "@/components/app/monitors/MonitorTemplates";
 import { MonitorPlanUpsell } from "@/components/app/monitors/MonitorPlanUpsell";
+import { ComingSoon } from "@/components/ui/ComingSoon";
 import {
   MONITORS,
   MONITOR_ALERTS,
@@ -28,6 +29,7 @@ export default function MonitorsPage() {
   const paused = MONITORS.length - active;
 
   return (
+    <ComingSoon feature="Monitors" subtitle="Automated AI watches are landing soon.">
     <div className="monitors panel-reveal">
       <PageHeader
         title="Monitors"
@@ -79,5 +81,6 @@ export default function MonitorsPage() {
 
       <MonitorPlanUpsell used={MONITORS.length} cap={10} plan="Pro" />
     </div>
+    </ComingSoon>
   );
 }

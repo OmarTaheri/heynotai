@@ -16,11 +16,13 @@ import {
   TEAM_MEMBERS,
   WORKSPACE,
 } from "@/lib/team-data";
+import { ComingSoon } from "@/components/ui/ComingSoon";
 
 export const metadata: Metadata = { title: "Team" };
 
 export default function TeamPage() {
   return (
+    <ComingSoon feature="Team" subtitle="Workspace collaboration is landing soon.">
     <div className="team panel-reveal">
       <PageHeader
         title="Team"
@@ -70,5 +72,6 @@ export default function TeamPage() {
         </aside>
       </div>
     </div>
+    </ComingSoon>
   );
 }
