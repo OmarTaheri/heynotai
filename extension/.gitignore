@@ -5,3 +5,7 @@ stats.html
 stats-*.json
 *.log
 web-ext.config.ts
+
+# Private key that pins the dev extension ID — anyone with this can
+# publish updates that look like they came from us. Never commit.
+*.pem

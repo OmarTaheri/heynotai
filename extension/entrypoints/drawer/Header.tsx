@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Icon, type IconName } from '@/components/Icon';
 import { useApp } from '@/lib/state';
 import { useAuth, type Plan } from '@/lib/auth-state';
+import { avatarUrl, pb } from '@/lib/pocketbase';
 
 const PLAN_LABEL: Record<Plan, string> = {
   check: 'Check',
@@ -99,14 +100,20 @@ export function Header() {
 
           <div className={`action-slot${inSettings ? ' collapsed' : ''}`}>
             <button
-              className={`icon-btn${inAccount ? ' active back-btn' : ''}`}
+              className={`icon-btn${inAccount ? ' active back-btn' : ''}${user && !inAccount ? ' avatar-btn' : ''}`}
               title={inAccount ? 'Back' : 'Account'}
               aria-label={inAccount ? 'Back' : 'Account'}
               aria-pressed={inAccount}
               onClick={toggleAccount}
               tabIndex={inSettings ? -1 : 0}
             >
-              <Icon name={inAccount ? 'arrow-left' : 'user'} size={14} />
+              {inAccount ? (
+                <Icon name="arrow-left" size={14} />
+              ) : user ? (
+                <UserBadge />
+              ) : (
+                <Icon name="user" size={14} />
+              )}
             </button>
           </div>
         </div>
@@ -116,4 +123,13 @@ export function Header() {
       </div>
     </>
   );
+}
+
+function UserBadge() {
+  const { user } = useAuth();
+  const avatar = avatarUrl(pb.authStore.record);
+  if (avatar) {
+    return <img className="header-avatar" src={avatar} alt="" />;
+  }
+  return <span className="header-avatar header-avatar-fallback">{user?.initials ?? '?'}</span>;
 }

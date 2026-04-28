@@ -1,13 +1,14 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Icon } from '@/components/Icon';
 import { MetricCard } from '@/components/MetricCard';
 import { Row } from '@/components/Row';
-import { Toggle } from '@/components/Toggle';
+import { useApp } from '@/lib/state';
 import { useAuth } from '@/lib/auth-state';
 import { avatarUrl, pb } from '@/lib/pocketbase';
 
 export function Account() {
   const { user, signIn, signUp, signInWithGoogle, confirmMfa, signOut } = useAuth();
+  const { setView } = useApp();
   const [tab, setTab] = useState<'login' | 'signup'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -17,13 +18,20 @@ export function Account() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [prefs, setPrefs] = useState({
-    notify: true, highlight: true, blockAutoplay: false,
-  });
+  // After a successful login (user transitions from null → record),
+  // jump back to the main view. Doesn't fire when the user opens
+  // Account while already signed in.
+  const prevUserRef = useRef(user);
+  useEffect(() => {
+    if (!prevUserRef.current && user) {
+      setView('main');
+    }
+    prevUserRef.current = user;
+  }, [user, setView]);
 
   if (!user) {
     return (
-      <div className="panel">
+      <div className="panel signin-screen">
         <div className="signin-card">
           <div className="signin-lock"><Icon name="lock" size={20} /></div>
           <div>
@@ -131,7 +139,7 @@ export function Account() {
                     setSubmitting(false);
                   }}
                 >
-                  <span className="tiny-square google" /> Continue with Google
+                  <GoogleIcon /> Continue with Google
                 </button>
               )}
               {!mfa && (
@@ -183,27 +191,33 @@ export function Account() {
         </div>
       </MetricCard>
 
-      <MetricCard title="Preferences">
-        <div>
-          <Row
-            label={<><Icon name="bell" size={12} /> Desktop notifications</>}
-            value={<Toggle on={prefs.notify} onChange={() => setPrefs(p => ({ ...p, notify: !p.notify }))} label="Desktop notifications" />}
-          />
-          <Row
-            label={<><Icon name="sparkle" size={12} /> Highlight flagged items</>}
-            value={<Toggle on={prefs.highlight} onChange={() => setPrefs(p => ({ ...p, highlight: !p.highlight }))} label="Highlight flagged items" />}
-          />
-          <Row
-            label={<><Icon name="shield" size={12} /> Block autoplay on AI video</>}
-            value={<Toggle on={prefs.blockAutoplay} onChange={() => setPrefs(p => ({ ...p, blockAutoplay: !p.blockAutoplay }))} label="Block autoplay on AI video" />}
-          />
-        </div>
-      </MetricCard>
-
       <button className="signout-btn" onClick={signOut}>
         <Icon name="log-out" size={13} /> Sign out
       </button>
     </div>
+  );
+}
+
+function GoogleIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden>
+      <path
+        fill="#4285F4"
+        d="M22 12.3c0-.7-.1-1.5-.2-2.2H12v4.1h5.6c-.2 1.3-1 2.4-2 3.1v2.5h3.3c1.9-1.8 3.1-4.4 3.1-7.5z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 22c2.7 0 5-1 6.7-2.4l-3.3-2.5c-.9.6-2 1-3.4 1-2.6 0-4.8-1.8-5.6-4.1H2.9V16C4.6 19.6 8 22 12 22z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M6.4 14c-.2-.6-.3-1.3-.3-2s.1-1.4.3-2V7.5H2.9C2.3 8.8 2 10.4 2 12s.3 3.2.9 4.5L6.4 14z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 5.9c1.5 0 2.8.5 3.8 1.5l2.9-2.9C16.9 2.9 14.7 2 12 2 8 2 4.6 4.4 2.9 7.5L6.4 10c.8-2.4 3-4.1 5.6-4.1z"
+      />
+    </svg>
   );
 }
 

@@ -100,7 +100,10 @@ function toggleHeynotaiDrawer(
 
   const closeNow = (el: HTMLElement) => {
     const side = el.dataset.side === 'left' ? 'left' : 'right';
-    el.style.transform = side === 'right' ? 'translateX(100vw)' : 'translateX(-100%)';
+    el.style.setProperty(
+      '--hn-x',
+      side === 'right' ? '100vw' : '-100%',
+    );
     el.style.opacity = '0';
     setTimeout(() => el.remove(), 500);
   };
@@ -124,7 +127,8 @@ function toggleHeynotaiDrawer(
         z-index: 2147483647;
         background: #f3f0e8;
         opacity: 0;
-        transform: translateX(100vw);
+        --hn-x: 100vw;
+        transform: translateX(var(--hn-x));
         transition:
           transform 0.5s cubic-bezier(0.22, 1, 0.36, 1),
           opacity   0.4s ease;
