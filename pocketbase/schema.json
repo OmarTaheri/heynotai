@@ -1,0 +1,3101 @@
+{
+  "collections": [
+    {
+      "id": "_pb_users_auth_",
+      "listRule": "id = @request.auth.id",
+      "viewRule": "id = @request.auth.id",
+      "createRule": "",
+      "updateRule": "id = @request.auth.id",
+      "deleteRule": "id = @request.auth.id",
+      "name": "users",
+      "type": "auth",
+      "fields": [
+        {
+          "autogeneratePattern": "[a-z0-9]{15}",
+          "hidden": false,
+          "id": "text3208210256",
+          "max": 15,
+          "min": 15,
+          "name": "id",
+          "pattern": "^[a-z0-9]+$",
+          "presentable": false,
+          "primaryKey": true,
+          "required": true,
+          "system": true,
+          "type": "text"
+        },
+        {
+          "exceptDomains": null,
+          "hidden": false,
+          "id": "email3885137012",
+          "name": "email",
+          "onlyDomains": null,
+          "presentable": false,
+          "required": true,
+          "system": true,
+          "type": "email"
+        },
+        {
+          "hidden": false,
+          "id": "bool1547992806",
+          "name": "emailVisibility",
+          "presentable": false,
+          "required": false,
+          "system": true,
+          "type": "bool"
+        },
+        {
+          "hidden": false,
+          "id": "bool256245529",
+          "name": "verified",
+          "presentable": false,
+          "required": false,
+          "system": true,
+          "type": "bool"
+        },
+        {
+          "autogeneratePattern": "[a-zA-Z0-9_]{50}",
+          "hidden": true,
+          "id": "text2504183744",
+          "max": 60,
+          "min": 30,
+          "name": "tokenKey",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": true,
+          "system": true,
+          "type": "text"
+        },
+        {
+          "cost": 0,
+          "hidden": true,
+          "id": "password901924565",
+          "max": 0,
+          "min": 8,
+          "name": "password",
+          "pattern": "",
+          "presentable": false,
+          "required": true,
+          "system": true,
+          "type": "password"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text1579384326",
+          "max": 200,
+          "min": 0,
+          "name": "name",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text2441093337",
+          "max": 60,
+          "min": 0,
+          "name": "handle",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "hidden": false,
+          "id": "file376926767",
+          "maxSelect": 1,
+          "maxSize": 5242880,
+          "mimeTypes": [
+            "image/jpeg",
+            "image/png",
+            "image/webp"
+          ],
+          "name": "avatar",
+          "presentable": false,
+          "protected": false,
+          "required": false,
+          "system": false,
+          "thumbs": null,
+          "type": "file"
+        },
+        {
+          "exceptDomains": null,
+          "hidden": false,
+          "id": "url742587758",
+          "name": "avatarUrl",
+          "onlyDomains": null,
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "url"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text922858135",
+          "max": 80,
+          "min": 0,
+          "name": "timezone",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "hidden": false,
+          "id": "select3571151285",
+          "maxSelect": 1,
+          "name": "language",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "select",
+          "values": [
+            "en",
+            "es",
+            "fr",
+            "de",
+            "zh",
+            "ar",
+            "ja"
+          ]
+        },
+        {
+          "hidden": false,
+          "id": "select3713686397",
+          "maxSelect": 1,
+          "name": "plan",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "select",
+          "values": [
+            "check",
+            "verify",
+            "certify",
+            "team"
+          ]
+        },
+        {
+          "hidden": false,
+          "id": "select968114814",
+          "maxSelect": 1,
+          "name": "planCycle",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "select",
+          "values": [
+            "monthly",
+            "yearly"
+          ]
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text2009258992",
+          "max": 40,
+          "min": 0,
+          "name": "planBadge",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "hidden": false,
+          "id": "date2143299147",
+          "max": "",
+          "min": "",
+          "name": "planRenewsOn",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "date"
+        },
+        {
+          "exceptDomains": null,
+          "hidden": false,
+          "id": "email67378604",
+          "name": "billingEmail",
+          "onlyDomains": null,
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "email"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text2115670734",
+          "max": 500,
+          "min": 0,
+          "name": "billingAddress",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text539440169",
+          "max": 4,
+          "min": 0,
+          "name": "billingCountry",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text2020362641",
+          "max": 60,
+          "min": 0,
+          "name": "taxId",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text2704617779",
+          "max": 30,
+          "min": 0,
+          "name": "paymentBrand",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text2555226898",
+          "max": 8,
+          "min": 0,
+          "name": "paymentLast4",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text2301242629",
+          "max": 8,
+          "min": 0,
+          "name": "paymentExpires",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text1278432162",
+          "max": 60,
+          "min": 0,
+          "name": "stripeCustomerId",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text1484822388",
+          "max": 60,
+          "min": 0,
+          "name": "stripeSubscriptionId",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "hidden": false,
+          "id": "bool4167259606",
+          "name": "onboardingCompleted",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "bool"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text1466534506",
+          "max": 40,
+          "min": 0,
+          "name": "role",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "hidden": false,
+          "id": "json533974864",
+          "maxSize": 4000,
+          "name": "useCases",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "json"
+        },
+        {
+          "hidden": false,
+          "id": "json3220634645",
+          "maxSize": 4000,
+          "name": "connections",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "json"
+        },
+        {
+          "hidden": false,
+          "id": "autodate2990389176",
+          "name": "created",
+          "onCreate": true,
+          "onUpdate": false,
+          "presentable": false,
+          "system": false,
+          "type": "autodate"
+        },
+        {
+          "hidden": false,
+          "id": "autodate3332085495",
+          "name": "updated",
+          "onCreate": true,
+          "onUpdate": true,
+          "presentable": false,
+          "system": false,
+          "type": "autodate"
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX `idx_tokenKey__pb_users_auth_` ON `users` (`tokenKey`)",
+        "CREATE UNIQUE INDEX `idx_email__pb_users_auth_` ON `users` (`email`) WHERE `email` != ''"
+      ],
+      "created": "2026-04-28 17:42:20.663Z",
+      "updated": "2026-05-05 10:37:28.094Z",
+      "system": false,
+      "authRule": "",
+      "manageRule": null,
+      "authAlert": {
+        "enabled": true,
+        "emailTemplate": {
+          "subject": "Login from a new location",
+          "body": "<p>Hello,</p>\n<p>We noticed a login to your {APP_NAME} account from a new location.</p>\n<p>If this was you, you may disregard this email.</p>\n<p><strong>If this wasn't you, you should immediately change your {APP_NAME} account password to revoke access from all other locations.</strong></p>\n<p>\n  Thanks,<br/>\n  {APP_NAME} team\n</p>"
+        }
+      },
+      "oauth2": {
+        "providers": [],
+        "mappedFields": {
+          "id": "",
+          "name": "name",
+          "username": "",
+          "avatarURL": ""
+        },
+        "enabled": true
+      },
+      "passwordAuth": {
+        "enabled": true,
+        "identityFields": [
+          "email"
+        ]
+      },
+      "mfa": {
+        "enabled": false,
+        "duration": 1800,
+        "rule": ""
+      },
+      "otp": {
+        "enabled": false,
+        "duration": 180,
+        "length": 8,
+        "emailTemplate": {
+          "subject": "OTP for {APP_NAME}",
+          "body": "<p>Hello,</p>\n<p>Your one-time password is: <strong>{OTP}</strong></p>\n<p><i>If you didn't ask for the one-time password, you can ignore this email.</i></p>\n<p>\n  Thanks,<br/>\n  {APP_NAME} team\n</p>"
+        }
+      },
+      "authToken": {
+        "duration": 604800
+      },
+      "passwordResetToken": {
+        "duration": 1800
+      },
+      "emailChangeToken": {
+        "duration": 1800
+      },
+      "verificationToken": {
+        "duration": 259200
+      },
+      "fileToken": {
+        "duration": 180
+      },
+      "verificationTemplate": {
+        "subject": "Verify your {APP_NAME} email",
+        "body": "<p>Hello,</p>\n<p>Thank you for joining us at {APP_NAME}.</p>\n<p>Click on the button below to verify your email address.</p>\n<p>\n  <a class=\"btn\" href=\"{APP_URL}/_/#/auth/confirm-verification/{TOKEN}\" target=\"_blank\" rel=\"noopener\">Verify</a>\n</p>\n<p>\n  Thanks,<br/>\n  {APP_NAME} team\n</p>"
+      },
+      "resetPasswordTemplate": {
+        "subject": "Reset your {APP_NAME} password",
+        "body": "<p>Hello,</p>\n<p>Click on the button below to reset your password.</p>\n<p>\n  <a class=\"btn\" href=\"{APP_URL}/_/#/auth/confirm-password-reset/{TOKEN}\" target=\"_blank\" rel=\"noopener\">Reset password</a>\n</p>\n<p><i>If you didn't ask to reset your password, you can ignore this email.</i></p>\n<p>\n  Thanks,<br/>\n  {APP_NAME} team\n</p>"
+      },
+      "confirmEmailChangeTemplate": {
+        "subject": "Confirm your {APP_NAME} new email address",
+        "body": "<p>Hello,</p>\n<p>Click on the button below to confirm your new email address.</p>\n<p>\n  <a class=\"btn\" href=\"{APP_URL}/_/#/auth/confirm-email-change/{TOKEN}\" target=\"_blank\" rel=\"noopener\">Confirm new email</a>\n</p>\n<p><i>If you didn't ask to change your email address, you can ignore this email.</i></p>\n<p>\n  Thanks,<br/>\n  {APP_NAME} team\n</p>"
+      }
+    },
+    {
+      "id": "pbc_3874001850",
+      "listRule": "userId = @request.auth.id",
+      "viewRule": "userId = @request.auth.id",
+      "createRule": "userId = @request.auth.id",
+      "updateRule": "userId = @request.auth.id",
+      "deleteRule": "userId = @request.auth.id",
+      "name": "notification_prefs",
+      "type": "base",
+      "fields": [
+        {
+          "autogeneratePattern": "[a-z0-9]{15}",
+          "hidden": false,
+          "id": "text3208210256",
+          "max": 15,
+          "min": 15,
+          "name": "id",
+          "pattern": "^[a-z0-9]+$",
+          "presentable": false,
+          "primaryKey": true,
+          "required": true,
+          "system": true,
+          "type": "text"
+        },
+        {
+          "cascadeDelete": false,
+          "collectionId": "_pb_users_auth_",
+          "hidden": false,
+          "id": "relation1689669068",
+          "maxSelect": 1,
+          "minSelect": 0,
+          "name": "userId",
+          "presentable": false,
+          "required": true,
+          "system": false,
+          "type": "relation"
+        },
+        {
+          "hidden": false,
+          "id": "json1248959145",
+          "maxSize": 100000,
+          "name": "prefs",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "json"
+        },
+        {
+          "hidden": false,
+          "id": "autodate2990389176",
+          "name": "created",
+          "onCreate": true,
+          "onUpdate": false,
+          "presentable": false,
+          "system": false,
+          "type": "autodate"
+        },
+        {
+          "hidden": false,
+          "id": "autodate3332085495",
+          "name": "updated",
+          "onCreate": true,
+          "onUpdate": true,
+          "presentable": false,
+          "system": false,
+          "type": "autodate"
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX `idx_notification_prefs_user` ON `notification_prefs` (`userId`)"
+      ],
+      "created": "2026-04-28 17:42:20.706Z",
+      "updated": "2026-04-28 17:42:20.706Z",
+      "system": false
+    },
+    {
+      "id": "pbc_1493972399",
+      "listRule": "userId = @request.auth.id",
+      "viewRule": "userId = @request.auth.id",
+      "createRule": "userId = @request.auth.id",
+      "updateRule": "userId = @request.auth.id",
+      "deleteRule": "userId = @request.auth.id",
+      "name": "privacy_prefs",
+      "type": "base",
+      "fields": [
+        {
+          "autogeneratePattern": "[a-z0-9]{15}",
+          "hidden": false,
+          "id": "text3208210256",
+          "max": 15,
+          "min": 15,
+          "name": "id",
+          "pattern": "^[a-z0-9]+$",
+          "presentable": false,
+          "primaryKey": true,
+          "required": true,
+          "system": true,
+          "type": "text"
+        },
+        {
+          "cascadeDelete": false,
+          "collectionId": "_pb_users_auth_",
+          "hidden": false,
+          "id": "relation1689669068",
+          "maxSelect": 1,
+          "minSelect": 0,
+          "name": "userId",
+          "presentable": false,
+          "required": true,
+          "system": false,
+          "type": "relation"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text1081413002",
+          "max": 60,
+          "min": 0,
+          "name": "scanRetention",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "hidden": false,
+          "id": "bool952066133",
+          "name": "modelTraining",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "bool"
+        },
+        {
+          "hidden": false,
+          "id": "bool246684860",
+          "name": "anonymousAnalytics",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "bool"
+        },
+        {
+          "hidden": false,
+          "id": "bool3072908207",
+          "name": "publicProfile",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "bool"
+        },
+        {
+          "hidden": false,
+          "id": "autodate2990389176",
+          "name": "created",
+          "onCreate": true,
+          "onUpdate": false,
+          "presentable": false,
+          "system": false,
+          "type": "autodate"
+        },
+        {
+          "hidden": false,
+          "id": "autodate3332085495",
+          "name": "updated",
+          "onCreate": true,
+          "onUpdate": true,
+          "presentable": false,
+          "system": false,
+          "type": "autodate"
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX `idx_privacy_prefs_user` ON `privacy_prefs` (`userId`)"
+      ],
+      "created": "2026-04-28 17:42:20.713Z",
+      "updated": "2026-04-28 17:42:20.713Z",
+      "system": false
+    },
+    {
+      "id": "pbc_711030668",
+      "listRule": "userId = @request.auth.id",
+      "viewRule": "userId = @request.auth.id",
+      "createRule": null,
+      "updateRule": null,
+      "deleteRule": null,
+      "name": "invoices",
+      "type": "base",
+      "fields": [
+        {
+          "autogeneratePattern": "[a-z0-9]{15}",
+          "hidden": false,
+          "id": "text3208210256",
+          "max": 15,
+          "min": 15,
+          "name": "id",
+          "pattern": "^[a-z0-9]+$",
+          "presentable": false,
+          "primaryKey": true,
+          "required": true,
+          "system": true,
+          "type": "text"
+        },
+        {
+          "cascadeDelete": false,
+          "collectionId": "_pb_users_auth_",
+          "hidden": false,
+          "id": "relation1689669068",
+          "maxSelect": 1,
+          "minSelect": 0,
+          "name": "userId",
+          "presentable": false,
+          "required": true,
+          "system": false,
+          "type": "relation"
+        },
+        {
+          "hidden": false,
+          "id": "number2392944706",
+          "max": null,
+          "min": null,
+          "name": "amount",
+          "onlyInt": false,
+          "presentable": false,
+          "required": true,
+          "system": false,
+          "type": "number"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text1767278655",
+          "max": 6,
+          "min": 0,
+          "name": "currency",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "hidden": false,
+          "id": "date3400087167",
+          "max": "",
+          "min": "",
+          "name": "paidOn",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "date"
+        },
+        {
+          "hidden": false,
+          "id": "file250665868",
+          "maxSelect": 1,
+          "maxSize": 10485760,
+          "mimeTypes": null,
+          "name": "pdf",
+          "presentable": false,
+          "protected": false,
+          "required": false,
+          "system": false,
+          "thumbs": null,
+          "type": "file"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text3423455137",
+          "max": 60,
+          "min": 0,
+          "name": "stripeInvoiceId",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "hidden": false,
+          "id": "autodate2990389176",
+          "name": "created",
+          "onCreate": true,
+          "onUpdate": false,
+          "presentable": false,
+          "system": false,
+          "type": "autodate"
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX `idx_invoices_stripe` ON `invoices` (`stripeInvoiceId`)",
+        "CREATE UNIQUE INDEX `idx_invoices_stripe_invoice_id` ON `invoices` (`stripeInvoiceId`) WHERE `stripeInvoiceId` != ''"
+      ],
+      "created": "2026-04-28 17:42:20.827Z",
+      "updated": "2026-04-29 09:21:44.196Z",
+      "system": false
+    },
+    {
+      "id": "pbc_3558567130",
+      "listRule": "@request.auth.id != ''",
+      "viewRule": "@request.auth.id != ''",
+      "createRule": null,
+      "updateRule": null,
+      "deleteRule": null,
+      "name": "updates",
+      "type": "base",
+      "fields": [
+        {
+          "autogeneratePattern": "[a-z0-9]{15}",
+          "hidden": false,
+          "id": "text3208210256",
+          "max": 15,
+          "min": 15,
+          "name": "id",
+          "pattern": "^[a-z0-9]+$",
+          "presentable": false,
+          "primaryKey": true,
+          "required": true,
+          "system": true,
+          "type": "text"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text2560465762",
+          "max": 80,
+          "min": 0,
+          "name": "slug",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": true,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "hidden": false,
+          "id": "select1002749145",
+          "maxSelect": 1,
+          "name": "kind",
+          "presentable": false,
+          "required": true,
+          "system": false,
+          "type": "select",
+          "values": [
+            "new-model",
+            "accuracy",
+            "product",
+            "fix"
+          ]
+        },
+        {
+          "hidden": false,
+          "id": "select3563894552",
+          "maxSelect": 1,
+          "name": "contentType",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "select",
+          "values": [
+            "txt",
+            "img",
+            "vid",
+            "aud"
+          ]
+        },
+        {
+          "hidden": false,
+          "id": "select1514993324",
+          "maxSelect": 1,
+          "name": "dayGroup",
+          "presentable": false,
+          "required": true,
+          "system": false,
+          "type": "select",
+          "values": [
+            "this-week",
+            "last-week",
+            "earlier-april"
+          ]
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text2782324286",
+          "max": 80,
+          "min": 0,
+          "name": "timestamp",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": true,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "hidden": false,
+          "id": "date3085063276",
+          "max": "",
+          "min": "",
+          "name": "publishedAt",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "date"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text724990059",
+          "max": 400,
+          "min": 0,
+          "name": "title",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": true,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "convertURLs": false,
+          "hidden": false,
+          "id": "editor1843675174",
+          "maxSize": 0,
+          "name": "description",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "editor"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text3622966325",
+          "max": 400,
+          "min": 0,
+          "name": "meta",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text3918387207",
+          "max": 80,
+          "min": 0,
+          "name": "ctaLabel",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text2791116623",
+          "max": 400,
+          "min": 0,
+          "name": "ctaHref",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "hidden": false,
+          "id": "bool1966893702",
+          "name": "unread",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "bool"
+        },
+        {
+          "hidden": false,
+          "id": "json2901202352",
+          "maxSize": 4000,
+          "name": "modelPreview",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "json"
+        },
+        {
+          "hidden": false,
+          "id": "json1928866419",
+          "maxSize": 2000,
+          "name": "accuracyCompare",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "json"
+        },
+        {
+          "hidden": false,
+          "id": "json1502213403",
+          "maxSize": 4000,
+          "name": "statBand",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "json"
+        },
+        {
+          "hidden": false,
+          "id": "number1063427325",
+          "max": null,
+          "min": null,
+          "name": "sortOrder",
+          "onlyInt": false,
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "number"
+        },
+        {
+          "hidden": false,
+          "id": "autodate2990389176",
+          "name": "created",
+          "onCreate": true,
+          "onUpdate": false,
+          "presentable": false,
+          "system": false,
+          "type": "autodate"
+        },
+        {
+          "hidden": false,
+          "id": "autodate3332085495",
+          "name": "updated",
+          "onCreate": true,
+          "onUpdate": true,
+          "presentable": false,
+          "system": false,
+          "type": "autodate"
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX `idx_updates_slug` ON `updates` (`slug`)",
+        "CREATE INDEX `idx_updates_dayGroup` ON `updates` (`dayGroup`)",
+        "CREATE INDEX `idx_updates_kind` ON `updates` (`kind`)"
+      ],
+      "created": "2026-04-28 17:42:20.830Z",
+      "updated": "2026-04-28 17:42:20.830Z",
+      "system": false
+    },
+    {
+      "id": "pbc_1568971955",
+      "listRule": "@request.auth.id != '' && manager = @request.auth.id",
+      "viewRule": "@request.auth.id != '' && manager = @request.auth.id",
+      "createRule": "@request.auth.id != '' && manager = @request.auth.id",
+      "updateRule": "manager = @request.auth.id",
+      "deleteRule": "manager = @request.auth.id",
+      "name": "teams",
+      "type": "base",
+      "fields": [
+        {
+          "autogeneratePattern": "[a-z0-9]{15}",
+          "hidden": false,
+          "id": "text3208210256",
+          "max": 15,
+          "min": 15,
+          "name": "id",
+          "pattern": "^[a-z0-9]+$",
+          "presentable": false,
+          "primaryKey": true,
+          "required": true,
+          "system": true,
+          "type": "text"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text1579384326",
+          "max": 120,
+          "min": 0,
+          "name": "name",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": true,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "cascadeDelete": false,
+          "collectionId": "_pb_users_auth_",
+          "hidden": false,
+          "id": "relation4196672953",
+          "maxSelect": 1,
+          "minSelect": 0,
+          "name": "manager",
+          "presentable": false,
+          "required": true,
+          "system": false,
+          "type": "relation"
+        },
+        {
+          "hidden": false,
+          "id": "number1915452830",
+          "max": null,
+          "min": 1,
+          "name": "seatLimit",
+          "onlyInt": false,
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "number"
+        },
+        {
+          "hidden": false,
+          "id": "autodate2990389176",
+          "name": "created",
+          "onCreate": true,
+          "onUpdate": false,
+          "presentable": false,
+          "system": false,
+          "type": "autodate"
+        },
+        {
+          "hidden": false,
+          "id": "autodate3332085495",
+          "name": "updated",
+          "onCreate": true,
+          "onUpdate": true,
+          "presentable": false,
+          "system": false,
+          "type": "autodate"
+        }
+      ],
+      "indexes": [],
+      "created": "2026-04-29 09:21:44.122Z",
+      "updated": "2026-04-29 09:21:44.122Z",
+      "system": false
+    },
+    {
+      "id": "pbc_3980519374",
+      "listRule": "@request.auth.id != '' && (user = @request.auth.id || team.manager = @request.auth.id)",
+      "viewRule": "@request.auth.id != '' && (user = @request.auth.id || team.manager = @request.auth.id)",
+      "createRule": "team.manager = @request.auth.id",
+      "updateRule": "team.manager = @request.auth.id",
+      "deleteRule": "team.manager = @request.auth.id",
+      "name": "team_members",
+      "type": "base",
+      "fields": [
+        {
+          "autogeneratePattern": "[a-z0-9]{15}",
+          "hidden": false,
+          "id": "text3208210256",
+          "max": 15,
+          "min": 15,
+          "name": "id",
+          "pattern": "^[a-z0-9]+$",
+          "presentable": false,
+          "primaryKey": true,
+          "required": true,
+          "system": true,
+          "type": "text"
+        },
+        {
+          "cascadeDelete": false,
+          "collectionId": "pbc_1568971955",
+          "hidden": false,
+          "id": "relation3303056927",
+          "maxSelect": 1,
+          "minSelect": 0,
+          "name": "team",
+          "presentable": false,
+          "required": true,
+          "system": false,
+          "type": "relation"
+        },
+        {
+          "cascadeDelete": false,
+          "collectionId": "_pb_users_auth_",
+          "hidden": false,
+          "id": "relation2375276105",
+          "maxSelect": 1,
+          "minSelect": 0,
+          "name": "user",
+          "presentable": false,
+          "required": true,
+          "system": false,
+          "type": "relation"
+        },
+        {
+          "hidden": false,
+          "id": "select1466534506",
+          "maxSelect": 1,
+          "name": "role",
+          "presentable": false,
+          "required": true,
+          "system": false,
+          "type": "select",
+          "values": [
+            "manager",
+            "member"
+          ]
+        },
+        {
+          "cascadeDelete": false,
+          "collectionId": "_pb_users_auth_",
+          "hidden": false,
+          "id": "relation3607751814",
+          "maxSelect": 1,
+          "minSelect": 0,
+          "name": "invitedBy",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "relation"
+        },
+        {
+          "hidden": false,
+          "id": "autodate2904712964",
+          "name": "joinedAt",
+          "onCreate": true,
+          "onUpdate": false,
+          "presentable": false,
+          "system": false,
+          "type": "autodate"
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX `idx_team_members_user_team` ON `team_members` (`team`, `user`)"
+      ],
+      "created": "2026-04-29 09:21:44.147Z",
+      "updated": "2026-04-29 09:21:44.147Z",
+      "system": false
+    },
+    {
+      "id": "pbc_2541310727",
+      "listRule": "userId = @request.auth.id",
+      "viewRule": "userId = @request.auth.id",
+      "createRule": "userId = @request.auth.id",
+      "updateRule": "userId = @request.auth.id",
+      "deleteRule": "userId = @request.auth.id",
+      "name": "extension_prefs",
+      "type": "base",
+      "fields": [
+        {
+          "autogeneratePattern": "[a-z0-9]{15}",
+          "hidden": false,
+          "id": "text3208210256",
+          "max": 15,
+          "min": 15,
+          "name": "id",
+          "pattern": "^[a-z0-9]+$",
+          "presentable": false,
+          "primaryKey": true,
+          "required": true,
+          "system": true,
+          "type": "text"
+        },
+        {
+          "cascadeDelete": false,
+          "collectionId": "_pb_users_auth_",
+          "hidden": false,
+          "id": "relation1689669068",
+          "maxSelect": 1,
+          "minSelect": 0,
+          "name": "userId",
+          "presentable": false,
+          "required": true,
+          "system": false,
+          "type": "relation"
+        },
+        {
+          "hidden": false,
+          "id": "select2546616235",
+          "maxSelect": 1,
+          "name": "mode",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "select",
+          "values": [
+            "normal",
+            "power"
+          ]
+        },
+        {
+          "hidden": false,
+          "id": "bool1162330284",
+          "name": "autoModelMode",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "bool"
+        },
+        {
+          "hidden": false,
+          "id": "select246758712",
+          "maxSelect": 1,
+          "name": "scanMode",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "select",
+          "values": [
+            "allowlist",
+            "manual",
+            "everything"
+          ]
+        },
+        {
+          "hidden": false,
+          "id": "json3154160227",
+          "maxSize": 200000,
+          "name": "sites",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "json"
+        },
+        {
+          "hidden": false,
+          "id": "json394364643",
+          "maxSize": 10000,
+          "name": "platforms",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "json"
+        },
+        {
+          "hidden": false,
+          "id": "json1610658003",
+          "maxSize": 10000,
+          "name": "notifications",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "json"
+        },
+        {
+          "hidden": false,
+          "id": "json3280214280",
+          "maxSize": 10000,
+          "name": "privacy",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "json"
+        },
+        {
+          "hidden": false,
+          "id": "json1158659468",
+          "maxSize": 20000,
+          "name": "hotkeys",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "json"
+        },
+        {
+          "hidden": false,
+          "id": "json184893882",
+          "maxSize": 20000,
+          "name": "flags",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "json"
+        },
+        {
+          "hidden": false,
+          "id": "autodate2990389176",
+          "name": "created",
+          "onCreate": true,
+          "onUpdate": false,
+          "presentable": false,
+          "system": false,
+          "type": "autodate"
+        },
+        {
+          "hidden": false,
+          "id": "autodate3332085495",
+          "name": "updated",
+          "onCreate": true,
+          "onUpdate": true,
+          "presentable": false,
+          "system": false,
+          "type": "autodate"
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX `idx_extension_prefs_user` ON `extension_prefs` (`userId`)"
+      ],
+      "created": "2026-04-29 09:21:44.158Z",
+      "updated": "2026-04-29 09:21:44.158Z",
+      "system": false
+    },
+    {
+      "id": "pbc_3753707191",
+      "listRule": "userId = @request.auth.id",
+      "viewRule": "userId = @request.auth.id",
+      "createRule": "userId = @request.auth.id",
+      "updateRule": null,
+      "deleteRule": "userId = @request.auth.id",
+      "name": "data_exports",
+      "type": "base",
+      "fields": [
+        {
+          "autogeneratePattern": "[a-z0-9]{15}",
+          "hidden": false,
+          "id": "text3208210256",
+          "max": 15,
+          "min": 15,
+          "name": "id",
+          "pattern": "^[a-z0-9]+$",
+          "presentable": false,
+          "primaryKey": true,
+          "required": true,
+          "system": true,
+          "type": "text"
+        },
+        {
+          "cascadeDelete": false,
+          "collectionId": "_pb_users_auth_",
+          "hidden": false,
+          "id": "relation1689669068",
+          "maxSelect": 1,
+          "minSelect": 0,
+          "name": "userId",
+          "presentable": false,
+          "required": true,
+          "system": false,
+          "type": "relation"
+        },
+        {
+          "hidden": false,
+          "id": "select1002749145",
+          "maxSelect": 1,
+          "name": "kind",
+          "presentable": false,
+          "required": true,
+          "system": false,
+          "type": "select",
+          "values": [
+            "everything",
+            "library",
+            "reports"
+          ]
+        },
+        {
+          "hidden": false,
+          "id": "select2063623452",
+          "maxSelect": 1,
+          "name": "status",
+          "presentable": false,
+          "required": true,
+          "system": false,
+          "type": "select",
+          "values": [
+            "pending",
+            "ready",
+            "failed"
+          ]
+        },
+        {
+          "hidden": false,
+          "id": "file2359244304",
+          "maxSelect": 1,
+          "maxSize": 524288000,
+          "mimeTypes": null,
+          "name": "file",
+          "presentable": false,
+          "protected": false,
+          "required": false,
+          "system": false,
+          "thumbs": null,
+          "type": "file"
+        },
+        {
+          "hidden": false,
+          "id": "autodate2990389176",
+          "name": "created",
+          "onCreate": true,
+          "onUpdate": false,
+          "presentable": false,
+          "system": false,
+          "type": "autodate"
+        },
+        {
+          "hidden": false,
+          "id": "autodate3332085495",
+          "name": "updated",
+          "onCreate": true,
+          "onUpdate": true,
+          "presentable": false,
+          "system": false,
+          "type": "autodate"
+        }
+      ],
+      "indexes": [],
+      "created": "2026-04-29 09:21:44.167Z",
+      "updated": "2026-04-29 09:21:44.167Z",
+      "system": false
+    },
+    {
+      "id": "pbc_3789704380",
+      "listRule": "userId = @request.auth.id",
+      "viewRule": "userId = @request.auth.id || visibility = 'public' || (collection_items_via_scanId.collection.userId ?= @request.auth.id || (collection_items_via_scanId.collection.collection_members_via_collection.userId ?= @request.auth.id && collection_items_via_scanId.collection.collection_members_via_collection.status ?= 'accepted'))",
+      "createRule": "userId = @request.auth.id",
+      "updateRule": "userId = @request.auth.id",
+      "deleteRule": "userId = @request.auth.id",
+      "name": "scans",
+      "type": "base",
+      "fields": [
+        {
+          "autogeneratePattern": "[a-z0-9]{15}",
+          "hidden": false,
+          "id": "text3208210256",
+          "max": 15,
+          "min": 15,
+          "name": "id",
+          "pattern": "^[a-z0-9]+$",
+          "presentable": false,
+          "primaryKey": true,
+          "required": true,
+          "system": true,
+          "type": "text"
+        },
+        {
+          "cascadeDelete": true,
+          "collectionId": "_pb_users_auth_",
+          "hidden": false,
+          "id": "relation1689669068",
+          "maxSelect": 1,
+          "minSelect": 0,
+          "name": "userId",
+          "presentable": false,
+          "required": true,
+          "system": false,
+          "type": "relation"
+        },
+        {
+          "hidden": false,
+          "id": "bool1639016958",
+          "name": "archived",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "bool"
+        },
+        {
+          "hidden": false,
+          "id": "bool3844597223",
+          "name": "pinned",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "bool"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text724990059",
+          "max": 200,
+          "min": 0,
+          "name": "title",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "hidden": false,
+          "id": "select2363381545",
+          "maxSelect": 1,
+          "name": "type",
+          "presentable": false,
+          "required": true,
+          "system": false,
+          "type": "select",
+          "values": [
+            "txt",
+            "img",
+            "aud",
+            "vid",
+            "web",
+            "soc"
+          ]
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text1433085346",
+          "max": 32,
+          "min": 0,
+          "name": "subtype",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "hidden": false,
+          "id": "select3740358174",
+          "maxSelect": 1,
+          "name": "origin",
+          "presentable": false,
+          "required": true,
+          "system": false,
+          "type": "select",
+          "values": [
+            "paste",
+            "link",
+            "upload",
+            "record",
+            "ext",
+            "url",
+            "mon"
+          ]
+        },
+        {
+          "hidden": false,
+          "id": "select2063623452",
+          "maxSelect": 1,
+          "name": "status",
+          "presentable": false,
+          "required": true,
+          "system": false,
+          "type": "select",
+          "values": [
+            "queued",
+            "scanning",
+            "done",
+            "failed"
+          ]
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text4274335913",
+          "max": 1000000,
+          "min": 0,
+          "name": "content",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "hidden": false,
+          "id": "file2359244304",
+          "maxSelect": 1,
+          "maxSize": 268435456,
+          "mimeTypes": null,
+          "name": "file",
+          "presentable": false,
+          "protected": false,
+          "required": false,
+          "system": false,
+          "thumbs": null,
+          "type": "file"
+        },
+        {
+          "exceptDomains": null,
+          "hidden": false,
+          "id": "url1061607967",
+          "name": "sourceUrl",
+          "onlyDomains": null,
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "url"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text3639779463",
+          "max": 128,
+          "min": 0,
+          "name": "mimeType",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "hidden": false,
+          "id": "number1188616821",
+          "max": null,
+          "min": null,
+          "name": "sizeBytes",
+          "onlyInt": false,
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "number"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text329407205",
+          "max": 128,
+          "min": 0,
+          "name": "fileHash",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "hidden": false,
+          "id": "number3946893568",
+          "max": null,
+          "min": null,
+          "name": "durationMs",
+          "onlyInt": false,
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "number"
+        },
+        {
+          "hidden": false,
+          "id": "number296229008",
+          "max": null,
+          "min": null,
+          "name": "wordCount",
+          "onlyInt": false,
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "number"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text3571151285",
+          "max": 16,
+          "min": 0,
+          "name": "language",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text1836681435",
+          "max": 1024,
+          "min": 0,
+          "name": "thumbUrl",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "hidden": false,
+          "id": "select587532947",
+          "maxSelect": 1,
+          "name": "verdict",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "select",
+          "values": [
+            "human",
+            "ai",
+            "mixed",
+            "unknown"
+          ]
+        },
+        {
+          "hidden": false,
+          "id": "number158830993",
+          "max": 100,
+          "min": 0,
+          "name": "confidence",
+          "onlyInt": false,
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "number"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text3616895705",
+          "max": 128,
+          "min": 0,
+          "name": "model",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text1509078054",
+          "max": 128,
+          "min": 0,
+          "name": "engineId",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "hidden": false,
+          "id": "date4032984554",
+          "max": "",
+          "min": "",
+          "name": "scanStartedAt",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "date"
+        },
+        {
+          "hidden": false,
+          "id": "date2837652390",
+          "max": "",
+          "min": "",
+          "name": "scanCompletedAt",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "date"
+        },
+        {
+          "hidden": false,
+          "id": "number38698550",
+          "max": null,
+          "min": null,
+          "name": "scanDurationMs",
+          "onlyInt": false,
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "number"
+        },
+        {
+          "hidden": false,
+          "id": "json3012992423",
+          "maxSize": 5000,
+          "name": "breakdown",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "json"
+        },
+        {
+          "hidden": false,
+          "id": "json184893882",
+          "maxSize": 200000,
+          "name": "flags",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "json"
+        },
+        {
+          "hidden": false,
+          "id": "json3393328",
+          "maxSize": 50000,
+          "name": "analysis",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "json"
+        },
+        {
+          "hidden": false,
+          "id": "number850305879",
+          "max": null,
+          "min": null,
+          "name": "analysisVersion",
+          "onlyInt": false,
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "number"
+        },
+        {
+          "hidden": false,
+          "id": "json1574812785",
+          "maxSize": 5000,
+          "name": "error",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "json"
+        },
+        {
+          "hidden": false,
+          "id": "select1368277760",
+          "maxSelect": 1,
+          "name": "visibility",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "select",
+          "values": [
+            "private",
+            "unlisted",
+            "public"
+          ]
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text2115302333",
+          "max": 64,
+          "min": 0,
+          "name": "shareToken",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "hidden": false,
+          "id": "json1874629670",
+          "maxSize": 5000,
+          "name": "tags",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "json"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text18589324",
+          "max": 50000,
+          "min": 0,
+          "name": "notes",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text455797646",
+          "max": 32,
+          "min": 0,
+          "name": "collectionRef",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "hidden": false,
+          "id": "number3666260254",
+          "max": null,
+          "min": null,
+          "name": "creditsUsed",
+          "onlyInt": false,
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "number"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text167020825",
+          "max": 32,
+          "min": 0,
+          "name": "parentScanId",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "hidden": false,
+          "id": "number3206337475",
+          "max": null,
+          "min": null,
+          "name": "version",
+          "onlyInt": false,
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "number"
+        },
+        {
+          "hidden": false,
+          "id": "autodate2990389176",
+          "name": "created",
+          "onCreate": true,
+          "onUpdate": false,
+          "presentable": false,
+          "system": false,
+          "type": "autodate"
+        },
+        {
+          "hidden": false,
+          "id": "autodate3332085495",
+          "name": "updated",
+          "onCreate": true,
+          "onUpdate": true,
+          "presentable": false,
+          "system": false,
+          "type": "autodate"
+        },
+        {
+          "hidden": false,
+          "id": "number1364898456",
+          "max": 100,
+          "min": 0,
+          "name": "aiPct",
+          "onlyInt": false,
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "number"
+        },
+        {
+          "hidden": false,
+          "id": "json1208928967",
+          "maxSize": 200000,
+          "name": "engineResults",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "json"
+        },
+        {
+          "hidden": false,
+          "id": "number2526027604",
+          "max": null,
+          "min": 0,
+          "name": "number",
+          "onlyInt": true,
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "number"
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX `idx_scans_user_created` ON `scans` (`userId`, `created` DESC)",
+        "CREATE INDEX `idx_scans_user_type` ON `scans` (`userId`, `type`)",
+        "CREATE UNIQUE INDEX `idx_scans_share` ON `scans` (`shareToken`) WHERE `shareToken` != ''",
+        "CREATE INDEX `idx_scans_user_number` ON `scans` (`userId`, `number` DESC)"
+      ],
+      "created": "2026-04-29 18:47:32.372Z",
+      "updated": "2026-05-04 23:54:14.243Z",
+      "system": false
+    },
+    {
+      "id": "pbc_601157786",
+      "listRule": "userId = @request.auth.id || (collection_members_via_collection.userId ?= @request.auth.id && collection_members_via_collection.status ?= 'accepted')",
+      "viewRule": "userId = @request.auth.id || (collection_members_via_collection.userId ?= @request.auth.id && collection_members_via_collection.status ?= 'accepted')",
+      "createRule": "@request.auth.id != '' && userId = @request.auth.id",
+      "updateRule": "userId = @request.auth.id",
+      "deleteRule": "userId = @request.auth.id",
+      "name": "collections",
+      "type": "base",
+      "fields": [
+        {
+          "autogeneratePattern": "[a-z0-9]{15}",
+          "hidden": false,
+          "id": "text3208210256",
+          "max": 15,
+          "min": 15,
+          "name": "id",
+          "pattern": "^[a-z0-9]+$",
+          "presentable": false,
+          "primaryKey": true,
+          "required": true,
+          "system": true,
+          "type": "text"
+        },
+        {
+          "cascadeDelete": true,
+          "collectionId": "_pb_users_auth_",
+          "hidden": false,
+          "id": "relation1689669068",
+          "maxSelect": 1,
+          "minSelect": 0,
+          "name": "userId",
+          "presentable": false,
+          "required": true,
+          "system": false,
+          "type": "relation"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text2560465762",
+          "max": 80,
+          "min": 1,
+          "name": "slug",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+          "presentable": false,
+          "primaryKey": false,
+          "required": true,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text724990059",
+          "max": 120,
+          "min": 1,
+          "name": "title",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": true,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text1843675174",
+          "max": 500,
+          "min": 0,
+          "name": "description",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "hidden": false,
+          "id": "select1077196596",
+          "maxSelect": 1,
+          "name": "tone",
+          "presentable": false,
+          "required": true,
+          "system": false,
+          "type": "select",
+          "values": [
+            "human",
+            "ai",
+            "mixed",
+            "info",
+            "gold",
+            "neutral"
+          ]
+        },
+        {
+          "hidden": false,
+          "id": "select2747071630",
+          "maxSelect": 1,
+          "name": "pattern",
+          "presentable": false,
+          "required": true,
+          "system": false,
+          "type": "select",
+          "values": [
+            "dots",
+            "grid",
+            "lines"
+          ]
+        },
+        {
+          "hidden": false,
+          "id": "bool3844597223",
+          "name": "pinned",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "bool"
+        },
+        {
+          "hidden": false,
+          "id": "autodate2990389176",
+          "name": "created",
+          "onCreate": true,
+          "onUpdate": false,
+          "presentable": false,
+          "system": false,
+          "type": "autodate"
+        },
+        {
+          "hidden": false,
+          "id": "autodate3332085495",
+          "name": "updated",
+          "onCreate": true,
+          "onUpdate": true,
+          "presentable": false,
+          "system": false,
+          "type": "autodate"
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX `idx_collections_slug` ON `collections` (`slug`)",
+        "CREATE INDEX `idx_collections_user` ON `collections` (`userId`)"
+      ],
+      "created": "2026-04-29 19:38:03.576Z",
+      "updated": "2026-05-03 23:36:52.003Z",
+      "system": false
+    },
+    {
+      "id": "pbc_2074168516",
+      "listRule": "@request.auth.id != \"\" && (userId = @request.auth.id || invitedBy = @request.auth.id || collection.userId = @request.auth.id)",
+      "viewRule": "@request.auth.id != \"\" && (userId = @request.auth.id || invitedBy = @request.auth.id || collection.userId = @request.auth.id)",
+      "createRule": "@request.auth.id != \"\" && collection.userId = @request.auth.id && invitedBy = @request.auth.id",
+      "updateRule": "userId = @request.auth.id || collection.userId = @request.auth.id || invitedBy = @request.auth.id",
+      "deleteRule": "userId = @request.auth.id || collection.userId = @request.auth.id || invitedBy = @request.auth.id",
+      "name": "collection_members",
+      "type": "base",
+      "fields": [
+        {
+          "autogeneratePattern": "[a-z0-9]{15}",
+          "hidden": false,
+          "id": "text3208210256",
+          "max": 15,
+          "min": 15,
+          "name": "id",
+          "pattern": "^[a-z0-9]+$",
+          "presentable": false,
+          "primaryKey": true,
+          "required": true,
+          "system": true,
+          "type": "text"
+        },
+        {
+          "cascadeDelete": true,
+          "collectionId": "pbc_601157786",
+          "hidden": false,
+          "id": "relation4232930610",
+          "maxSelect": 1,
+          "minSelect": 0,
+          "name": "collection",
+          "presentable": false,
+          "required": true,
+          "system": false,
+          "type": "relation"
+        },
+        {
+          "cascadeDelete": true,
+          "collectionId": "_pb_users_auth_",
+          "hidden": false,
+          "id": "relation1689669068",
+          "maxSelect": 1,
+          "minSelect": 0,
+          "name": "userId",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "relation"
+        },
+        {
+          "cascadeDelete": false,
+          "collectionId": "_pb_users_auth_",
+          "hidden": false,
+          "id": "relation3607751814",
+          "maxSelect": 1,
+          "minSelect": 0,
+          "name": "invitedBy",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "relation"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text1167850209",
+          "max": 254,
+          "min": 0,
+          "name": "invitedEmail",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "hidden": false,
+          "id": "select1466534506",
+          "maxSelect": 1,
+          "name": "role",
+          "presentable": false,
+          "required": true,
+          "system": false,
+          "type": "select",
+          "values": [
+            "owner",
+            "editor",
+            "viewer"
+          ]
+        },
+        {
+          "hidden": false,
+          "id": "select2063623452",
+          "maxSelect": 1,
+          "name": "status",
+          "presentable": false,
+          "required": true,
+          "system": false,
+          "type": "select",
+          "values": [
+            "pending",
+            "accepted",
+            "rejected"
+          ]
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text3065852031",
+          "max": 500,
+          "min": 0,
+          "name": "message",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "hidden": false,
+          "id": "autodate2990389176",
+          "name": "created",
+          "onCreate": true,
+          "onUpdate": false,
+          "presentable": false,
+          "system": false,
+          "type": "autodate"
+        },
+        {
+          "hidden": false,
+          "id": "autodate3332085495",
+          "name": "updated",
+          "onCreate": true,
+          "onUpdate": true,
+          "presentable": false,
+          "system": false,
+          "type": "autodate"
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX `idx_collection_members_pair` ON `collection_members` (`collection`, `userId`) WHERE `userId` != ''",
+        "CREATE INDEX `idx_collection_members_user` ON `collection_members` (`userId`, `status`)",
+        "CREATE INDEX `idx_collection_members_email` ON `collection_members` (`invitedEmail`, `status`)"
+      ],
+      "created": "2026-05-03 23:36:51.983Z",
+      "updated": "2026-05-04 00:32:17.435Z",
+      "system": false
+    },
+    {
+      "id": "pbc_3096047515",
+      "listRule": "@request.auth.id != '' && (collection.userId = @request.auth.id || (collection.collection_members_via_collection.userId ?= @request.auth.id && collection.collection_members_via_collection.status ?= 'accepted'))",
+      "viewRule": "@request.auth.id != '' && (collection.userId = @request.auth.id || (collection.collection_members_via_collection.userId ?= @request.auth.id && collection.collection_members_via_collection.status ?= 'accepted'))",
+      "createRule": "@request.auth.id != '' && addedBy = @request.auth.id && (collection.userId = @request.auth.id || (collection.collection_members_via_collection.userId ?= @request.auth.id && collection.collection_members_via_collection.status ?= 'accepted'))",
+      "updateRule": null,
+      "deleteRule": "addedBy = @request.auth.id || collection.userId = @request.auth.id",
+      "name": "collection_items",
+      "type": "base",
+      "fields": [
+        {
+          "autogeneratePattern": "[a-z0-9]{15}",
+          "hidden": false,
+          "id": "text3208210256",
+          "max": 15,
+          "min": 15,
+          "name": "id",
+          "pattern": "^[a-z0-9]+$",
+          "presentable": false,
+          "primaryKey": true,
+          "required": true,
+          "system": true,
+          "type": "text"
+        },
+        {
+          "cascadeDelete": true,
+          "collectionId": "pbc_601157786",
+          "hidden": false,
+          "id": "relation4232930610",
+          "maxSelect": 1,
+          "minSelect": 0,
+          "name": "collection",
+          "presentable": false,
+          "required": true,
+          "system": false,
+          "type": "relation"
+        },
+        {
+          "cascadeDelete": true,
+          "collectionId": "pbc_3789704380",
+          "hidden": false,
+          "id": "relation1213330448",
+          "maxSelect": 1,
+          "minSelect": 0,
+          "name": "scanId",
+          "presentable": false,
+          "required": true,
+          "system": false,
+          "type": "relation"
+        },
+        {
+          "cascadeDelete": false,
+          "collectionId": "_pb_users_auth_",
+          "hidden": false,
+          "id": "relation3888809020",
+          "maxSelect": 1,
+          "minSelect": 0,
+          "name": "addedBy",
+          "presentable": false,
+          "required": true,
+          "system": false,
+          "type": "relation"
+        },
+        {
+          "hidden": false,
+          "id": "autodate2990389176",
+          "name": "created",
+          "onCreate": true,
+          "onUpdate": false,
+          "presentable": false,
+          "system": false,
+          "type": "autodate"
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX `idx_collection_items_pair` ON `collection_items` (`collection`, `scanId`)",
+        "CREATE INDEX `idx_collection_items_collection` ON `collection_items` (`collection`)",
+        "CREATE INDEX `idx_collection_items_scan` ON `collection_items` (`scanId`)"
+      ],
+      "created": "2026-05-03 23:36:52.032Z",
+      "updated": "2026-05-03 23:36:52.032Z",
+      "system": false
+    },
+    {
+      "id": "pbc_1794819098",
+      "listRule": null,
+      "viewRule": null,
+      "createRule": null,
+      "updateRule": null,
+      "deleteRule": null,
+      "name": "service_secrets",
+      "type": "base",
+      "fields": [
+        {
+          "autogeneratePattern": "[a-z0-9]{15}",
+          "hidden": false,
+          "id": "text3208210256",
+          "max": 15,
+          "min": 15,
+          "name": "id",
+          "pattern": "^[a-z0-9]+$",
+          "presentable": false,
+          "primaryKey": true,
+          "required": true,
+          "system": true,
+          "type": "text"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": true,
+          "id": "text72079683",
+          "max": 200,
+          "min": 0,
+          "name": "huggingfaceToken",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": true,
+          "id": "text2697122615",
+          "max": 200,
+          "min": 0,
+          "name": "velmaApiKey",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "hidden": false,
+          "id": "autodate2990389176",
+          "name": "created",
+          "onCreate": true,
+          "onUpdate": false,
+          "presentable": false,
+          "system": false,
+          "type": "autodate"
+        },
+        {
+          "hidden": false,
+          "id": "autodate3332085495",
+          "name": "updated",
+          "onCreate": true,
+          "onUpdate": true,
+          "presentable": false,
+          "system": false,
+          "type": "autodate"
+        }
+      ],
+      "indexes": [],
+      "created": "2026-05-04 02:40:21.986Z",
+      "updated": "2026-05-05 10:37:28.547Z",
+      "system": false
+    },
+    {
+      "id": "pbc_1962270352",
+      "listRule": "enabled = true && @request.auth.id != ''",
+      "viewRule": "enabled = true && @request.auth.id != ''",
+      "createRule": null,
+      "updateRule": null,
+      "deleteRule": null,
+      "name": "detection_models",
+      "type": "base",
+      "fields": [
+        {
+          "autogeneratePattern": "[a-z0-9]{15}",
+          "hidden": false,
+          "id": "text3208210256",
+          "max": 15,
+          "min": 15,
+          "name": "id",
+          "pattern": "^[a-z0-9]+$",
+          "presentable": false,
+          "primaryKey": true,
+          "required": true,
+          "system": true,
+          "type": "text"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text2560465762",
+          "max": 80,
+          "min": 1,
+          "name": "slug",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": true,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text1579384326",
+          "max": 120,
+          "min": 0,
+          "name": "name",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": true,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "hidden": false,
+          "id": "select2363381545",
+          "maxSelect": 1,
+          "name": "type",
+          "presentable": false,
+          "required": true,
+          "system": false,
+          "type": "select",
+          "values": [
+            "txt",
+            "img",
+            "aud",
+            "vid"
+          ]
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text2175501037",
+          "max": 200,
+          "min": 0,
+          "name": "hfModelId",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text1304724841",
+          "max": 80,
+          "min": 0,
+          "name": "videoFrameModelSlug",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "hidden": false,
+          "id": "number230402008",
+          "max": null,
+          "min": null,
+          "name": "videoFrameCount",
+          "onlyInt": false,
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "number"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text1843675174",
+          "max": 600,
+          "min": 0,
+          "name": "description",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "hidden": false,
+          "id": "number2470773635",
+          "max": 100,
+          "min": 0,
+          "name": "accuracy",
+          "onlyInt": false,
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "number"
+        },
+        {
+          "exceptDomains": null,
+          "hidden": false,
+          "id": "url1327994364",
+          "name": "getKeyUrl",
+          "onlyDomains": null,
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "url"
+        },
+        {
+          "hidden": false,
+          "id": "bool1358543748",
+          "name": "enabled",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "bool"
+        },
+        {
+          "hidden": false,
+          "id": "number743939940",
+          "max": null,
+          "min": 0,
+          "name": "tokenCost",
+          "onlyInt": false,
+          "presentable": false,
+          "required": true,
+          "system": false,
+          "type": "number"
+        },
+        {
+          "hidden": false,
+          "id": "select2593194284",
+          "maxSelect": 1,
+          "name": "costUnit",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "select",
+          "values": [
+            "per_scan",
+            "per_minute"
+          ]
+        },
+        {
+          "hidden": false,
+          "id": "select741107948",
+          "maxSelect": 4,
+          "name": "plansAllowed",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "select",
+          "values": [
+            "check",
+            "verify",
+            "certify",
+            "team"
+          ]
+        },
+        {
+          "hidden": false,
+          "id": "select93156405",
+          "maxSelect": 4,
+          "name": "defaultForPlans",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "select",
+          "values": [
+            "check",
+            "verify",
+            "certify",
+            "team"
+          ]
+        },
+        {
+          "hidden": false,
+          "id": "autodate2990389176",
+          "name": "created",
+          "onCreate": true,
+          "onUpdate": false,
+          "presentable": false,
+          "system": false,
+          "type": "autodate"
+        },
+        {
+          "hidden": false,
+          "id": "autodate3332085495",
+          "name": "updated",
+          "onCreate": true,
+          "onUpdate": true,
+          "presentable": false,
+          "system": false,
+          "type": "autodate"
+        },
+        {
+          "hidden": false,
+          "id": "select2462348188",
+          "maxSelect": 1,
+          "name": "provider",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "select",
+          "values": [
+            "hf-inference",
+            "velma"
+          ]
+        },
+        {
+          "hidden": false,
+          "id": "select614373258",
+          "maxSelect": 1,
+          "name": "tier",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "select",
+          "values": [
+            "check",
+            "verify",
+            "certify",
+            "team"
+          ]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX `idx_detection_models_slug` ON `detection_models` (`slug`)",
+        "CREATE INDEX `idx_detection_models_type_enabled` ON `detection_models` (`type`, `enabled`)"
+      ],
+      "created": "2026-05-04 02:40:22.039Z",
+      "updated": "2026-05-05 01:46:48.009Z",
+      "system": false
+    },
+    {
+      "id": "pbc_691642300",
+      "listRule": "@request.auth.id != '' && (scanId.userId = @request.auth.id || scanId.visibility = 'public' || (scanId.collection_items_via_scanId.collection.userId ?= @request.auth.id) || (scanId.collection_items_via_scanId.collection.collection_members_via_collection.userId ?= @request.auth.id && scanId.collection_items_via_scanId.collection.collection_members_via_collection.status ?= 'accepted'))",
+      "viewRule": "@request.auth.id != '' && (scanId.userId = @request.auth.id || scanId.visibility = 'public' || (scanId.collection_items_via_scanId.collection.userId ?= @request.auth.id) || (scanId.collection_items_via_scanId.collection.collection_members_via_collection.userId ?= @request.auth.id && scanId.collection_items_via_scanId.collection.collection_members_via_collection.status ?= 'accepted'))",
+      "createRule": "@request.auth.id != '' && userId = @request.auth.id",
+      "updateRule": "userId = @request.auth.id",
+      "deleteRule": "userId = @request.auth.id",
+      "name": "presence",
+      "type": "base",
+      "fields": [
+        {
+          "autogeneratePattern": "[a-z0-9]{15}",
+          "hidden": false,
+          "id": "text3208210256",
+          "max": 15,
+          "min": 15,
+          "name": "id",
+          "pattern": "^[a-z0-9]+$",
+          "presentable": false,
+          "primaryKey": true,
+          "required": true,
+          "system": true,
+          "type": "text"
+        },
+        {
+          "cascadeDelete": true,
+          "collectionId": "_pb_users_auth_",
+          "hidden": false,
+          "id": "relation1689669068",
+          "maxSelect": 1,
+          "minSelect": 0,
+          "name": "userId",
+          "presentable": false,
+          "required": true,
+          "system": false,
+          "type": "relation"
+        },
+        {
+          "cascadeDelete": true,
+          "collectionId": "pbc_3789704380",
+          "hidden": false,
+          "id": "relation1213330448",
+          "maxSelect": 1,
+          "minSelect": 0,
+          "name": "scanId",
+          "presentable": false,
+          "required": true,
+          "system": false,
+          "type": "relation"
+        },
+        {
+          "hidden": false,
+          "id": "autodate1801940630",
+          "name": "lastSeen",
+          "onCreate": true,
+          "onUpdate": true,
+          "presentable": false,
+          "system": false,
+          "type": "autodate"
+        },
+        {
+          "hidden": false,
+          "id": "autodate2990389176",
+          "name": "created",
+          "onCreate": true,
+          "onUpdate": false,
+          "presentable": false,
+          "system": false,
+          "type": "autodate"
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX `idx_presence_pair` ON `presence` (`userId`, `scanId`)",
+        "CREATE INDEX `idx_presence_scan` ON `presence` (`scanId`)"
+      ],
+      "created": "2026-05-04 19:27:08.528Z",
+      "updated": "2026-05-04 19:27:08.528Z",
+      "system": false
+    },
+    {
+      "id": "pbc_84554408",
+      "listRule": "@request.auth.id != '' && (collection.userId = @request.auth.id || (collection.collection_members_via_collection.userId ?= @request.auth.id && collection.collection_members_via_collection.status ?= 'accepted'))",
+      "viewRule": "@request.auth.id != '' && (collection.userId = @request.auth.id || (collection.collection_members_via_collection.userId ?= @request.auth.id && collection.collection_members_via_collection.status ?= 'accepted'))",
+      "createRule": "@request.auth.id != '' && actor = @request.auth.id && (collection.userId = @request.auth.id || (collection.collection_members_via_collection.userId ?= @request.auth.id && collection.collection_members_via_collection.status ?= 'accepted'))",
+      "updateRule": null,
+      "deleteRule": null,
+      "name": "collection_activities",
+      "type": "base",
+      "fields": [
+        {
+          "autogeneratePattern": "[a-z0-9]{15}",
+          "hidden": false,
+          "id": "text3208210256",
+          "max": 15,
+          "min": 15,
+          "name": "id",
+          "pattern": "^[a-z0-9]+$",
+          "presentable": false,
+          "primaryKey": true,
+          "required": true,
+          "system": true,
+          "type": "text"
+        },
+        {
+          "cascadeDelete": true,
+          "collectionId": "pbc_601157786",
+          "hidden": false,
+          "id": "relation4232930610",
+          "maxSelect": 1,
+          "minSelect": 0,
+          "name": "collection",
+          "presentable": false,
+          "required": true,
+          "system": false,
+          "type": "relation"
+        },
+        {
+          "cascadeDelete": false,
+          "collectionId": "_pb_users_auth_",
+          "hidden": false,
+          "id": "relation1148540665",
+          "maxSelect": 1,
+          "minSelect": 0,
+          "name": "actor",
+          "presentable": false,
+          "required": true,
+          "system": false,
+          "type": "relation"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text2363381545",
+          "max": 64,
+          "min": 0,
+          "name": "type",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": true,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "hidden": false,
+          "id": "json1110206997",
+          "maxSize": 20000,
+          "name": "payload",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "json"
+        },
+        {
+          "hidden": false,
+          "id": "autodate2990389176",
+          "name": "created",
+          "onCreate": true,
+          "onUpdate": false,
+          "presentable": false,
+          "system": false,
+          "type": "autodate"
+        },
+        {
+          "hidden": false,
+          "id": "autodate3332085495",
+          "name": "updated",
+          "onCreate": true,
+          "onUpdate": true,
+          "presentable": false,
+          "system": false,
+          "type": "autodate"
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX `idx_collection_activities_collection_created` ON `collection_activities` (`collection`, `created`)",
+        "CREATE INDEX `idx_collection_activities_actor` ON `collection_activities` (`actor`)"
+      ],
+      "created": "2026-05-04 23:54:14.234Z",
+      "updated": "2026-05-04 23:54:14.234Z",
+      "system": false
+    },
+    {
+      "id": "pbc_3545105603",
+      "listRule": null,
+      "viewRule": null,
+      "createRule": null,
+      "updateRule": null,
+      "deleteRule": null,
+      "name": "appearance_prefs",
+      "type": "base",
+      "fields": [
+        {
+          "autogeneratePattern": "[a-z0-9]{15}",
+          "hidden": false,
+          "id": "text3208210256",
+          "max": 15,
+          "min": 15,
+          "name": "id",
+          "pattern": "^[a-z0-9]+$",
+          "presentable": false,
+          "primaryKey": true,
+          "required": true,
+          "system": true,
+          "type": "text"
+        },
+        {
+          "cascadeDelete": false,
+          "collectionId": "_pb_users_auth_",
+          "hidden": false,
+          "id": "relation1689669068",
+          "maxSelect": 1,
+          "minSelect": 0,
+          "name": "userId",
+          "presentable": false,
+          "required": true,
+          "system": false,
+          "type": "relation"
+        },
+        {
+          "hidden": false,
+          "id": "select2541086472",
+          "maxSelect": 1,
+          "name": "theme",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "select",
+          "values": [
+            "paper",
+            "night",
+            "system"
+          ]
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text3923670009",
+          "max": 40,
+          "min": 0,
+          "name": "dateFormat",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "hidden": false,
+          "id": "bool3590436741",
+          "name": "showAuthenticVerdicts",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "bool"
+        },
+        {
+          "hidden": false,
+          "id": "autodate2990389176",
+          "name": "created",
+          "onCreate": true,
+          "onUpdate": false,
+          "presentable": false,
+          "system": false,
+          "type": "autodate"
+        },
+        {
+          "hidden": false,
+          "id": "autodate3332085495",
+          "name": "updated",
+          "onCreate": true,
+          "onUpdate": true,
+          "presentable": false,
+          "system": false,
+          "type": "autodate"
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX `idx_appearance_prefs_user` ON `appearance_prefs` (`userId`)"
+      ],
+      "created": "2026-05-05 10:23:37.236Z",
+      "updated": "2026-05-05 10:23:37.236Z",
+      "system": false
+    }
+  ]
+}

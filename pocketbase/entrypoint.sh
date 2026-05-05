@@ -51,6 +51,17 @@ if [ "$ready" = "true" ] && [ -n "$PB_ADMIN_EMAIL" ] && [ -n "$PB_ADMIN_PASSWORD
   if ! PB_URL=http://127.0.0.1:8090 bash /setup-schema.sh "$PB_ADMIN_EMAIL" "$PB_ADMIN_PASSWORD"; then
     echo "[heynotai] schema apply reported errors (continuing — PB itself is up)"
   fi
+
+  # Optional demo data — only seeds when HEYNOTAI_SEED is explicitly
+  # set to "true". Production deploys leave the var unset so the test
+  # account never auto-creates itself. The script is idempotent so a
+  # truthy value across deploys is safe.
+  if [ "$HEYNOTAI_SEED" = "true" ]; then
+    echo "[heynotai] HEYNOTAI_SEED=true — running /seed.sh"
+    if ! PB_URL=http://127.0.0.1:8090 bash /seed.sh "$PB_ADMIN_EMAIL" "$PB_ADMIN_PASSWORD"; then
+      echo "[heynotai] seed reported errors (continuing — PB itself is up)"
+    fi
+  fi
 elif [ "$ready" != "true" ]; then
   echo "[heynotai] pocketbase didn't become ready within 60s; skipping schema apply"
 fi

@@ -34,6 +34,11 @@ services:
       # requiring a manual `superuser create` step after each deploy.
       PB_ADMIN_EMAIL: ${PB_ADMIN_EMAIL:-}
       PB_ADMIN_PASSWORD: ${PB_ADMIN_PASSWORD:-}
+      # Set HEYNOTAI_SEED=true in Coolify env vars to auto-create the
+      # demo user (O.Taheri@aui.ma / O.Taheri) plus a sample collection
+      # and a handful of scans. Idempotent — leaving it set across
+      # deploys is fine. Unset for true production.
+      HEYNOTAI_SEED: ${HEYNOTAI_SEED:-}
 
   api:
     build:
