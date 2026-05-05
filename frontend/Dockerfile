@@ -18,7 +18,11 @@ COPY shared/package.json shared/
 COPY frontend/package.json frontend/
 COPY extension/package.json extension/
 
-RUN pnpm install --frozen-lockfile --filter @heynotai/extension...
+# --ignore-scripts skips the extension's postinstall (`wxt prepare`),
+# which would otherwise fail here because extension/entrypoints/ isn't
+# copied until below. `wxt zip` (next RUN) runs prepare itself, so we
+# don't lose anything by skipping it during install.
+RUN pnpm install --frozen-lockfile --filter @heynotai/extension... --ignore-scripts
 
 COPY shared shared
 COPY extension extension
