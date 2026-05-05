@@ -22,9 +22,10 @@ RUN apk add --no-cache bash curl python3
 #                    HEYNOTAI_SEED env var in entrypoint.sh.
 COPY schema.json /schema.json
 COPY setup-schema.sh /setup-schema.sh
+COPY seed-models.sh /seed-models.sh
 COPY seed.sh /seed.sh
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /setup-schema.sh /seed.sh /entrypoint.sh
+RUN chmod +x /setup-schema.sh /seed-models.sh /seed.sh /entrypoint.sh
 
 EXPOSE 8090
 ENTRYPOINT ["/entrypoint.sh"]

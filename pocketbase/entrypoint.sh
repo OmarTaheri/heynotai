@@ -52,6 +52,14 @@ if [ "$ready" = "true" ] && [ -n "$PB_ADMIN_EMAIL" ] && [ -n "$PB_ADMIN_PASSWORD
     echo "[heynotai] schema apply reported errors (continuing — PB itself is up)"
   fi
 
+  # detection_models is required for every scan — the api throws
+  # `no_model_available` when this collection is empty. Always run
+  # the model seeder; it's an idempotent upsert by slug.
+  echo "[heynotai] seeding detection_models via /seed-models.sh"
+  if ! PB_URL=http://127.0.0.1:8090 bash /seed-models.sh "$PB_ADMIN_EMAIL" "$PB_ADMIN_PASSWORD"; then
+    echo "[heynotai] model seed reported errors (continuing)"
+  fi
+
   # Optional demo data — only seeds when HEYNOTAI_SEED is explicitly
   # set to "true". Production deploys leave the var unset so the test
   # account never auto-creates itself. The script is idempotent so a
