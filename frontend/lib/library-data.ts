@@ -1,6 +1,5 @@
 import type { ScanType } from "@/components/ui/TypeChip";
 import type { Origin } from "@/components/ui/OriginBadge";
-import type { ActivityRow } from "@/components/app/home/ActivityTable";
 import type { Scan } from "./scan-types";
 import {
   deriveItemMeta,
@@ -170,58 +169,3 @@ export function formatRelative(iso: string): string {
   return `${Math.round(day / 365)}y ago`;
 }
 
-/**
- * TODO(demo-data): remove these once real scans populate the home
- * Activity table reliably. Distinct shape from `LibraryItem` so the
- * home table doesn't pull confidence bars / model columns it doesn't
- * render. Ids `d1..d5` are short on purpose — they don't collide with
- * 15-char PB ids and clicking them routes to the friendly not-found.
- */
-export const DEMO_ACTIVITY_ROWS: ActivityRow[] = [
-  {
-    id: "d1",
-    type: "yt-vid",
-    name: "Celebrity Interview — Exclusive Reveal",
-    origin: "ext",
-    meta: { socialFormat: "video", socialId: "xK2Qjm4" },
-    link: { url: "https://youtube.com/watch?v=xK2Qjm4" },
-    confidence: 87,
-    when: "12m ago",
-  },
-  {
-    id: "d2",
-    type: "img",
-    name: "linkedin_headshot",
-    origin: "up",
-    meta: { size: "1024 × 1024" },
-    confidence: 92,
-    when: "42m ago",
-  },
-  {
-    id: "d3",
-    type: "txt",
-    name: "\"Breaking: A new study shows that AI-generated images...\"",
-    origin: "ext",
-    meta: { wordCount: "612 words" },
-    confidence: 84,
-    when: "1h ago",
-  },
-  {
-    id: "d4",
-    type: "aud",
-    name: "voicemail_from_boss",
-    origin: "mon",
-    meta: { length: "0:42", ext: "mp3" },
-    confidence: 88,
-    when: "3h ago",
-  },
-  {
-    id: "d5",
-    type: "web",
-    name: "EU agrees new framework on synthetic media labelling",
-    origin: "url",
-    meta: { domain: "bbc.com", pathTail: "technology-68921" },
-    confidence: 96,
-    when: "Yesterday",
-  },
-];

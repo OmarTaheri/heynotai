@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ActivityTable, type ActivityRow } from "./ActivityTable";
 import { listScans, ScanApiError } from "@/lib/scans-api";
-import { scanToLibraryItem, DEMO_ACTIVITY_ROWS } from "@/lib/library-data";
+import { scanToLibraryItem } from "@/lib/library-data";
 import { getScanCollections } from "@/lib/collection-items";
 
 const RECENT_LIMIT = 5;
@@ -65,14 +65,9 @@ export function ActivityTableClient() {
     };
   }, []);
 
-  // TODO(demo-data): drop the DEMO_ACTIVITY_ROWS concat once real scans
-  // populate this table reliably. Real rows come first; demos fill out
-  // the bottom so the table never looks empty during demos.
-  const merged: ActivityRow[] = [...(rows ?? []), ...DEMO_ACTIVITY_ROWS];
-
   return (
     <ActivityTable
-      rows={merged}
+      rows={rows ?? []}
       onRowClick={(id) => router.push(`/editor/${id}`)}
     />
   );
