@@ -211,6 +211,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       myTabId = Number.isNaN(t) ? null : t;
     } catch {}
 
+    // Track the URL the drawer is currently mirroring. PAGE_CHANGED is
+    // re-broadcast on the same video at t=0/1.5s/3.5s as YouTube hydrates
+    // metadata (and once more at scan-start with full ytMeta). Treating
+    // every broadcast as "navigation" wipes the scanning UI mid-scan and
+    // makes the drawer look like the Check button did nothing — fixed
+    // here by only resetting when the URL genuinely changed.
+    let lastPageUrl: string | null = null;
+
     // Ask the content script (if any) what state the host page is in
     // right now. Handles "user right-clicked Check before opening
     // drawer" and "drawer auto-reopened on a tab that already scanned".
@@ -223,7 +231,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
             const r = response as {
               scanning?: boolean;
               scanned?: boolean;
+              pageInfo?: { url?: string };
             };
+            // Seed lastPageUrl so the next same-page settle broadcast
+            // doesn't wipe the scan state we're about to restore.
+            if (r.pageInfo?.url) lastPageUrl = r.pageInfo.url;
             if (r.scanning) {
               setProgress(0);
               setScanned(false);
@@ -242,7 +254,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     const onMessage = (msg: unknown, sender: chrome.runtime.MessageSender) => {
-      const m = msg as { type?: string } | null;
+      const m = msg as { type?: string; payload?: { url?: string } } | null;
       if (!m?.type) return;
       // Only react to events from our own host tab.
       if (myTabId != null && sender.tab?.id !== myTabId) return;
@@ -256,6 +268,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setScanning(false);
         setScanned(true);
       } else if (m.type === 'PAGE_CHANGED') {
+        const nextUrl = m.payload?.url ?? null;
+        if (lastPageUrl !== null && nextUrl === lastPageUrl) {
+          // Same page, just a metadata-settle re-broadcast — leave the
+          // scan lifecycle alone.
+          return;
+        }
+        lastPageUrl = nextUrl;
         // Different video/reel/post — wipe any prior verdict state so
         // the drawer doesn't show last page's result for this one.
         setScanning(false);
