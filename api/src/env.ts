@@ -14,9 +14,6 @@ const envSchema = z.object({
     .default("http://localhost:3000")
     .transform((s) => s.split(",").map((o) => o.trim()).filter(Boolean)),
 
-  OPENAI_API_KEY: z.string().optional(),
-  ANTHROPIC_API_KEY: z.string().optional(),
-
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   STRIPE_PRICE_VERIFY_MONTHLY: z.string().optional(),
