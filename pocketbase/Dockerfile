@@ -7,11 +7,17 @@ FROM ghcr.io/muchobien/pocketbase:0.23
 # fresh databases because every boot retries the broken update migration.
 # pb_data is mounted via docker-compose.
 
-# Bootstrap the admin user from PB_ADMIN_EMAIL / PB_ADMIN_PASSWORD on
-# every start so a fresh deploy has a working /_/ login without manual
-# `superuser create` steps.
+# setup-schema.sh needs bash, curl, and python3 (for JSON parsing) —
+# none ship with the upstream Alpine image.
+RUN apk add --no-cache bash curl python3
+
+# Bake the schema script in so the entrypoint can apply it on every
+# boot, and so `docker exec <container> bash /setup-schema.sh ...` is
+# available straight from Coolify's terminal without needing to copy
+# the file in first.
+COPY setup-schema.sh /setup-schema.sh
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN chmod +x /setup-schema.sh /entrypoint.sh
 
 EXPOSE 8090
 ENTRYPOINT ["/entrypoint.sh"]
