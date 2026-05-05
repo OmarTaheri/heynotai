@@ -375,7 +375,7 @@ function ExtensionPrompt({
           >
             Not now
           </button>
-          <BrowserInstallButton href="/#extension" />
+          <BrowserInstallButton href="/install" />
         </div>
       </div>
     </div>
