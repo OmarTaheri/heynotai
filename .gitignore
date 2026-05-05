@@ -9,6 +9,7 @@ build/
 out/
 .turbo/
 .cache/
+frontend/public/downloads/*.zip
 
 # Env files
 .env

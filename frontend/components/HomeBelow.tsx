@@ -345,7 +345,7 @@ export function FinalCTA() {
             detections each month — no card, no model, no guesswork.
           </p>
           <div className={styles.ctaActions}>
-            <a className={`${styles.pill} ${styles.pillCta}`} href="#">
+            <a className={`${styles.pill} ${styles.pillCta}`} href="/install">
               <ChromeIcon size={14} /> Add to Chrome — free
             </a>
             <a className={`${styles.pill} ${styles.pillGhost}`} href="#">

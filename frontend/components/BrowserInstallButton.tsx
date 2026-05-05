@@ -85,7 +85,7 @@ const BROWSERS: Record<
 };
 
 export function BrowserInstallButton({
-  href = "#extension",
+  href = "/install",
   size = "sm",
 }: {
   href?: string;
