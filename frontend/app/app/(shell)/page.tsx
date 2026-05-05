@@ -4,10 +4,7 @@ import { StatGrid, StatTile, type StatTone } from "@/components/ui/StatTile";
 import type { IconName } from "@/components/Icon";
 import { Greeting } from "@/components/app/home/Greeting";
 import { DropCard } from "@/components/app/home/DropCard";
-import {
-  LastScanCard,
-  type LastScan,
-} from "@/components/app/home/LastScanCard";
+import { LastScanCardClient } from "@/components/app/home/LastScanCardClient";
 import { ActivityTableClient } from "@/components/app/home/ActivityTableClient";
 
 export const metadata: Metadata = { title: "Home" };
@@ -52,53 +49,6 @@ const STATS: Stat[] = [
   },
 ];
 
-const LAST_SCAN: LastScan = {
-  type: "txt",
-  filename: "student_essay_214.txt",
-  meta: "UPLOAD · 1,430 words · Fall semester",
-  verdict: "ai",
-  verdictLabel: "Likely AI-written",
-  score: 89,
-  closestModel: "GPT-5",
-  ci: "±3% CI · last model update 2d ago",
-  prose: [
-    [
-      {
-        text:
-          "Growing up in a small coastal town, I always imagined a different kind of life — one where the waves weren't just background noise but a daily reminder of something larger than myself.",
-        highlight: "human",
-      },
-      { text: " " },
-      {
-        text:
-          "The transformative power of coastal living cannot be understated, as it fundamentally reshapes one's perspective on both solitude and community in ways that are both profound and enduring.",
-        highlight: "ai",
-      },
-      {
-        text:
-          " Back in high school I worked summers at the pier, scooping ice cream and pretending not to notice the tourists.",
-      },
-    ],
-    [
-      {
-        text:
-          "Furthermore, it is important to recognize that such experiences serve as foundational building blocks in the development of one's character, offering invaluable lessons that extend far beyond the confines of the immediate environment.",
-        highlight: "ai",
-      },
-      {
-        text:
-          " My first real job came the year I turned sixteen — a summer at the pier diner, where the regulars knew me by the smell of fryer oil before they knew my name.",
-      },
-    ],
-  ],
-  signals: [
-    { name: "Perplexity", value: 92 },
-    { name: "Burstiness", value: 78 },
-    { name: "Phrasing", value: 85 },
-    { name: "Vocabulary", value: 68 },
-  ],
-};
-
 /**
  * Home — the dashboard cold-open. Server component, dark theme, same
  * tokens + visual language as the extension popup.
@@ -142,7 +92,7 @@ export default function HomePage() {
             linkLabel="Open full view"
             linkHref="/app/library"
           />
-          <LastScanCard scan={LAST_SCAN} />
+          <LastScanCardClient />
         </section>
 
         <section>
