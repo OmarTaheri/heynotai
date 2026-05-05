@@ -1,6 +1,14 @@
 import { Nav } from "@/components/Nav";
 import { Hero } from "@/components/Hero";
 import { TrustedBy } from "@/components/TrustedBy";
+import { LiveDemo } from "@/components/LiveDemo";
+import {
+  Steps,
+  FeaturesGrid,
+  MarketingTestimonials,
+  FAQ,
+  FinalCTA,
+} from "@/components/HomeBelow";
 import { Footer } from "@/components/Footer";
 
 export default function HomePage() {
@@ -13,6 +21,12 @@ export default function HomePage() {
           <TrustedBy />
         </div>
       </div>
+      <LiveDemo />
+      <Steps />
+      <FeaturesGrid />
+      <MarketingTestimonials />
+      <FAQ />
+      <FinalCTA />
       <Footer />
     </main>
   );
