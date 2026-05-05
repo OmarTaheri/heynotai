@@ -97,5 +97,141 @@ export function mockScan(text: string): ScanResult {
   const plag = pct(sumLen("plag"));
   const authenticity = Math.max(0, 100 - Math.round(gen * 0.6 + match * 0.25 + plag * 0.4));
 
-  return { authenticity, breakdown: { gen, match, plag }, flags };
+  return { authenticity, aiPct: gen, breakdown: { gen, match, plag }, flags };
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   Image / video / audio mocks. They share the AiFlag shape — `from`/`to`
+   are reinterpreted by each canvas:
+     • image  : packed coords. from = packBox top-left, to = bottom-right.
+                packBox(x, y) = x * 10000 + y, with x,y in 0–1000 (per-mille
+                of width/height). decodeBox/decodePoint live in ImageCanvas.
+     • video  : milliseconds.
+     • audio  : milliseconds.
+   ────────────────────────────────────────────────────────────────────── */
+
+export function packBox(x: number, y: number): number {
+  return Math.round(x) * 10000 + Math.round(y);
+}
+export function unpackBox(n: number): { x: number; y: number } {
+  return { x: Math.floor(n / 10000), y: n % 10000 };
+}
+
+export function mockImageScan(): ScanResult {
+  const flags: AiFlag[] = [
+    {
+      id: "im1",
+      from: packBox(180, 140),
+      to: packBox(560, 520),
+      kind: "gen",
+      confidence: 91,
+      label: "Diffusion-model artifacts in face",
+      match: { vendor: "openai", name: "DALL·E 3" },
+    },
+    {
+      id: "im2",
+      from: packBox(620, 320),
+      to: packBox(880, 660),
+      kind: "match",
+      confidence: 76,
+      label: "Stable Diffusion XL signature",
+      match: { vendor: "google", name: "Imagen-trained features" },
+    },
+    {
+      id: "im3",
+      from: packBox(60, 720),
+      to: packBox(420, 940),
+      kind: "plag",
+      confidence: 64,
+      label: "Reused stock background",
+      source: {
+        url: "unsplash.com/photos/sunset-over-the-water-…",
+        quote: "Backdrop matches a CC-licensed Unsplash photo with 87% similarity.",
+      },
+    },
+  ];
+  return {
+    authenticity: 38,
+    aiPct: 62,
+    breakdown: { gen: 62, match: 41, plag: 18 },
+    flags,
+  };
+}
+
+export function mockVideoScan(durationMs: number = 30_000): ScanResult {
+  const dur = Math.max(durationMs, 8_000);
+  const flags: AiFlag[] = [
+    {
+      id: "vd1",
+      from: Math.round(dur * 0.12),
+      to: Math.round(dur * 0.22),
+      kind: "gen",
+      confidence: 88,
+      label: "Lip-sync mismatch",
+      match: { vendor: "openai", name: "Sora signature" },
+    },
+    {
+      id: "vd2",
+      from: Math.round(dur * 0.46),
+      to: Math.round(dur * 0.58),
+      kind: "match",
+      confidence: 73,
+      label: "Face-swap pattern",
+      match: { vendor: "google", name: "Veo motion fingerprint" },
+    },
+    {
+      id: "vd3",
+      from: Math.round(dur * 0.78),
+      to: Math.round(dur * 0.86),
+      kind: "gen",
+      confidence: 81,
+      label: "Synthetic frame interpolation",
+      match: { vendor: "openai", name: "Runway Gen-3" },
+    },
+  ];
+  return {
+    authenticity: 44,
+    aiPct: 54,
+    breakdown: { gen: 54, match: 36, plag: 0 },
+    flags,
+  };
+}
+
+export function mockAudioScan(durationMs: number = 30_000): ScanResult {
+  const dur = Math.max(durationMs, 8_000);
+  const flags: AiFlag[] = [
+    {
+      id: "au1",
+      from: Math.round(dur * 0.08),
+      to: Math.round(dur * 0.24),
+      kind: "match",
+      confidence: 92,
+      label: "Voice clone — ElevenLabs match",
+      match: { vendor: "openai", name: "ElevenLabs v2 voiceprint" },
+    },
+    {
+      id: "au2",
+      from: Math.round(dur * 0.38),
+      to: Math.round(dur * 0.5),
+      kind: "gen",
+      confidence: 79,
+      label: "Prosody anomaly",
+      match: { vendor: "anthropic", name: "Synthetic-cadence model" },
+    },
+    {
+      id: "au3",
+      from: Math.round(dur * 0.66),
+      to: Math.round(dur * 0.78),
+      kind: "gen",
+      confidence: 67,
+      label: "Spectral discontinuity",
+      match: { vendor: "openai", name: "TTS edit boundary" },
+    },
+  ];
+  return {
+    authenticity: 32,
+    aiPct: 48,
+    breakdown: { gen: 48, match: 58, plag: 0 },
+    flags,
+  };
 }

@@ -3,7 +3,7 @@
   background: var(--color-cream-surface);
   color: var(--color-cream-fg);
   border-radius: 14px;
-  padding: 14px;
+  padding: 12px 14px;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
   cursor: pointer;
   transition: box-shadow 0.15s ease, transform 0.15s ease;
@@ -24,12 +24,17 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
   font-family: var(--font-mono);
   font-size: 10px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--color-cream-fg-mid);
-  flex-wrap: wrap;
+}
+
+.confidence {
+  color: var(--color-cream-fg);
+  font-weight: 600;
 }
 
 .pos {
@@ -72,11 +77,14 @@
   color: oklch(0.4 0.12 265);
 }
 
+/* Excerpt + explanation only render in the Findings tab — they give
+   the in-depth read of each detection. The blockquote's left border
+   tints by kind so the eye picks up the category instantly. */
 .quote {
+  margin: 10px 0 0;
+  padding: 9px 11px;
   background: var(--color-cream-surface-sunken);
   border-radius: 8px;
-  padding: 9px 11px;
-  margin: 10px 0 0;
   font-size: 12px;
   line-height: 1.5;
   color: var(--color-cream-fg);
@@ -84,67 +92,15 @@
   font-style: italic;
 }
 
+.quoteGen { border-left-color: var(--color-ai); }
 .quoteMatch { border-left-color: var(--color-mixed); }
 .quotePlag { border-left-color: var(--color-info); }
 
-.modelRow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 10px;
-  padding: 8px;
-  border-radius: 8px;
-  background: var(--color-cream-surface-sunken);
-}
-
-.modelAvatar {
-  width: 30px;
-  height: 30px;
-  border-radius: 7px;
-  background: oklch(0.45 0.15 150);
-  color: #fff;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-mono);
-  font-size: 13px;
-  font-weight: 600;
-  flex-shrink: 0;
-}
-
-.modelAvatarGpt { background: oklch(0.5 0.13 165); }
-.modelAvatarCl { background: oklch(0.55 0.12 35); }
-.modelAvatarGem {
-  background: linear-gradient(135deg, #4285f4 0%, #9b72cb 50%, #ea4335 100%);
-}
-
-.modelBody {
-  flex: 1;
-  min-width: 0;
-}
-
-.modelName {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--color-cream-fg);
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-
-.modelMeta {
-  font-family: var(--font-mono);
-  font-size: 9.5px;
+.explain {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  line-height: 1.55;
   color: var(--color-cream-fg-mid);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  margin-top: 1px;
-}
-
-.modelPct {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--color-cream-fg);
-  font-weight: 600;
 }
 
 .plag {
@@ -167,55 +123,4 @@
   font-size: 12px;
   line-height: 1.5;
   color: var(--color-cream-fg-mid);
-}
-
-.actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 10px;
-  align-items: center;
-}
-
-.grow {
-  flex: 1;
-}
-
-.btnDark {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 12px;
-  border-radius: 8px;
-  background: #1a1916;
-  color: #ecebe5;
-  font-size: 12px;
-  font-weight: 500;
-  border: none;
-  cursor: pointer;
-}
-
-.btnDark:hover {
-  filter: brightness(1.15);
-}
-
-.btnGhost {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 10px;
-  border-radius: 8px;
-  background: transparent;
-  border: none;
-  color: var(--color-cream-fg-mid);
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.btnGhost:hover {
-  background: var(--color-cream-surface-sunken);
-  color: var(--color-cream-fg);
-}
-
-.btnIcon {
-  padding: 6px;
 }

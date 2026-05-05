@@ -6,7 +6,7 @@
   background:
     radial-gradient(
       circle at 90% -20%,
-      color-mix(in oklch, var(--color-cta) 18%, transparent) 0%,
+      color-mix(in oklch, var(--plan-accent, var(--color-cta)) 18%, transparent) 0%,
       transparent 60%
     ),
     linear-gradient(
@@ -46,11 +46,26 @@
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.12em;
-  background: color-mix(in oklch, var(--color-cta) 18%, transparent);
-  color: var(--color-cta);
+  background: color-mix(in oklch, var(--plan-accent, var(--color-cta)) 18%, transparent);
+  color: var(--plan-accent, var(--color-cta));
   padding: 3px 8px;
   border-radius: 4px;
-  border: 1px solid color-mix(in oklch, var(--color-cta) 35%, transparent);
+  border: 1px solid color-mix(in oklch, var(--plan-accent, var(--color-cta)) 35%, transparent);
+}
+
+/* "ENDING" badge — uses the warning/error palette so the card
+   visually signals "winding down" instead of "growing". */
+.badgeEnding {
+  background: color-mix(in oklch, var(--color-error, #d24c4c) 16%, transparent);
+  color: var(--color-error, #f08585);
+  border-color: color-mix(in oklch, var(--color-error, #d24c4c) 38%, transparent);
+}
+
+/* When a cancellation is scheduled the card border picks up a
+   warning tint so a glance tells the user "this plan is ending."
+   The renew/ends row carries the date, the badge carries the tag. */
+.cardEnding {
+  border-color: color-mix(in oklch, var(--color-error, #d24c4c) 35%, var(--color-line-strong));
 }
 
 .renews {
@@ -96,6 +111,19 @@
   margin-top: 4px;
 }
 
+.scans {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--color-fg-mid);
+  letter-spacing: 0.02em;
+  margin-top: 4px;
+}
+
+.scans strong {
+  color: var(--color-fg);
+  font-weight: 600;
+}
+
 .features {
   list-style: none;
   padding: 0;
@@ -116,7 +144,7 @@
 }
 
 .feat svg {
-  color: var(--color-cta);
+  color: var(--plan-accent, var(--color-cta));
   flex-shrink: 0;
 }
 
@@ -167,6 +195,105 @@
   background: var(--color-surface);
   color: var(--color-fg);
   border-color: var(--color-line-medium);
+}
+
+.danger {
+  background: color-mix(in oklch, var(--color-error, #d24c4c) 14%, transparent);
+  color: var(--color-error, #f08585);
+  border-color: color-mix(in oklch, var(--color-error, #d24c4c) 35%, transparent);
+}
+
+.danger:hover {
+  background: color-mix(in oklch, var(--color-error, #d24c4c) 22%, transparent);
+  border-color: color-mix(in oklch, var(--color-error, #d24c4c) 55%, transparent);
+}
+
+.danger:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ── Cancel confirm dialog ────────────────────────────────── */
+.confirmBackdrop {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in oklch, black 70%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 24px;
+  animation: confirmFadeIn 0.18s ease;
+}
+
+@keyframes confirmFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.confirmDialog {
+  /* Brighter than the page surface so the dialog reads against the
+     dimmed backdrop — mixing surface with foreground tint lifts it
+     a step regardless of theme. */
+  background: color-mix(in oklch, var(--color-surface) 80%, var(--color-fg) 8%);
+  color: var(--color-fg);
+  border: 1px solid color-mix(in oklch, var(--color-fg) 18%, transparent);
+  border-radius: 14px;
+  padding: 28px 28px 22px;
+  max-width: 460px;
+  width: 100%;
+  box-shadow:
+    0 24px 64px color-mix(in oklch, black 60%, transparent),
+    0 0 0 1px color-mix(in oklch, var(--color-fg) 6%, transparent) inset;
+  animation: confirmZoomIn 0.18s cubic-bezier(0.2, 0.8, 0.4, 1);
+}
+
+@keyframes confirmZoomIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.confirmTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-fg);
+  letter-spacing: -0.015em;
+  margin: 0 0 10px;
+  line-height: 1.25;
+}
+
+.confirmBody {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--color-fg-mid);
+  margin: 0 0 18px;
+}
+
+.confirmBody strong {
+  color: var(--color-fg);
+  font-weight: 600;
+}
+
+.confirmError {
+  font-size: 12.5px;
+  color: var(--color-error, #f08585);
+  margin: 0 0 14px;
+  line-height: 1.4;
+}
+
+.confirmActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 @media (max-width: 760px) {

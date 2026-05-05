@@ -1,28 +1,31 @@
 import { StatGrid, StatTile } from "@/components/ui/StatTile";
-import type { Collection } from "@/lib/collections-data";
+import type { CollectionStatsSummary } from "./collection-stats";
 
 /**
  * 4-tile KPI strip for the collection detail page. Reuses the global
  * StatTile primitive — only the AI-flagged tile injects a custom
  * delta node (mini split-bar visualizing flagged vs clean).
+ *
+ * Stats are derived from the loaded items list, not from static fields
+ * on the collection record (which PB doesn't store).
  */
-export function CollectionStats({ collection }: { collection: Collection }) {
-  const aiPct = Math.max(0, Math.min(100, collection.aiRate));
+export function CollectionStats({ stats }: { stats: CollectionStatsSummary }) {
+  const aiPct = Math.max(0, Math.min(100, stats.aiPct));
   const okPct = 100 - aiPct;
 
   return (
     <StatGrid>
       <StatTile
         label="Total items"
-        value={collection.itemCount}
-        delta={`${collection.graded} graded · ${collection.pending} pending`}
+        value={stats.itemCount}
+        delta={`${stats.graded} graded · ${stats.pending} pending`}
       />
 
       <StatTile
         label="AI-flagged"
         value={
           <>
-            {collection.flagged}
+            {stats.flagged}
             <span className="coll-stats-frac"> · {aiPct}%</span>
           </>
         }
@@ -36,16 +39,15 @@ export function CollectionStats({ collection }: { collection: Collection }) {
       />
 
       <StatTile
-        label="Avg confidence"
-        value={collection.avgConfidence}
-        unit="%"
-        delta="±3% across items"
+        label="Last scanned"
+        value={stats.lastScannedRelative}
+        delta={stats.lastScannedSubtitle}
       />
 
       <StatTile
-        label="Top model match"
-        value={<span className="coll-stats-italic">{collection.topModel}</span>}
-        delta={`${collection.topModelHits} of ${collection.flagged} flagged`}
+        label="Tokens used"
+        value={stats.tokensUsed.toLocaleString()}
+        delta={stats.tokensSubtitle}
       />
     </StatGrid>
   );

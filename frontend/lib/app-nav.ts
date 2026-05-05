@@ -19,8 +19,8 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     label: "Content",
     items: [
-      { href: "/app/library", label: "Library", icon: "list", count: 470 },
-      { href: "/app/collections", label: "Collections", icon: "folder", count: 7 },
+      { href: "/app/library", label: "Library", icon: "list" },
+      { href: "/app/collections", label: "Collections", icon: "folder" },
       {
         href: "/app/monitors",
         label: "Monitors",
@@ -33,15 +33,9 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     label: "Intelligence",
     items: [
-      { href: "/app/models", label: "Models", icon: "cube", count: 52 },
+      { href: "/app/models", label: "Models", icon: "cube" },
       { href: "/app/reports", label: "Reports", icon: "file-text" },
-      {
-        href: "/app/updates",
-        label: "Updates",
-        icon: "zap",
-        count: 3,
-        indicator: "dot",
-      },
+      { href: "/app/updates", label: "Updates", icon: "zap" },
     ],
   },
   {
@@ -54,8 +48,6 @@ export const NAV_SECTIONS: NavSection[] = [
         icon: "puzzle",
         indicator: "new",
       },
-      { href: "/app/api", label: "API & webhooks", icon: "code" },
-      { href: "/app/settings", label: "Settings", icon: "settings" },
     ],
   },
 ];

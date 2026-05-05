@@ -3,6 +3,11 @@
  * can read their own row + sibling members in the same team. */
 migrate(
   (app) => {
+    try {
+      app.findCollectionByNameOrId("team_members");
+      return;
+    } catch (_) {}
+
     const teams = app.findCollectionByNameOrId("teams");
     const users = app.findCollectionByNameOrId("users");
 
@@ -42,8 +47,10 @@ migrate(
       indexes: [
         "CREATE UNIQUE INDEX `idx_team_members_user_team` ON `team_members` (`team`, `user`)",
       ],
+      // Avoid self-reference at creation time. Sibling-member access
+      // can be added by a later migration if needed.
       listRule:
-        "@request.auth.id != '' && (user = @request.auth.id || team.manager = @request.auth.id || @collection.team_members.user.id ?= @request.auth.id && @collection.team_members.team ?= team)",
+        "@request.auth.id != '' && (user = @request.auth.id || team.manager = @request.auth.id)",
       viewRule:
         "@request.auth.id != '' && (user = @request.auth.id || team.manager = @request.auth.id)",
       createRule: "team.manager = @request.auth.id",

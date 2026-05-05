@@ -7,7 +7,9 @@ import "./types.js";
 import { env } from "./env.js";
 import { health } from "./routes/health.js";
 import { me } from "./routes/me.js";
-import { scan } from "./routes/scan.js";
+import { models } from "./routes/models.js";
+import { scans } from "./routes/scans/index.js";
+import { billing } from "./routes/billing.js";
 
 const app = new Hono();
 
@@ -31,7 +33,9 @@ app.use(
 
 app.route("/health", health);
 app.route("/me", me);
-app.route("/scan", scan);
+app.route("/models", models);
+app.route("/scans", scans);
+app.route("/billing", billing);
 
 app.notFound((c) => c.json({ error: "not_found" }, 404));
 app.onError((err, c) => {

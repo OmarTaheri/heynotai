@@ -1,34 +1,44 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Icon } from '@/components/Icon';
 import { MetricCard } from '@/components/MetricCard';
 import { Row } from '@/components/Row';
 import { Toggle } from '@/components/Toggle';
-import { MODEL_GROUPS } from '@/lib/sample-data';
 import { useApp } from '@/lib/state';
-import type { ContentKind, ModelOption } from '@/lib/types';
+import { useAuth } from '@/lib/auth-state';
+import {
+  fetchModelsCatalog,
+  type Engine,
+  type EngineType,
+  type ModelsCatalog,
+} from '@/lib/models-api';
 
 type PrefKey = 'cloud' | 'cache' | 'share';
 
-// Which option id the Auto picker would choose per content type (dummy logic for now).
-const AUTO_PICKS: Record<ContentKind, string> = {
-  text:  'heynotai-text-v3',
-  image: 'pixel-forensics',
-  audio: 'wave-scan',
-  video: 'frame-drift',
+const TYPES: EngineType[] = ['txt', 'img', 'aud', 'vid'];
+
+const TYPE_LABEL: Record<EngineType, string> = {
+  txt: 'Text detection',
+  img: 'Image detection',
+  aud: 'Audio detection',
+  vid: 'Video detection',
 };
 
-function ModelOpt({
-  opt, active, onSelect, powerMode, disabled, autoPicked,
+const TYPE_ICON: Record<EngineType, 'text' | 'image' | 'audio' | 'video'> = {
+  txt: 'text',
+  img: 'image',
+  aud: 'audio',
+  vid: 'video',
+};
+
+function EngineRow({
+  engine, active, autoPicked, disabled, onSelect,
 }: {
-  opt: ModelOption;
+  engine: Engine;
   active: boolean;
-  onSelect: () => void;
-  powerMode: boolean;
-  disabled: boolean;
   autoPicked: boolean;
+  disabled: boolean;
+  onSelect: () => void;
 }) {
-  const name = powerMode ? opt.name : opt.friendlyName;
-  const spec = powerMode ? opt.spec : opt.friendlySpec;
   return (
     <button
       type="button"
@@ -40,41 +50,78 @@ function ModelOpt({
       <span className="bullet" />
       <div className="mo-body">
         <div className="mo-head">
-          <span className="mo-name">{name}</span>
+          <span className="mo-name">{engine.name}</span>
+          {engine.isDefault && <span className="mo-tag mo-tag-default">DEFAULT</span>}
           {autoPicked && <span className="mo-tag mo-tag-auto">auto-pick</span>}
-          {powerMode && !autoPicked && <span className="mo-tag">{opt.tag}</span>}
         </div>
-        <div className="mo-spec">{spec}</div>
+        {engine.description && <div className="mo-spec">{engine.description}</div>}
+        <div className="mo-meta">
+          <span>{engine.accuracy}% accuracy</span>
+          <span aria-hidden>·</span>
+          <span className={`mo-cost mo-cost-${engine.cost.tone}`}>
+            {engine.cost.value} {engine.cost.unit}
+          </span>
+        </div>
       </div>
-      <span className={`mo-speed ${opt.speed}`}>{opt.speed}</span>
     </button>
+  );
+}
+
+function SkeletonRows() {
+  return (
+    <div className="model-skeleton">
+      <div className="model-skeleton-row" />
+      <div className="model-skeleton-row" />
+    </div>
+  );
+}
+
+function EmptyRow({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="model-empty">
+      <div>No models available right now.</div>
+      <button type="button" className="btn-link" onClick={onRetry}>Retry</button>
+    </div>
   );
 }
 
 export function Models() {
   const { mode, autoModelMode, setAutoModelMode } = useApp();
+  const { user } = useAuth();
   const powerMode = mode === 'power';
 
-  const [selected, setSelected] = useState<Record<ContentKind, string>>({
-    text: 'heynotai-text-v3',
-    image: 'pixel-forensics',
-    audio: 'wave-scan',
-    video: 'frame-drift',
+  const [catalog, setCatalog] = useState<ModelsCatalog | null>(null);
+  const [loadTick, setLoadTick] = useState(0);
+  const [selected, setSelected] = useState<Record<EngineType, string>>({
+    txt: '', img: '', aud: '', vid: '',
   });
   const [prefs, setPrefs] = useState<Record<PrefKey, boolean>>({
     cloud: true, cache: true, share: false,
   });
 
-  const bannerTitle = powerMode
-    ? 'Choose one model per content type'
-    : 'Pick a checker for each type of content';
-  const bannerDesc = powerMode
-    ? 'Larger models are more accurate but slower. You can change these anytime; running scans will finish on the current model.'
-    : "We'll use these to check for AI. You can change them anytime — switch to Power mode in Settings to see the technical model names.";
+  useEffect(() => {
+    let cancelled = false;
+    setCatalog(null);
+    void fetchModelsCatalog().then((c) => {
+      if (cancelled) return;
+      setCatalog(c);
+      setSelected((prev) => ({
+        txt: prev.txt || c.defaults.txt,
+        img: prev.img || c.defaults.img,
+        aud: prev.aud || c.defaults.aud,
+        vid: prev.vid || c.defaults.vid,
+      }));
+    });
+    return () => { cancelled = true; };
+  }, [user?.id, loadTick]);
 
-  // What's effectively active for each kind — auto picks override manual selection while on.
-  const effective: Record<ContentKind, string> = autoModelMode
-    ? AUTO_PICKS
+  const bannerTitle = 'Pick a checker for each type of content';
+  const bannerDesc = autoModelMode
+    ? "heynotai is choosing the recommended checker per type. Turn off Auto mode to pick your own."
+    : "We'll use these to check for AI. Switch to Power mode in Settings for the technical names.";
+
+  const effective: Record<EngineType, string> = autoModelMode && catalog
+    ? catalog.defaults
     : selected;
 
   return (
@@ -107,32 +154,33 @@ export function Models() {
         </div>
       </div>
 
-      {MODEL_GROUPS.map(g => (
+      {TYPES.map((type) => (
         <MetricCard
-          key={g.key}
-          title={g.label}
+          key={type}
+          title={TYPE_LABEL[type]}
           action={
             <span className="card-action" style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-              <Icon name={g.icon} size={12} /> {g.key}
+              <Icon name={TYPE_ICON[type]} size={12} /> {type}
             </span>
           }
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 2 }}>
-            {g.options.map(o => {
-              const isActive = effective[g.key] === o.id;
-              const autoPicked = autoModelMode && AUTO_PICKS[g.key] === o.id;
-              return (
-                <ModelOpt
-                  key={o.id}
-                  opt={o}
-                  active={isActive}
-                  autoPicked={autoPicked}
+            {!catalog ? (
+              <SkeletonRows />
+            ) : catalog.engines[type].length === 0 ? (
+              <EmptyRow onRetry={() => setLoadTick((n) => n + 1)} />
+            ) : (
+              catalog.engines[type].map((eng) => (
+                <EngineRow
+                  key={eng.id}
+                  engine={eng}
+                  active={effective[type] === eng.id}
+                  autoPicked={autoModelMode && catalog.defaults[type] === eng.id}
                   disabled={autoModelMode}
-                  powerMode={powerMode}
-                  onSelect={() => setSelected(s => ({ ...s, [g.key]: o.id }))}
+                  onSelect={() => setSelected((s) => ({ ...s, [type]: eng.id }))}
                 />
-              );
-            })}
+              ))
+            )}
           </div>
         </MetricCard>
       ))}

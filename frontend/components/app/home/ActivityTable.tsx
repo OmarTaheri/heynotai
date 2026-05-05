@@ -1,8 +1,8 @@
-import { Card } from "@/components/ui/Card";
-import { Pill } from "@/components/ui/Pill";
+import { Table } from "@/components/ui/Table";
 import { TypeChip, type ScanType } from "@/components/ui/TypeChip";
 import { OriginBadge, type Origin } from "@/components/ui/OriginBadge";
-import type { ScanVerdict } from "./LastScanCard";
+import { ItemMeta } from "@/components/ui/ItemMeta";
+import type { ItemMetaLink, ItemMetaParts } from "@/lib/item-meta";
 
 export type { Origin } from "@/components/ui/OriginBadge";
 
@@ -11,71 +11,64 @@ export type ActivityRow = {
   type: ScanType;
   name: string;
   origin: Origin;
-  source: string;
+  meta: ItemMetaParts;
+  link?: ItemMetaLink;
   confidence: number;
-  verdict: ScanVerdict;
-  verdictLabel: string;
   when: string;
 };
 
-/**
- * Recent-activity grid on the home page.
- *
- * A semantic <table> laid out with CSS grid on each row so the visual
- * grid (kept identical to the original design) coexists with proper
- * row/cell semantics. The table sits inside a horizontal scroll
- * container so all columns remain reachable on narrow viewports
- * instead of being hidden.
- */
-export function ActivityTable({ rows }: { rows: ActivityRow[] }) {
+export function ActivityTable({
+  rows,
+  onRowClick,
+}: {
+  rows: ActivityRow[];
+  /** When provided, the row title becomes a clickable link. */
+  onRowClick?: (id: string) => void;
+}) {
+  if (rows.length === 0) {
+    return (
+      <Table columns="48px minmax(220px, 1fr) 100px 90px">
+        <Table.Empty>No activity yet.</Table.Empty>
+      </Table>
+    );
+  }
+
   return (
-    <Card>
-      {rows.length === 0 ? (
-        <div className="home-act-empty">No activity yet.</div>
-      ) : (
-        <div className="home-act-scroll">
-          <table className="home-act-table">
-            <thead>
-              <tr className="home-act-head">
-                <th aria-hidden />
-                <th scope="col">Item</th>
-                <th scope="col">Confidence</th>
-                <th scope="col">Verdict</th>
-                <th scope="col" style={{ textAlign: "right" }}>
-                  When
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.id} className="home-act-row">
-                  <td>
-                    <TypeChip type={row.type} size="lg" />
-                  </td>
-                  <td>
-                    <div className="home-act-name">{row.name}</div>
-                    <div className="home-act-meta">
-                      <OriginBadge origin={row.origin} />
-                      <span>{row.source}</span>
-                    </div>
-                  </td>
-                  <td className="home-act-conf">{row.confidence}%</td>
-                  <td>
-                    <Pill
-                      tone={row.verdict === "human" ? "human" : "ai"}
-                      dot
-                      compact
-                    >
-                      {row.verdictLabel}
-                    </Pill>
-                  </td>
-                  <td className="home-act-time">{row.when}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </Card>
+    <Table
+      columns="48px minmax(220px, 1fr) 100px 90px"
+      minWidth={560}
+      scroll
+      aria-label="Recent activity"
+    >
+      <Table.Header>
+        <Table.HeaderCell aria-hidden />
+        <Table.HeaderCell>Item</Table.HeaderCell>
+        <Table.HeaderCell>Confidence</Table.HeaderCell>
+        <Table.HeaderCell align="right">When</Table.HeaderCell>
+      </Table.Header>
+      <Table.Body>
+        {rows.map((row) => (
+          <Table.Row
+            key={row.id}
+            onClick={onRowClick ? () => onRowClick(row.id) : undefined}
+          >
+            <Table.Cell>
+              <TypeChip type={row.type} size="lg" />
+            </Table.Cell>
+            <Table.Cell>
+              <Table.CellTitle>{row.name}</Table.CellTitle>
+              <Table.CellMeta>
+                <OriginBadge origin={row.origin} />
+                <ItemMeta type={row.type} parts={row.meta} link={row.link} />
+              </Table.CellMeta>
+            </Table.Cell>
+            <Table.Cell mono>{row.confidence}%</Table.Cell>
+            <Table.Cell align="right" muted>
+              {row.when}
+            </Table.Cell>
+          </Table.Row>
+        ))}
+      </Table.Body>
+    </Table>
   );
 }

@@ -6,14 +6,17 @@ import { Button } from "@/components/ui/Button";
 import { Pill, type PillTone } from "@/components/ui/Pill";
 import { FormRow } from "@/components/ui/FormRow";
 import { Icon, type IconName } from "@/components/Icon";
+import {
+  AvatarCropModal,
+  type AvatarPickerHandle,
+} from "@/components/ui/AvatarCropModal";
 import { useAuth } from "@/lib/auth";
 import {
   getProfile,
   updateProfile,
-  uploadAvatar,
   changeEmail,
 } from "@/lib/settings-api";
-import { avatarUrl, type PBUserRecord } from "@/lib/pocketbase";
+import { avatarUrl, pb, type PBUserRecord } from "@/lib/pocketbase";
 import {
   profileMetaFromUser,
   type ProfileMetaTone,
@@ -43,7 +46,6 @@ type ProfileForm = {
   name: string;
   handle: string;
   email: string;
-  timezone: string;
   language: Language;
 };
 
@@ -52,30 +54,62 @@ function fromRecord(r: PBUserRecord | null): ProfileForm {
     name: r?.name ?? "",
     handle: r?.handle ?? "",
     email: r?.email ?? "",
-    timezone: r?.timezone ?? "",
     language: ((r?.language as Language) ?? "en") as Language,
   };
+}
+
+/** Seed the form from the auth user record immediately so the page
+ *  isn't blank during the network roundtrip to /settings. The auth
+ *  context already has the latest record cached on every navigation. */
+function fromAuthUser(u: ReturnType<typeof useAuth>["user"]): ProfileForm {
+  return {
+    name: u?.name ?? "",
+    handle: u?.handle ?? "",
+    email: u?.email ?? "",
+    language: "en",
+  };
+}
+
+function detectTimezone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+  } catch {
+    return "";
+  }
 }
 
 export function ProfileSection() {
   const { user, refresh } = useAuth();
   const [record, setRecord] = useState<PBUserRecord | null>(null);
-  const [original, setOriginal] = useState<ProfileForm>(fromRecord(null));
-  const [form, setForm] = useState<ProfileForm>(fromRecord(null));
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [original, setOriginal] = useState<ProfileForm>(() => fromAuthUser(user));
+  const [form, setForm] = useState<ProfileForm>(() => fromAuthUser(user));
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const pickerRef = useRef<AvatarPickerHandle>(null);
 
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       try {
-        const r = await getProfile();
+        let r = await getProfile();
+        if (cancelled) return;
+        // Auto-sync the browser's timezone in the background so the field
+        // stays accurate without exposing it in the UI.
+        const browserTz = detectTimezone();
+        if (browserTz && r.timezone !== browserTz) {
+          try {
+            r = await updateProfile({ timezone: browserTz });
+          } catch {
+            // non-fatal; keep whatever the server has
+          }
+        }
         if (cancelled) return;
         setRecord(r);
         const f = fromRecord(r);
         setOriginal(f);
         setForm(f);
       } catch {
-        // not signed in, or PB unreachable — leave blank
+        // not signed in, or PB unreachable — leave the auth-seeded values.
       }
     })();
     return () => {
@@ -83,47 +117,68 @@ export function ProfileSection() {
     };
   }, [user?.id]);
 
+  // Free the in-memory blob URL when we replace it or unmount.
+  useEffect(() => {
+    return () => {
+      if (avatarPreview) URL.revokeObjectURL(avatarPreview);
+    };
+  }, [avatarPreview]);
+
   const dirty = useMemo(
     () =>
       form.name !== original.name ||
       form.handle !== original.handle ||
-      form.timezone !== original.timezone ||
-      form.language !== original.language,
-    [form, original],
+      form.language !== original.language ||
+      avatarFile !== null,
+    [form, original, avatarFile],
   );
 
   useRegisterSection("profile", {
     dirty,
     save: async () => {
-      const patch: Partial<PBUserRecord> = {};
-      if (form.name !== original.name) patch.name = form.name;
-      if (form.handle !== original.handle) patch.handle = form.handle;
-      if (form.timezone !== original.timezone) patch.timezone = form.timezone;
-      if (form.language !== original.language) patch.language = form.language;
-      if (Object.keys(patch).length === 0) return;
-      const r = await updateProfile(patch);
+      // Field-level patch — only send what changed. When the user staged
+      // a new avatar, switch to FormData so PB writes the file too.
+      const fieldPatch: Partial<PBUserRecord> = {};
+      if (form.name !== original.name) fieldPatch.name = form.name;
+      if (form.handle !== original.handle) fieldPatch.handle = form.handle;
+      if (form.language !== original.language) fieldPatch.language = form.language;
+
+      if (!avatarFile && Object.keys(fieldPatch).length === 0) return;
+
+      const userId = pb.authStore.record?.id;
+      if (!userId) return;
+
+      let r: PBUserRecord;
+      if (avatarFile) {
+        const fd = new FormData();
+        for (const [k, v] of Object.entries(fieldPatch)) {
+          if (v !== undefined) fd.append(k, String(v));
+        }
+        fd.append("avatar", avatarFile);
+        r = (await pb.collection("users").update(userId, fd)) as PBUserRecord;
+      } else {
+        r = await updateProfile(fieldPatch);
+      }
       setRecord(r);
       const f = fromRecord(r);
       setOriginal(f);
       setForm(f);
+      setAvatarFile(null);
+      setAvatarPreview((p) => {
+        if (p) URL.revokeObjectURL(p);
+        return null;
+      });
       await refresh();
     },
-    discard: () => setForm(original),
+    discard: () => {
+      setForm(original);
+      setAvatarFile(null);
+      setAvatarPreview((p) => {
+        if (p) URL.revokeObjectURL(p);
+        return null;
+      });
+    },
   });
-
-  const onChooseAvatar = () => fileRef.current?.click();
-
-  const onAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const r = await uploadAvatar(file);
-      setRecord(r);
-      await refresh();
-    } finally {
-      if (fileRef.current) fileRef.current.value = "";
-    }
-  };
 
   const onChangeEmail = async () => {
     if (!form.email || form.email === original.email) return;
@@ -138,7 +193,9 @@ export function ProfileSection() {
   });
 
   const initials = user?.initials ?? "··";
-  const avatarSrc = avatarUrl(record);
+  // Prefer the staged preview (in-memory blob URL while the user has a
+  // pending change), then the saved avatar from PB, then the URL field.
+  const avatarSrc = avatarPreview ?? avatarUrl(record) ?? user?.avatarSrc ?? null;
 
   return (
     <SettingsSection
@@ -158,17 +215,10 @@ export function ProfileSection() {
               type="button"
               className={styles.avatarEdit}
               aria-label="Change profile photo"
-              onClick={onChooseAvatar}
+              onClick={() => pickerRef.current?.open()}
             >
               <Icon name="image" size={13} />
             </button>
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              hidden
-              onChange={onAvatarChange}
-            />
           </div>
           <div className={styles.info}>
             <div className={styles.name}>{form.name || user?.name || "—"}</div>
@@ -227,19 +277,6 @@ export function ProfileSection() {
           }
         />
         <FormRow
-          label="Time zone"
-          hint="For dates and scheduled monitors"
-          control={
-            <input
-              type="text"
-              value={form.timezone}
-              onChange={(e) => setForm({ ...form, timezone: e.target.value })}
-              placeholder="Europe/London"
-              className="settings-input"
-            />
-          }
-        />
-        <FormRow
           label="Language"
           hint="Interface language"
           control={
@@ -259,6 +296,17 @@ export function ProfileSection() {
           }
         />
       </Card>
+
+      <AvatarCropModal
+        ref={pickerRef}
+        onConfirm={(file, previewUrl) => {
+          setAvatarPreview((p) => {
+            if (p) URL.revokeObjectURL(p);
+            return previewUrl;
+          });
+          setAvatarFile(file);
+        }}
+      />
     </SettingsSection>
   );
 }

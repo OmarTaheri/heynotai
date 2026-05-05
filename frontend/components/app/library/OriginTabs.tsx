@@ -1,13 +1,21 @@
 "use client";
 
+import { Icon } from "@/components/Icon";
 import type { OriginTabKey } from "@/lib/library-data";
+
+export type OriginTabRender = {
+  key: OriginTabKey;
+  label: string;
+  count: number;
+  locked?: boolean;
+};
 
 export function OriginTabs({
   tabs,
   value,
   onChange,
 }: {
-  tabs: { key: OriginTabKey; label: string; count: number }[];
+  tabs: OriginTabRender[];
   value: OriginTabKey;
   onChange: (next: OriginTabKey) => void;
 }) {
@@ -24,6 +32,9 @@ export function OriginTabs({
             className={`lib-tab${active ? " is-active" : ""}`}
             onClick={() => onChange(tab.key)}
           >
+            {tab.locked && (
+              <Icon name="lock" size={11} className="lib-tab-lock" />
+            )}
             <span>{tab.label}</span>
             <span className="lib-tab-count">{tab.count.toLocaleString()}</span>
           </button>

@@ -1,0 +1,133 @@
+.cropOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: cropFade 180ms ease-out;
+}
+@keyframes cropFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.cropDialog {
+  width: 100%;
+  max-width: 460px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line-strong);
+  border-radius: 18px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: cropRise 200ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+@keyframes cropRise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.cropHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--color-line);
+}
+.cropTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-fg);
+  letter-spacing: -0.2px;
+}
+.cropClose {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  background: transparent;
+  color: var(--color-fg-mid);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 7px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.cropClose:hover {
+  background: var(--color-surface-alt);
+  color: var(--color-fg);
+}
+.cropStage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: var(--color-surface-sunken);
+}
+.cropControls {
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-top: 1px solid var(--color-line);
+}
+.cropZoomLabel {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-fg-mid);
+}
+.cropZoomInput {
+  flex: 1;
+  accent-color: var(--color-cta);
+  cursor: pointer;
+}
+.cropFoot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--color-line);
+}
+
+/* Local copies of the button styles so the modal isn't coupled to a
+   page-level stylesheet. Kept terse; they match the design system. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 0;
+  cursor: pointer;
+  transition: filter 0.15s, background 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s;
+  font-family: inherit;
+}
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btnCta {
+  background: linear-gradient(180deg, var(--color-cta), var(--color-cta-deep));
+  color: #fff;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.25) inset, 0 4px 14px var(--color-cta-ring);
+}
+.btnCta:hover:not(:disabled) { filter: brightness(1.08); }
+.btnGhost {
+  background: transparent;
+  color: var(--color-fg-mid);
+  border: 1px solid var(--color-line-strong);
+}
+.btnGhost:hover:not(:disabled) {
+  color: var(--color-fg);
+  border-color: rgba(255, 255, 255, 0.28);
+}
+.btnText {
+  background: transparent;
+  color: var(--color-fg-mid);
+  height: 36px;
+  padding: 0 8px;
+}
+.btnText:hover:not(:disabled) { color: var(--color-fg); }

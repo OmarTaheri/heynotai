@@ -32,10 +32,18 @@ export function TextEditorToolbar({
 }: Props) {
   return (
     <Toolbar>
-      <Toolbar.Button tip="Previous flag" onClick={onPrev} disabled={flagTotal === 0}>
+      <Toolbar.Button
+        tip={flagTotal === 0 ? "Per-sentence flags — coming soon" : "Previous flag"}
+        onClick={onPrev}
+        disabled={flagTotal === 0}
+      >
         <ChevronUp />
       </Toolbar.Button>
-      <Toolbar.Button tip="Next flag" onClick={onNext} disabled={flagTotal === 0}>
+      <Toolbar.Button
+        tip={flagTotal === 0 ? "Per-sentence flags — coming soon" : "Next flag"}
+        onClick={onNext}
+        disabled={flagTotal === 0}
+      >
         <Icon name="chevron-down" size={16} />
       </Toolbar.Button>
       <Toolbar.FlagCounter current={flagIndex + 1} total={flagTotal} />

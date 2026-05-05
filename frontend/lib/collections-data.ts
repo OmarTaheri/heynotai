@@ -1,6 +1,8 @@
 import type { ScanType } from "@/components/ui/TypeChip";
-import type { PillTone } from "@/components/ui/Pill";
 import type { IconName } from "@/components/Icon";
+import type { Origin } from "@/components/ui/OriginBadge";
+import type { ItemMetaLink, ItemMetaParts } from "./item-meta";
+import type { Scan } from "./scan-types";
 
 export type CollectionTone =
   | "human"
@@ -12,14 +14,25 @@ export type CollectionTone =
 
 export type CollectionPattern = "dots" | "grid" | "lines";
 
-export type Collaborator = { initials: string };
+export type Collaborator = {
+  initials: string;
+  /** Resolved avatar URL when the collaborator has uploaded one. The
+   *  detail page hero + member cards use this for the inline image
+   *  fallback to initials when missing or broken. */
+  avatarSrc?: string | null;
+};
 
 export type CollectionMember = {
+  /** PocketBase row id for the `collection_members` join row. Empty
+   *  when synthesized from a freshly-adapted owner row. */
+  membershipId?: string;
   initials: string;
   name: string;
   /** "Owner" | "Editor" | "Viewer" */
   role: string;
   emailHandle: string;
+  email?: string;
+  avatarSrc?: string | null;
   you?: boolean;
 };
 
@@ -30,30 +43,36 @@ export type CollectionRule = {
   active: boolean;
 };
 
-export type CollectionActivity = {
-  id: string;
-  initials: string;
-  /** Mini rich-text: "**Tara** tagged *essay_208* as Follow-up needed" */
-  actor: string;
-  /** Already-formatted body (with optional `<em>` and `<strong>`-style spans). */
-  text: string;
-  emphasis?: string;
-  when: string;
-};
-
 /** A scan that lives in this collection. Lighter than LibraryItem — just
  *  the fields the detail-page table renders. */
 export type CollectionItem = {
   id: string;
+  /** Underlying scan id — used to call `deleteScan()` in the bulk
+   *  Delete action. */
+  scanId?: string;
   type: ScanType;
   name: string;
-  tag?: string;
-  meta: string;
+  origin: Origin;
+  meta: ItemMetaParts;
+  link?: ItemMetaLink;
   confidence: number;
+  /** Unified AI-generated probability 0-100 — what the table displays
+   *  next to the verdict badge. */
+  aiPct?: number;
   model: string;
-  verdict: PillTone;
-  verdictLabel: string;
+  /** Human-readable detector engine name — what the "Detector" column
+   *  shows. */
+  detector?: string;
   when: string;
+  /** Underlying scan status — drives the "graded vs pending" KPI on the
+   *  detail page. */
+  status?: Scan["status"];
+  /** ISO timestamp of the most recent scan event (completion if done,
+   *  otherwise creation). Used to compute "Last scanned". */
+  whenIso?: string;
+  /** Tokens charged for this scan (mirrors `scan.creditsUsed`). Summed
+   *  by the detail-page "Tokens used" KPI. */
+  tokensUsed?: number;
 };
 
 export type Collection = {
@@ -80,495 +99,189 @@ export type Collection = {
   created: string;
   updated: string;
   pinned?: boolean;
+  /** True when the current viewer owns this collection — controls
+   *  whether the pin button + destructive actions render. */
+  isOwner?: boolean;
   collaborators: Collaborator[];
   members: CollectionMember[];
   rules: CollectionRule[];
-  activity: CollectionActivity[];
   items: CollectionItem[];
 };
 
-export type CollectionTemplate = {
+type AdaptUser = {
   id: string;
-  name: string;
-  description: string;
-  icon: IconName;
-  tone: CollectionTone;
+  initials: string;
+  displayName: string;
+  email: string;
+  avatarSrc: string | null;
 };
 
-const FALL_ESSAYS_ITEMS: CollectionItem[] = [
-  {
-    id: "i1",
-    type: "txt",
-    name: "student_essay_214.txt",
-    tag: "Week 6",
-    meta: "1,430 words · Jamie R.",
-    confidence: 89,
-    model: "GPT-5",
-    verdict: "ai",
-    verdictLabel: "AI-written",
-    when: "2h ago",
-  },
-  {
-    id: "i2",
-    type: "txt",
-    name: "student_essay_208.txt",
-    tag: "Week 6",
-    meta: "1,180 words · Morgan T.",
-    confidence: 94,
-    model: "GPT-5",
-    verdict: "ai",
-    verdictLabel: "AI-written",
-    when: "3h ago",
-  },
-  {
-    id: "i3",
-    type: "txt",
-    name: "student_essay_196.txt",
-    tag: "Week 5",
-    meta: "1,520 words · Alex P.",
-    confidence: 71,
-    model: "Claude 4.5",
-    verdict: "mixed",
-    verdictLabel: "Some AI",
-    when: "Yesterday",
-  },
-  {
-    id: "i4",
-    type: "txt",
-    name: "student_essay_187.txt",
-    tag: "Week 5",
-    meta: "1,290 words · Sam K.",
-    confidence: 85,
-    model: "GPT-5",
-    verdict: "ai",
-    verdictLabel: "AI-written",
-    when: "Yesterday",
-  },
-  {
-    id: "i5",
-    type: "txt",
-    name: "student_essay_173.txt",
-    tag: "Week 4",
-    meta: "1,410 words · Riley C.",
-    confidence: 92,
-    model: "GPT-5",
-    verdict: "ai",
-    verdictLabel: "AI-written",
-    when: "2d ago",
-  },
-  {
-    id: "i6",
-    type: "txt",
-    name: "student_essay_162.txt",
-    tag: "Week 4",
-    meta: "1,340 words · Casey W.",
-    confidence: 78,
-    model: "Claude 4.5",
-    verdict: "mixed",
-    verdictLabel: "Some AI",
-    when: "3d ago",
-  },
-  {
-    id: "i7",
-    type: "txt",
-    name: "student_essay_154.txt",
-    tag: "Week 3",
-    meta: "1,265 words · Drew L.",
-    confidence: 96,
-    model: "GPT-5",
-    verdict: "ai",
-    verdictLabel: "AI-written",
-    when: "4d ago",
-  },
-  {
-    id: "i8",
-    type: "txt",
-    name: "student_essay_142.txt",
-    tag: "Week 3",
-    meta: "1,495 words · Taylor F.",
-    confidence: 88,
-    model: "GPT-5",
-    verdict: "ai",
-    verdictLabel: "AI-written",
-    when: "5d ago",
-  },
-  {
-    id: "i9",
-    type: "txt",
-    name: "student_essay_128.txt",
-    tag: "Week 2",
-    meta: "1,370 words · Jordan M.",
-    confidence: 82,
-    model: "GPT-5",
-    verdict: "ai",
-    verdictLabel: "AI-written",
-    when: "1w ago",
-  },
-  {
-    id: "i10",
-    type: "txt",
-    name: "student_essay_116.txt",
-    tag: "Week 2",
-    meta: "1,250 words · Quinn B.",
-    confidence: 74,
-    model: "Claude 4.5",
-    verdict: "mixed",
-    verdictLabel: "Some AI",
-    when: "1w ago",
-  },
-  {
-    id: "i11",
-    type: "txt",
-    name: "student_essay_107.txt",
-    tag: "Week 1",
-    meta: "1,180 words · Avery N.",
-    confidence: 91,
-    model: "GPT-5",
-    verdict: "ai",
-    verdictLabel: "AI-written",
-    when: "2w ago",
-  },
-];
+type AdaptRecord = {
+  id: string;
+  slug: string;
+  title: string;
+  description?: string;
+  tone: CollectionTone;
+  pattern: CollectionPattern;
+  pinned?: boolean;
+  created: string;
+  updated: string;
+  /** PB id of the user who owns this collection. Used to detect when
+   *  the current viewer is an accepted member rather than the owner —
+   *  in that case we shouldn't render their own avatar as "Owner". */
+  userId?: string;
+};
 
-const FALL_ESSAYS_MEMBERS: CollectionMember[] = [
-  {
-    initials: "BM",
-    name: "Boufarssi M.",
-    role: "Owner",
-    emailHandle: "boufarssi@",
-    you: true,
-  },
-  { initials: "TK", name: "Tara K.", role: "Editor", emailHandle: "tara@" },
-];
+/** Public profile fields used to synthesize the Owner row when the
+ *  collection's owner isn't the current user (i.e. we're an accepted
+ *  member viewing it). When omitted, the Owner row falls back to a
+ *  placeholder until a lookup completes. */
+export type OwnerProfile = {
+  id: string;
+  name: string;
+  handle: string;
+  email: string;
+  avatarUrl: string | null;
+};
 
-const FALL_ESSAYS_RULES: CollectionRule[] = [
+const DEFAULT_RULES: CollectionRule[] = [
   {
-    id: "r1",
+    id: "rd1",
     icon: "eye",
-    text: "Auto-add essays uploaded from “Fall 2025” folder",
+    text: "Auto-add scans tagged with this collection",
     active: true,
   },
   {
-    id: "r2",
-    icon: "bell",
-    text: "Email Tara when confidence ≥ 85%",
-    active: true,
-  },
-  {
-    id: "r3",
+    id: "rd2",
     icon: "refresh",
-    text: "Re-scan all items when new model ships",
+    text: "Re-scan when new model ships",
     active: false,
   },
 ];
 
-const FALL_ESSAYS_ACTIVITY: CollectionActivity[] = [
-  {
-    id: "a1",
-    initials: "BM",
-    actor: "You",
-    text: "added",
-    emphasis: "4 items from Week 6 submissions",
-    when: "2h ago",
-  },
-  {
-    id: "a2",
-    initials: "TK",
-    actor: "Tara",
-    text: "tagged",
-    emphasis: "essay_208 as “Follow-up needed”",
-    when: "3h ago",
-  },
-  {
-    id: "a3",
-    initials: "BM",
-    actor: "You",
-    text: "exported a grading report",
-    when: "Yesterday",
-  },
-  {
-    id: "a4",
-    initials: "TK",
-    actor: "Tara",
-    text: "joined the collection",
-    when: "3w ago",
-  },
-];
+/**
+ * Shape a PocketBase `collections` record into the rich `Collection`
+ * type the detail page renders. Items + stats are empty until the
+ * caller fans out to the `collection_items` join.
+ *
+ * Ownership: if `owner` is provided we render that profile as the
+ * Owner row; otherwise we synthesize from the current user *only when*
+ * the record's `userId` matches them. For accepted members viewing a
+ * shared collection, we render a neutral "Owner" placeholder and let
+ * the caller refill it once the user lookup resolves.
+ */
+export function adaptCollectionRecord(
+  record: AdaptRecord,
+  user: AdaptUser,
+  owner?: OwnerProfile | null,
+): Collection {
+  const youAreOwner = !record.userId || record.userId === user.id;
+  const ownerMember = ownerRow(record, user, owner, youAreOwner);
+  const collaborators: Collaborator[] = [
+    { initials: ownerMember.initials, avatarSrc: ownerMember.avatarSrc },
+  ];
+  const members: CollectionMember[] = [ownerMember];
 
-/** Lightweight default detail records for collections that don't have
- *  hand-tuned content yet. Keeps every detail page renderable. */
-function defaultDetail(collaborators: Collaborator[]): {
-  members: CollectionMember[];
-  rules: CollectionRule[];
-  activity: CollectionActivity[];
-  items: CollectionItem[];
-} {
   return {
-    members: collaborators.map((c, i) => ({
-      initials: c.initials,
-      name: c.initials,
-      role: i === 0 ? "Owner" : "Editor",
-      emailHandle: `${c.initials.toLowerCase()}@`,
-      you: i === 0,
-    })),
-    rules: [
-      {
-        id: "rd1",
-        icon: "eye",
-        text: "Auto-add scans tagged with this collection",
-        active: true,
-      },
-      {
-        id: "rd2",
-        icon: "refresh",
-        text: "Re-scan when new model ships",
-        active: false,
-      },
-    ],
-    activity: [
-      {
-        id: "ad1",
-        initials: collaborators[0]?.initials ?? "BM",
-        actor: "You",
-        text: "created the collection",
-        when: "Recently",
-      },
-    ],
+    id: record.id,
+    slug: record.slug,
+    title: record.title,
+    description: record.description ?? "",
+    tone: record.tone,
+    pattern: record.pattern,
+    thumbs: [],
+    itemCount: 0,
+    flagged: 0,
+    aiRate: 0,
+    avgConfidence: 0,
+    topModel: "—",
+    topModelHits: 0,
+    graded: 0,
+    pending: 0,
+    created: formatDate(record.created),
+    updated: `Updated ${formatRelative(record.updated)}`,
+    pinned: Boolean(record.pinned),
+    isOwner: youAreOwner,
+    collaborators,
+    members,
+    rules: DEFAULT_RULES,
     items: [],
   };
 }
 
-const FALL_ESSAYS_DEFAULT: Collection = {
-  id: "c1",
-  slug: "fall-semester-essays",
-  title: "Fall semester essays",
-  description:
-    "Student submissions for English 201 · personal narrative assignment · graded weekly. Flagged items trigger a follow-up conversation before grading.",
-  tone: "human",
-  pattern: "dots",
-  thumbs: ["txt", "txt", "txt"],
-  extraCount: 39,
-  itemCount: 42,
-  flagged: 11,
-  aiRate: 26,
-  avgConfidence: 91,
-  topModel: "GPT-5",
-  topModelHits: 8,
-  graded: 36,
-  pending: 6,
-  created: "Sep 3, 2025",
-  updated: "Updated 2h ago",
-  pinned: true,
-  collaborators: [{ initials: "BM" }, { initials: "TK" }],
-  members: FALL_ESSAYS_MEMBERS,
-  rules: FALL_ESSAYS_RULES,
-  activity: FALL_ESSAYS_ACTIVITY,
-  items: FALL_ESSAYS_ITEMS,
-};
-
-export const COLLECTIONS: Collection[] = [
-  FALL_ESSAYS_DEFAULT,
-  {
-    id: "c2",
-    slug: "election-2026-fact-checks",
-    title: "Election 2026 fact-checks",
-    description:
-      "Suspicious campaign media flagged by extension while browsing · cross-platform sources",
-    tone: "ai",
-    pattern: "grid",
-    thumbs: ["img", "vid", "aud", "soc"],
-    extraCount: 84,
-    itemCount: 88,
-    flagged: 67,
-    aiRate: 76,
-    avgConfidence: 87,
-    topModel: "Sora 2",
-    topModelHits: 24,
-    graded: 67,
-    pending: 21,
-    created: "Jan 14, 2026",
-    updated: "Updated 18m ago",
-    pinned: true,
-    collaborators: [
-      { initials: "BM" },
-      { initials: "LR" },
-      { initials: "DA" },
-    ],
-    ...defaultDetail([
-      { initials: "BM" },
-      { initials: "LR" },
-      { initials: "DA" },
-    ]),
-  },
-  {
-    id: "c3",
-    slug: "newsroom-verification-queue",
-    title: "Newsroom verification queue",
-    description:
-      "Tip-line submissions and wire photos pending authenticity checks before publication",
-    tone: "gold",
-    pattern: "lines",
-    thumbs: ["img", "web", "soc"],
-    extraCount: 23,
-    itemCount: 26,
-    flagged: 8,
-    aiRate: 30,
-    avgConfidence: 84,
-    topModel: "Midjourney v7",
-    topModelHits: 5,
-    graded: 18,
-    pending: 8,
-    created: "Feb 02, 2026",
-    updated: "Updated 4h ago",
-    collaborators: [
-      { initials: "BM" },
-      { initials: "TK" },
-      { initials: "LR" },
-    ],
-    ...defaultDetail([
-      { initials: "BM" },
-      { initials: "TK" },
-      { initials: "LR" },
-    ]),
-  },
-  {
-    id: "c4",
-    slug: "ai-music-deepfakes-study",
-    title: "AI music deepfakes study",
-    description:
-      "Research dataset: voice-cloned tracks vs originals · for paper on auditory detection",
-    tone: "info",
-    pattern: "dots",
-    thumbs: ["aud", "aud", "vid"],
-    extraCount: 31,
-    itemCount: 34,
-    flagged: 22,
-    aiRate: 65,
-    avgConfidence: 79,
-    topModel: "ElevenLabs v3",
-    topModelHits: 14,
-    graded: 22,
-    pending: 12,
-    created: "Mar 11, 2026",
-    updated: "Updated yesterday",
-    collaborators: [{ initials: "BM" }],
-    ...defaultDetail([{ initials: "BM" }]),
-  },
-  {
-    id: "c5",
-    slug: "q4-marketing-audit",
-    title: "Q4 marketing audit",
-    description:
-      "Checking competitor ad creative and landing pages for AI-generated content",
-    tone: "mixed",
-    pattern: "grid",
-    thumbs: ["txt", "img", "web"],
-    extraCount: 14,
-    itemCount: 17,
-    flagged: 9,
-    aiRate: 53,
-    avgConfidence: 81,
-    topModel: "GPT-5",
-    topModelHits: 6,
-    graded: 12,
-    pending: 5,
-    created: "Mar 24, 2026",
-    updated: "Updated 2d ago",
-    collaborators: [{ initials: "BM" }, { initials: "DA" }],
-    ...defaultDetail([{ initials: "BM" }, { initials: "DA" }]),
-  },
-  {
-    id: "c6",
-    slug: "recruiting-portfolio-review",
-    title: "Recruiting portfolio review",
-    description:
-      "Applicant work samples for senior designer role · screening for AI-generated portfolios",
-    tone: "ai",
-    pattern: "lines",
-    thumbs: ["img", "txt"],
-    extraCount: 8,
-    itemCount: 10,
-    flagged: 4,
-    aiRate: 40,
-    avgConfidence: 86,
-    topModel: "Midjourney v7",
-    topModelHits: 3,
-    graded: 7,
-    pending: 3,
-    created: "Apr 01, 2026",
-    updated: "Updated 4d ago",
-    collaborators: [{ initials: "BM" }],
-    ...defaultDetail([{ initials: "BM" }]),
-  },
-  {
-    id: "c7",
-    slug: "personal-verifications",
-    title: "Personal verifications",
-    description:
-      "Stuff I've spotted in the wild — receipts, screenshots, messages I wanted to double-check",
-    tone: "neutral",
-    pattern: "dots",
-    thumbs: ["img", "aud", "soc"],
-    itemCount: 7,
-    flagged: 3,
-    aiRate: 43,
-    avgConfidence: 76,
-    topModel: "Mixed",
-    topModelHits: 0,
-    graded: 7,
-    pending: 0,
-    created: "Apr 14, 2026",
-    updated: "Updated last week",
-    collaborators: [{ initials: "BM" }],
-    ...defaultDetail([{ initials: "BM" }]),
-  },
-];
-
-export function getCollection(slugOrId: string): Collection | undefined {
-  return COLLECTIONS.find((c) => c.slug === slugOrId || c.id === slugOrId);
+function ownerRow(
+  record: AdaptRecord,
+  user: AdaptUser,
+  owner: OwnerProfile | null | undefined,
+  youAreOwner: boolean,
+): CollectionMember {
+  if (youAreOwner) {
+    const emailLocal =
+      user.email.split("@")[0] ?? user.displayName.toLowerCase();
+    return {
+      initials: user.initials,
+      name: user.displayName,
+      role: "Owner",
+      emailHandle: `${emailLocal}@`,
+      email: user.email,
+      avatarSrc: user.avatarSrc,
+      you: true,
+    };
+  }
+  if (owner) {
+    const display =
+      owner.handle.trim() ||
+      owner.name.trim() ||
+      owner.email.split("@")[0] ||
+      "Owner";
+    const emailLocal = owner.email ? owner.email.split("@")[0] ?? "" : "";
+    return {
+      initials: deriveInitials(display) || (owner.email[0] ?? "U").toUpperCase(),
+      name: display,
+      role: "Owner",
+      emailHandle: emailLocal ? `${emailLocal}@` : "",
+      email: owner.email,
+      avatarSrc: owner.avatarUrl,
+      you: false,
+    };
+  }
+  // Placeholder used during the brief window between the collection
+  // record loading and the owner-profile lookup resolving.
+  return {
+    initials: "··",
+    name: "Owner",
+    role: "Owner",
+    emailHandle: "",
+    avatarSrc: null,
+    you: false,
+  };
 }
 
-export const TEMPLATES: CollectionTemplate[] = [
-  {
-    id: "t1",
-    name: "Classroom grading",
-    description: "Essay batch + grading report",
-    icon: "users",
-    tone: "human",
-  },
-  {
-    id: "t2",
-    name: "Newsroom verify",
-    description: "Tip-line + wire photos",
-    icon: "file-text",
-    tone: "gold",
-  },
-  {
-    id: "t3",
-    name: "Research dataset",
-    description: "Tagged samples + export",
-    icon: "cube",
-    tone: "info",
-  },
-  {
-    id: "t4",
-    name: "Hiring review",
-    description: "Applications + portfolios",
-    icon: "shield",
-    tone: "mixed",
-  },
-  {
-    id: "t5",
-    name: "Legal evidence",
-    description: "Chain-of-custody report",
-    icon: "lock",
-    tone: "ai",
-  },
-  {
-    id: "t6",
-    name: "Custom",
-    description: "Configure your own",
-    icon: "sparkle",
-    tone: "neutral",
-  },
-];
+function deriveInitials(seed: string): string {
+  const parts = seed.split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function formatRelative(iso: string): string {
+  const d = new Date(iso).getTime();
+  if (Number.isNaN(d)) return "just now";
+  const diffSec = Math.max(0, Math.floor((Date.now() - d) / 1000));
+  if (diffSec < 30) return "just now";
+  if (diffSec < 60) return `${diffSec}s ago`;
+  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+  if (diffSec < 7 * 86400) return `${Math.floor(diffSec / 86400)}d ago`;
+  return formatDate(iso);
+}

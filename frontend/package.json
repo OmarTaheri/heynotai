@@ -12,6 +12,8 @@
   },
   "dependencies": {
     "@heynotai/shared": "workspace:*",
+    "@stripe/react-stripe-js": "^6.3.0",
+    "@stripe/stripe-js": "^9.3.1",
     "@tiptap/core": "^3.22.4",
     "@tiptap/extension-placeholder": "^3.22.4",
     "@tiptap/pm": "^3.22.4",
@@ -20,7 +22,8 @@
     "next": "^16.2.4",
     "pocketbase": "^0.26.0",
     "react": "^19.2.5",
-    "react-dom": "^19.2.5"
+    "react-dom": "^19.2.5",
+    "react-easy-crop": "^5.5.7"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

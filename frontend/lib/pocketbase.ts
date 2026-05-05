@@ -26,19 +26,32 @@ export type PBUserRecord = RecordModel & {
   name?: string;
   handle?: string;
   avatar?: string;
+  avatarUrl?: string;
   timezone?: string;
   language?: string;
   plan?: string;
+  planCycle?: "monthly" | "yearly";
   planBadge?: string;
   planRenewsOn?: string;
+  /** Scheduled downgrade target (kicks in at `pendingPlanEffective`).
+   *  Active `plan`/`planCycle` stay on the higher tier until the
+   *  Stripe subscription schedule transitions. */
+  pendingPlan?: string;
+  pendingPlanCycle?: "monthly" | "yearly";
+  pendingPlanEffective?: string;
   billingEmail?: string;
   billingAddress?: string;
-  paymentMethodLast4?: string;
+  billingCountry?: string;
+  paymentBrand?: string;
+  paymentLast4?: string;
   paymentExpires?: string;
   taxId?: string;
+  stripeCustomerId?: string;
+  stripeSubscriptionId?: string;
   team?: string;
   verified?: boolean;
   mfa?: boolean;
+  onboardingCompleted?: boolean;
 };
 
 export function avatarUrl(user: PBUserRecord | null): string | null {

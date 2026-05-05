@@ -1,6 +1,8 @@
 import Link from "next/link";
+import type { MouseEvent } from "react";
 import { Pill } from "@/components/ui/Pill";
 import { Avatar } from "@/components/ui/Avatar";
+import { Icon } from "@/components/Icon";
 import { TypeChip } from "@/components/ui/TypeChip";
 import type { Collection } from "@/lib/collections-data";
 
@@ -10,11 +12,25 @@ import type { Collection } from "@/lib/collections-data";
  * collaborators stack and an "updated" timestamp. Renders as a Link
  * to the collection detail page.
  *
- * Reuses Pill (pinned badge), TypeChip (cover thumbs), and Avatar
- * (collaborators) — the same primitives the home / library pages use.
+ * The pin button in the cover's top-right toggles `collection.pinned`
+ * on PocketBase. It's only rendered for owned collections — non-owners
+ * see a read-only "Pinned" pill when the owner has pinned it. Clicks
+ * are stopped from bubbling so the surrounding Link doesn't navigate.
  */
-export function CollectionCard({ collection }: { collection: Collection }) {
+export function CollectionCard({
+  collection,
+  onTogglePin,
+}: {
+  collection: Collection;
+  onTogglePin?: (id: string, next: boolean) => void;
+}) {
   const { thumbs, extraCount, collaborators } = collection;
+
+  const handlePinClick = (e: MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onTogglePin?.(collection.id, !collection.pinned);
+  };
 
   return (
     <Link
@@ -23,11 +39,23 @@ export function CollectionCard({ collection }: { collection: Collection }) {
       aria-label={`Open collection ${collection.title}`}
     >
       <div className={`coll-cover coll-pat-${collection.pattern}`}>
-        {collection.pinned && (
+        {collection.isOwner && onTogglePin ? (
+          <button
+            type="button"
+            className={`coll-pin-btn${collection.pinned ? " is-pinned" : ""}`}
+            aria-pressed={Boolean(collection.pinned)}
+            aria-label={
+              collection.pinned ? "Unpin collection" : "Pin collection"
+            }
+            onClick={handlePinClick}
+          >
+            <Icon name="pin" size={13} />
+          </button>
+        ) : collection.pinned ? (
           <Pill tone="neutral" compact className="coll-pin">
             Pinned
           </Pill>
-        )}
+        ) : null}
         <div className="coll-thumbs">
           {thumbs.map((t, i) => (
             <TypeChip key={`${t}-${i}`} type={t} />
@@ -72,7 +100,7 @@ export function CollectionCard({ collection }: { collection: Collection }) {
                 className="coll-shared-slot"
                 style={{ marginLeft: i === 0 ? 0 : -6 }}
               >
-                <Avatar initials={c.initials} size="sm" />
+                <Avatar initials={c.initials} size="sm" src={c.avatarSrc} />
               </span>
             ))}
           </div>

@@ -5,45 +5,49 @@ import { Icon } from "@/components/Icon";
 import type { CollectionRule } from "@/lib/collections-data";
 
 /**
- * Side-panel listing every auto-rule on the collection with a per-row
- * toggle. Local state only for now — wiring to real persistence will
- * land when the collections data layer goes from mock to live.
+ * Auto-rules side panel. Visually blurred + locked behind a "coming
+ * soon" overlay until the rules engine ships. The list and toggles
+ * stay rendered for visual density but are inert (`pointer-events:
+ * none`) and aria-hidden behind the overlay.
  */
 export function RulesPanel({ rules }: { rules: CollectionRule[] }) {
-  const [state, setState] = useState<Record<string, boolean>>(() =>
+  const [state] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(rules.map((r) => [r.id, r.active])),
   );
 
   return (
-    <section className="coll-panel">
+    <section className="coll-panel coll-panel-locked">
       <header className="coll-panel-head">
         <span>Auto-rules</span>
-        <button type="button" className="coll-panel-link">
-          Edit
-        </button>
+        <span className="coll-panel-tag">Soon</span>
       </header>
 
-      <ul className="coll-rule-list">
-        {rules.map((r) => {
-          const on = state[r.id];
-          return (
-            <li key={r.id} className="coll-rule">
-              <span className="coll-rule-icon">
-                <Icon name={r.icon} size={12} />
-              </span>
-              <span className="coll-rule-text">{r.text}</span>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={on}
-                aria-label={r.text}
-                className={`coll-rule-toggle${on ? " is-on" : ""}`}
-                onClick={() => setState((s) => ({ ...s, [r.id]: !on }))}
-              />
-            </li>
-          );
-        })}
-      </ul>
+      <div className="coll-panel-content" aria-hidden>
+        <ul className="coll-rule-list">
+          {rules.map((r) => {
+            const on = state[r.id];
+            return (
+              <li key={r.id} className="coll-rule">
+                <span className="coll-rule-icon">
+                  <Icon name={r.icon} size={12} />
+                </span>
+                <span className="coll-rule-text">{r.text}</span>
+                <span
+                  role="switch"
+                  aria-checked={on}
+                  className={`coll-rule-toggle${on ? " is-on" : ""}`}
+                />
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+
+      <div className="coll-panel-overlay" role="status">
+        <Icon name="sparkle" size={16} />
+        <strong>Almost ready</strong>
+        <span>We&apos;re working on auto-rules — coming soon.</span>
+      </div>
     </section>
   );
 }

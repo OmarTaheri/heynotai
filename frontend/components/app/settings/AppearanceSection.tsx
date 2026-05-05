@@ -15,14 +15,12 @@ type Form = {
   theme: ThemeChoice;
   dateFormat: string;
   showAuthenticVerdicts: boolean;
-  reduceMotion: boolean;
 };
 
 const DEFAULT: Form = {
   theme: "system",
   dateFormat: "DD MMM YYYY",
   showAuthenticVerdicts: true,
-  reduceMotion: false,
 };
 
 export function AppearanceSection() {
@@ -39,7 +37,6 @@ export function AppearanceSection() {
           theme: (r.theme as ThemeChoice) ?? "system",
           dateFormat: r.dateFormat ?? "DD MMM YYYY",
           showAuthenticVerdicts: r.showAuthenticVerdicts ?? true,
-          reduceMotion: r.reduceMotion ?? false,
         };
         setOriginal(next);
         setForm(next);
@@ -56,8 +53,7 @@ export function AppearanceSection() {
     () =>
       form.theme !== original.theme ||
       form.dateFormat !== original.dateFormat ||
-      form.showAuthenticVerdicts !== original.showAuthenticVerdicts ||
-      form.reduceMotion !== original.reduceMotion,
+      form.showAuthenticVerdicts !== original.showAuthenticVerdicts,
     [form, original],
   );
 
@@ -141,18 +137,6 @@ export function AppearanceSection() {
           }
         />
 
-        <FormRow
-          label="Reduce motion"
-          hint="Disable pulsing dots and transitions"
-          control={<span />}
-          aux={
-            <Toggle
-              on={form.reduceMotion}
-              onChange={(v) => setForm({ ...form, reduceMotion: v })}
-              label="Reduce motion"
-            />
-          }
-        />
       </Card>
     </SettingsSection>
   );

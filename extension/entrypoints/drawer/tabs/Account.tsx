@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Icon } from '@/components/Icon';
 import { MetricCard } from '@/components/MetricCard';
 import { Row } from '@/components/Row';
@@ -9,6 +10,7 @@ import { avatarUrl, pb } from '@/lib/pocketbase';
 export function Account() {
   const { user, signIn, signUp, signInWithGoogle, confirmMfa, signOut } = useAuth();
   const { setView } = useApp();
+  const navigate = useNavigate();
   const [tab, setTab] = useState<'login' | 'signup'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -19,15 +21,16 @@ export function Account() {
   const [error, setError] = useState<string | null>(null);
 
   // After a successful login (user transitions from null → record),
-  // jump back to the main view. Doesn't fire when the user opens
+  // land them on the home tab. Doesn't fire when the user opens
   // Account while already signed in.
   const prevUserRef = useRef(user);
   useEffect(() => {
     if (!prevUserRef.current && user) {
+      navigate('/home', { replace: true });
       setView('main');
     }
     prevUserRef.current = user;
-  }, [user, setView]);
+  }, [user, setView, navigate]);
 
   if (!user) {
     return (
@@ -39,7 +42,7 @@ export function Account() {
               {tab === 'login' ? 'Sign in to heynotai' : 'Create your account'}
             </div>
             <div className="signin-desc">
-              Sync your scan history, sites, and model choices across browsers. 500 free scans per month.
+              Sync your scan history, sites, and model choices across browsers. 100 free tokens per month.
             </div>
           </div>
 

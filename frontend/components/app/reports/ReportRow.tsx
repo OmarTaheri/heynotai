@@ -1,5 +1,6 @@
 import { Icon } from "@/components/Icon";
 import { Pill, type PillTone } from "@/components/ui/Pill";
+import { Table } from "@/components/ui/Table";
 import type { Report, ReportStatus } from "@/lib/reports-data";
 import { DocPreviewIcon } from "./DocPreviewIcon";
 import { FormatBadge } from "./FormatBadge";
@@ -16,14 +17,16 @@ const STATUS_TONE: Record<ReportStatus, PillTone> = {
   expired: "warn",
 };
 
-/** One row in the reports table. Layout is grid-based and owned by
- *  ReportsTable so the header row and body rows stay aligned. */
+/** One row in the reports table. Column widths come from the parent
+ *  Table primitive (see `--reports-cols` on `.reports-page`). */
 export function ReportRow({ report }: { report: Report }) {
   return (
-    <div className={styles.row}>
-      <DocPreviewIcon bands={report.bands} dim={report.dim} />
+    <Table.Row>
+      <Table.Cell>
+        <DocPreviewIcon bands={report.bands} dim={report.dim} />
+      </Table.Cell>
 
-      <div className={styles.info}>
+      <Table.Cell className={styles.info}>
         <div className={styles.title}>{report.title}</div>
         <div className={styles.meta}>
           <span className={styles.source}>
@@ -32,31 +35,35 @@ export function ReportRow({ report }: { report: Report }) {
           </span>
           <span>{report.meta}</span>
         </div>
-      </div>
+      </Table.Cell>
 
-      <FormatBadge format={report.format} label={report.formatLabel} />
+      <Table.Cell>
+        <FormatBadge format={report.format} label={report.formatLabel} />
+      </Table.Cell>
 
-      <Pill tone={STATUS_TONE[report.status]} dot compact>
-        {report.statusLabel}
-      </Pill>
+      <Table.Cell>
+        <Pill tone={STATUS_TONE[report.status]} dot compact>
+          {report.statusLabel}
+        </Pill>
+      </Table.Cell>
 
-      <div className={styles.stats}>
+      <Table.Cell className={styles.stats}>
         {report.stats.map((stat, i) => (
           <div key={i} className={styles.statRow}>
             <Icon name={stat.icon} size={10} />
             <span>{stat.label}</span>
           </div>
         ))}
-      </div>
+      </Table.Cell>
 
-      <div className={styles.time}>
+      <Table.Cell align="right" className={styles.time}>
         <strong>{report.updatedRel}</strong>
         <span>{report.updatedAbs}</span>
-      </div>
+      </Table.Cell>
 
-      <button type="button" className={styles.action} aria-label="More actions">
-        <Icon name="more" size={14} />
-      </button>
-    </div>
+      <Table.Cell>
+        <Table.RowAction />
+      </Table.Cell>
+    </Table.Row>
   );
 }

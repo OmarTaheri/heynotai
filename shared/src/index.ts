@@ -8,11 +8,31 @@
 
 import { z } from "zod";
 
+export {
+  describeAuthError,
+  type AuthErrorContext,
+  type AuthErrorInfo,
+} from "./auth-errors";
+
 /* ── Plans ──────────────────────────────────────────────────── */
 
 export const PLANS = ["check", "verify", "certify", "team"] as const;
 export const planSchema = z.enum(PLANS);
 export type Plan = z.infer<typeof planSchema>;
+
+export const PLAN_CYCLES = ["monthly", "yearly"] as const;
+export const planCycleSchema = z.enum(PLAN_CYCLES);
+export type PlanCycle = z.infer<typeof planCycleSchema>;
+
+/** USD per month for each tier × billing cycle. Yearly cycles are
+ *  shown as monthly-equivalent rate (the design's "$17 / month, billed
+ *  annually" pattern). */
+export const PLAN_PRICES: Record<Plan, { monthly: number; yearly: number }> = {
+  check: { monthly: 0, yearly: 0 },
+  verify: { monthly: 10, yearly: 100 },
+  certify: { monthly: 30, yearly: 300 },
+  team: { monthly: 80, yearly: 800 },
+};
 
 export const LANGUAGES = ["en", "es", "fr", "de", "zh", "ar", "ja"] as const;
 export const languageSchema = z.enum(LANGUAGES);
@@ -20,25 +40,47 @@ export type Language = z.infer<typeof languageSchema>;
 
 /* ── User profile (extends PB built-in `users` auth collection) ─ */
 
+export const ROLES = [
+  "journalist",
+  "educator",
+  "hr",
+  "marketing",
+  "researcher",
+  "dev",
+  "other",
+] as const;
+export const roleSchema = z.enum(ROLES);
+export type Role = z.infer<typeof roleSchema>;
+
 export const userSchema = z.object({
   id: z.string(),
   email: z.string().email(),
   name: z.string().default(""),
   handle: z.string().default(""),
   avatar: z.string().default(""),
+  avatarUrl: z.string().default(""),
   timezone: z.string().default(""),
   language: languageSchema.default("en"),
   plan: planSchema.default("check"),
+  planCycle: planCycleSchema.optional(),
   planBadge: z.string().default(""),
   planRenewsOn: z.string().default(""),
   billingEmail: z.string().default(""),
   billingAddress: z.string().default(""),
-  paymentMethodLast4: z.string().default(""),
+  billingCountry: z.string().default(""),
+  paymentBrand: z.string().default(""),
+  paymentLast4: z.string().optional(),
   paymentExpires: z.string().default(""),
+  stripeCustomerId: z.string().default(""),
+  stripeSubscriptionId: z.string().default(""),
   taxId: z.string().default(""),
   team: z.string().default(""),
   verified: z.boolean().default(false),
   mfa: z.boolean().default(false),
+  onboardingCompleted: z.boolean().default(false),
+  role: z.string().default(""),
+  useCases: z.array(z.string()).default([]),
+  connections: z.array(z.string()).default([]),
   created: z.string().optional(),
   updated: z.string().optional(),
 });
@@ -84,7 +126,6 @@ export const appearancePrefsSchema = z.object({
   theme: themeSchema.default("system"),
   dateFormat: z.string().default("DD MMM YYYY"),
   showAuthenticVerdicts: z.boolean().default(true),
-  reduceMotion: z.boolean().default(false),
 });
 export type AppearancePrefs = z.infer<typeof appearancePrefsSchema>;
 

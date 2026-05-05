@@ -1,6 +1,10 @@
 /// <reference path="../pb_data/types.d.ts" />
 migrate(
   (app) => {
+    try {
+      app.findCollectionByNameOrId("notification_prefs");
+      return;
+    } catch (_) {}
     const users = app.findCollectionByNameOrId("users");
     const c = new Collection({
       type: "base",

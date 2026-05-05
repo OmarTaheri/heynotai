@@ -1,10 +1,14 @@
 import type { Report } from "@/lib/reports-data";
+import { Table } from "@/components/ui/Table";
 import { ReportRow } from "./ReportRow";
 import styles from "./ReportsTable.module.css";
 
-/** Bordered card that hosts the reports list. Owns the column header
- *  row; ReportRow inherits column widths via the .reports-grid class
- *  on this wrapper (see reports.css). */
+/**
+ * Reports list. Wraps the shared Table primitive with the section
+ * header (title + total/shared counts). Column widths come from the
+ * `--reports-cols` custom property declared on `.reports-page`, so the
+ * responsive collapses in `reports.css` still apply.
+ */
 export function ReportsTable({
   reports,
   totalCount,
@@ -15,7 +19,7 @@ export function ReportsTable({
   sharedCount: number;
 }) {
   return (
-    <section>
+    <section className={styles.section}>
       <div className={styles.head}>
         <h2 className={styles.title}>
           <span>Your reports</span>
@@ -25,25 +29,27 @@ export function ReportsTable({
         </h2>
       </div>
 
-      <div className={`${styles.table} reports-grid`}>
-        <div className={styles.headerRow}>
-          <span />
-          <span>Report</span>
-          <span>Format</span>
-          <span>Status</span>
-          <span>Stats</span>
-          <span className={styles.headerRight}>Updated</span>
-          <span />
-        </div>
+      <Table columns="var(--reports-cols)" className="reports-grid">
+        <Table.Header>
+          <Table.HeaderCell aria-hidden />
+          <Table.HeaderCell>Report</Table.HeaderCell>
+          <Table.HeaderCell>Format</Table.HeaderCell>
+          <Table.HeaderCell>Status</Table.HeaderCell>
+          <Table.HeaderCell>Stats</Table.HeaderCell>
+          <Table.HeaderCell align="right">Updated</Table.HeaderCell>
+          <Table.HeaderCell aria-hidden />
+        </Table.Header>
 
         {reports.length === 0 ? (
-          <div className={styles.empty}>No reports match these filters.</div>
+          <Table.Empty>No reports match these filters.</Table.Empty>
         ) : (
-          reports.map((report) => (
-            <ReportRow key={report.id} report={report} />
-          ))
+          <Table.Body>
+            {reports.map((report) => (
+              <ReportRow key={report.id} report={report} />
+            ))}
+          </Table.Body>
         )}
-      </div>
+      </Table>
     </section>
   );
 }

@@ -1,4 +1,3 @@
-import { Icon } from "@/components/Icon";
 import type { AiFlag, FlagKind } from "@/lib/detection-types";
 import styles from "./FindingCard.module.css";
 
@@ -22,15 +21,15 @@ const TAG_CLASS: Record<FlagKind, string> = {
 };
 
 const QUOTE_CLASS: Record<FlagKind, string> = {
-  gen: "",
+  gen: styles.quoteGen,
   match: styles.quoteMatch,
   plag: styles.quotePlag,
 };
 
-const VENDOR_BADGE: Record<string, { initials: string; cls: string }> = {
-  openai: { initials: "G5", cls: styles.modelAvatarGpt },
-  anthropic: { initials: "Cl", cls: styles.modelAvatarCl },
-  google: { initials: "Ge", cls: styles.modelAvatarGem },
+const EXPLANATION: Record<FlagKind, string> = {
+  gen: "This passage carries markers of machine generation: low lexical burstiness, uniform sentence cadence, and template-like transitions. The confidence reflects how strongly these signals cluster in the span.",
+  match: "The phrasing here closely echoes the output style of the model identified above. Restructuring sentence boundaries or substituting domain-specific vocabulary usually reduces this signal.",
+  plag: "This passage matches indexed source material. The source URL and the matched quote are shown below — review and cite, or rewrite to remove the overlap.",
 };
 
 export function FindingCard({ flag, active, onClick, excerpt }: Props) {
@@ -52,7 +51,7 @@ export function FindingCard({ flag, active, onClick, excerpt }: Props) {
           <span className={styles.tagDot} />
           {KIND_LABEL[flag.kind]}
         </span>
-        <span>{flag.confidence}% confidence</span>
+        <span className={styles.confidence}>{flag.confidence}% confidence</span>
         <span className={styles.pos}>{flag.label}</span>
       </header>
 
@@ -62,22 +61,7 @@ export function FindingCard({ flag, active, onClick, excerpt }: Props) {
         </blockquote>
       )}
 
-      {flag.match && (
-        <div className={styles.modelRow}>
-          <span
-            className={`${styles.modelAvatar} ${VENDOR_BADGE[flag.match.vendor]?.cls ?? ""}`}
-          >
-            {VENDOR_BADGE[flag.match.vendor]?.initials ?? "AI"}
-          </span>
-          <div className={styles.modelBody}>
-            <div className={styles.modelName}>{flag.match.name}</div>
-            <div className={styles.modelMeta}>
-              {flag.match.vendor.toUpperCase()} · text · model match
-            </div>
-          </div>
-          <div className={styles.modelPct}>{flag.confidence}%</div>
-        </div>
-      )}
+      <p className={styles.explain}>{EXPLANATION[flag.kind]}</p>
 
       {flag.source && (
         <div className={styles.plag}>
@@ -85,25 +69,6 @@ export function FindingCard({ flag, active, onClick, excerpt }: Props) {
           <div className={styles.plagQuote}>{flag.source.quote}</div>
         </div>
       )}
-
-      <footer className={styles.actions}>
-        <button type="button" className={styles.btnDark} onClick={(e) => e.stopPropagation()}>
-          <Icon name="check" size={11} />
-          Mark reviewed
-        </button>
-        <button type="button" className={styles.btnGhost} onClick={(e) => e.stopPropagation()}>
-          Dismiss
-        </button>
-        <span className={styles.grow} />
-        <button
-          type="button"
-          className={`${styles.btnGhost} ${styles.btnIcon}`}
-          onClick={(e) => e.stopPropagation()}
-          aria-label="More"
-        >
-          <Icon name="more" size={14} />
-        </button>
-      </footer>
     </article>
   );
 }

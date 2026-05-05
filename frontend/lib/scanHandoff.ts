@@ -25,21 +25,30 @@ export function setPendingScan(text: string): void {
 
 export function consumePendingScan(): PendingScan | null {
   if (typeof window === "undefined") return null;
+  // React Strict Mode + Next dev re-runs effects, so this can be called
+  // twice in quick succession. Cache the most recent consumption briefly
+  // so the second call returns the same value instead of null.
+  const now = Date.now();
+  if (lastConsumed && now - lastConsumed.ts < 1500) {
+    return lastConsumed;
+  }
+  let result: PendingScan | null = null;
   try {
     const raw = sessionStorage.getItem(KEY);
     if (raw) {
       sessionStorage.removeItem(KEY);
-      return JSON.parse(raw) as PendingScan;
+      result = JSON.parse(raw) as PendingScan;
     }
   } catch {
     /* fall through to memory */
   }
-  if (inMemory) {
-    const v = inMemory;
+  if (!result && inMemory) {
+    result = inMemory;
     inMemory = null;
-    return v;
   }
-  return null;
+  if (result) lastConsumed = { ...result, ts: now };
+  return result;
 }
 
 let inMemory: PendingScan | null = null;
+let lastConsumed: PendingScan | null = null;

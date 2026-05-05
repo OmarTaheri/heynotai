@@ -1,0 +1,161 @@
+/* Loading state for /app/models. Mirrors the EngineSection rhythm
+   (heading + meta line, then 4 EngineRow-shaped placeholder rows) so
+   the layout doesn't shift when real engines load. */
+.head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.title {
+  height: 22px;
+  width: 180px;
+  border-radius: 6px;
+  position: relative;
+  overflow: hidden;
+  background: var(--color-surface-alt);
+}
+
+.meta {
+  height: 14px;
+  width: 220px;
+  border-radius: 5px;
+  position: relative;
+  overflow: hidden;
+  background: var(--color-surface-alt);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.row {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 14px;
+  padding: 16px 20px;
+  display: grid;
+  grid-template-columns: auto 1fr auto auto auto;
+  gap: 18px;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.radio {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-surface-alt);
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.name {
+  height: 16px;
+  width: 50%;
+  min-width: 140px;
+  border-radius: 5px;
+  background: var(--color-surface-alt);
+  position: relative;
+  overflow: hidden;
+}
+
+.desc {
+  height: 11px;
+  width: 90%;
+  border-radius: 4px;
+  background: var(--color-surface-alt);
+  position: relative;
+  overflow: hidden;
+}
+
+.spec {
+  height: 36px;
+  width: 56px;
+  border-radius: 6px;
+  background: var(--color-surface-alt);
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.cost {
+  height: 36px;
+  width: 76px;
+  border-radius: 6px;
+  background: var(--color-surface-alt);
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.action {
+  height: 32px;
+  width: 32px;
+  border-radius: 8px;
+  background: var(--color-surface-alt);
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+/* Shared shimmer overlay. */
+.title::after,
+.meta::after,
+.radio::after,
+.name::after,
+.desc::after,
+.spec::after,
+.cost::after,
+.action::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklch, white 8%, transparent),
+    transparent
+  );
+  transform: translateX(-100%);
+  animation: shimmer 1.6s infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@media (max-width: 1100px) {
+  .row {
+    grid-template-columns: auto 1fr auto;
+  }
+  .spec,
+  .action {
+    display: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .row {
+    grid-template-columns: auto 1fr;
+    gap: 14px;
+    padding: 14px 16px;
+  }
+  .cost {
+    display: none;
+  }
+}

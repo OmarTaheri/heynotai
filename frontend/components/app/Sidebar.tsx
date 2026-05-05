@@ -2,25 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Icon, type IconName } from "@/components/Icon";
 import { AppBrand } from "./AppBrand";
 import { Avatar } from "@/components/ui/Avatar";
 import { useAuth } from "@/lib/auth";
+import { fetchMonthlyUsage } from "@/lib/models-api";
 import { UsageCard } from "./UsageCard";
 import styles from "./Sidebar.module.css";
-
-/** Plan-specific check budgets until the backend feeds real usage.
- *  Three tiers match the extension's detection-mode naming:
- *    check   — entry tier
- *    verify  — mid tier
- *    certify — premium, highest quota
- *  Remaining numbers are mocked to show plausible mid-cycle states. */
-const PLAN_LIMITS: Record<string, { remaining: number; total: number }> = {
-  check: { remaining: 38, total: 50 },
-  verify: { remaining: 1530, total: 2000 },
-  certify: { remaining: 24100, total: 25000 },
-};
 
 export type NavSection = {
   label: string;
@@ -71,7 +60,29 @@ export function Sidebar({
   const pathname = usePathname();
   const { user } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
-  const usage = user ? PLAN_LIMITS[user.plan] ?? PLAN_LIMITS.check : null;
+  const [usage, setUsage] = useState<{ remaining: number; total: number } | null>(null);
+
+  // Fetch real per-user monthly token usage. Team accounts have a
+  // custom (admin-assigned) allotment so the API returns `total: null`
+  // — we leave `usage` null in that case and the meter stays hidden.
+  useEffect(() => {
+    if (!user || user.plan === "team") {
+      setUsage(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const monthly = await fetchMonthlyUsage();
+      if (cancelled || !monthly || monthly.total === null) return;
+      setUsage({
+        remaining: Math.max(0, monthly.total - monthly.used),
+        total: monthly.total,
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   return (
     <>
@@ -93,7 +104,7 @@ export function Sidebar({
           </button>
         </div>
 
-        <nav className="flex flex-col gap-0.5">
+        <nav className={`${styles.nav} flex flex-col gap-0.5`}>
           {primaryItem && (
             <SidebarLink
               item={primaryItem}
@@ -211,10 +222,18 @@ function DefaultProfile() {
 
   return (
     <div className={styles.profileGroup} role="group" aria-label="Account">
-      <Avatar initials={user.initials} />
+      <Avatar initials={user.initials} src={user.avatarSrc} />
       <div className={styles.profileText}>
-        <div className={styles.profileName}>{user.name}</div>
+        <div className={styles.profileName}>{user.displayName}</div>
       </div>
+      <Link
+        href="/app/settings"
+        className={styles.profileAction}
+        aria-label="Settings"
+        title="Settings"
+      >
+        <Icon name="settings" size={16} />
+      </Link>
       <button
         type="button"
         className={styles.profileAction}

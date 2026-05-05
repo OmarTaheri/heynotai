@@ -4,6 +4,10 @@
  * One row per user; PB realtime pushes changes to both surfaces. */
 migrate(
   (app) => {
+    try {
+      app.findCollectionByNameOrId("extension_prefs");
+      return;
+    } catch (_) {}
     const users = app.findCollectionByNameOrId("users");
     const c = new Collection({
       type: "base",

@@ -1,5 +1,6 @@
 "use client";
 
+import { ClientResponseError } from "pocketbase";
 import {
   DEFAULT_EXTENSION_PREFS,
   type AppearancePrefs,
@@ -26,7 +27,13 @@ function uid(): string {
 
 export async function getProfile(): Promise<PBUserRecord> {
   const id = uid();
-  return (await pb.collection("users").getOne(id)) as PBUserRecord;
+  // Multiple settings sections call this in parallel on mount. PB's
+  // SDK auto-cancels earlier in-flight calls with the same auto-
+  // generated request key — pass `requestKey: null` to opt out so
+  // every section gets the response.
+  return (await pb
+    .collection("users")
+    .getOne(id, { requestKey: null })) as PBUserRecord;
 }
 
 export async function updateProfile(
@@ -53,22 +60,53 @@ export async function requestPasswordReset(email: string): Promise<void> {
 
 /* ── First-or-default helpers ───────────────────────────────── */
 
+/* Fetch the per-user row in a one-row-per-user collection, or seed
+ * defaults if it doesn't exist yet. Robust against:
+ *  - getFirstListItem returning 404 when the row is genuinely missing
+ *    (→ create it),
+ *  - getFirstListItem failing for any other reason (auth, network) —
+ *    we surface the real error instead of pretending the row is missing
+ *    and triggering a doomed create,
+ *  - create racing against another tab / a sibling call and tripping
+ *    the unique-userId index → re-read the now-existing row. */
 async function firstOrCreate<T extends Record<string, unknown>>(
   collection: string,
   defaults: T,
 ): Promise<T & { id: string; userId: string }> {
   const userId = uid();
   try {
-    const r = await pb
+    return (await pb
       .collection(collection)
       .getFirstListItem<T & { id: string; userId: string }>(
-        `userId="${userId}"`,
-      );
-    return r;
-  } catch {
+        `userId = "${userId}"`,
+      )) as T & { id: string; userId: string };
+  } catch (err) {
+    // PB returns 404 when the filter matches nothing — that's the
+    // only case where falling through to `create` is correct.
+    if (!(err instanceof ClientResponseError) || err.status !== 404) {
+      throw err;
+    }
+  }
+
+  try {
     return (await pb
       .collection(collection)
       .create({ ...defaults, userId })) as T & { id: string; userId: string };
+  } catch (err) {
+    // Unique-index race: another concurrent caller seeded the row
+    // between our read and our create. Re-read and return that one.
+    if (err instanceof ClientResponseError && err.status === 400) {
+      try {
+        return (await pb
+          .collection(collection)
+          .getFirstListItem<T & { id: string; userId: string }>(
+            `userId = "${userId}"`,
+          )) as T & { id: string; userId: string };
+      } catch {
+        // fall through to surface the original create error
+      }
+    }
+    throw err;
   }
 }
 
@@ -94,7 +132,6 @@ const APPEARANCE_DEFAULT: Omit<AppearancePrefs, "userId" | "id"> = {
   theme: "system",
   dateFormat: "DD MMM YYYY",
   showAuthenticVerdicts: true,
-  reduceMotion: false,
 };
 
 export async function getAppearance(): Promise<AppearancePrefs> {
@@ -173,9 +210,14 @@ export async function subscribeExtensionPrefs(
 
 export async function getInvoices(): Promise<Invoice[]> {
   const userId = uid();
-  return (await pb
-    .collection("invoices")
-    .getFullList({ filter: `userId="${userId}"`, sort: "-paidOn" })) as unknown as Invoice[];
+  // Sort newest-first by paidOn, with `created` as a stable tiebreaker
+  // so backfilled rows with identical `paidOn` dates keep a deterministic
+  // order matching their creation sequence.
+  return (await pb.collection("invoices").getFullList({
+    filter: `userId="${userId}"`,
+    sort: "-paidOn,-created",
+    requestKey: null,
+  })) as unknown as Invoice[];
 }
 
 export function invoicePdfUrl(invoice: Invoice): string | null {

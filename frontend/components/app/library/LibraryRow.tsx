@@ -1,112 +1,92 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Pill } from "@/components/ui/Pill";
+import { Table } from "@/components/ui/Table";
 import { TypeChip } from "@/components/ui/TypeChip";
 import { OriginBadge } from "@/components/ui/OriginBadge";
-import { Icon } from "@/components/Icon";
+import { ItemMeta } from "@/components/ui/ItemMeta";
+import { Pill } from "@/components/ui/Pill";
 import { Checkbox } from "./Checkbox";
-import type { LibraryItem, LibrarySourceLink } from "@/lib/library-data";
+import { detectorDisplayName } from "@/lib/detector-display";
+import {
+  verdictLabelFromAiPct,
+  verdictToneFromAiPct,
+} from "@/lib/verdict-tone";
+import type { LibraryItem } from "@/lib/library-data";
 
 export function LibraryRow({
   item,
   selected,
   onToggle,
+  onOpen,
 }: {
   item: LibraryItem;
   selected: boolean;
   onToggle: (id: string, next: boolean) => void;
+  /** Fired when the title cell is clicked. Used to navigate to the
+   *  editor for this scan. Row-level click still toggles selection. */
+  onOpen?: (id: string) => void;
 }) {
+  const aiPct = item.aiPct ?? item.confidence;
+  const tone = verdictToneFromAiPct(aiPct);
+  const label = verdictLabelFromAiPct(aiPct);
+  const detector = detectorDisplayName(item.engineId ?? "", item.model);
+
   return (
-    <div
-      className={`lib-row${selected ? " is-selected" : ""}`}
+    <Table.Row
+      selected={selected}
       onClick={() => onToggle(item.id, !selected)}
-      role="row"
     >
-      <Checkbox
-        checked={selected}
-        onChange={(next) => onToggle(item.id, next)}
-        label={`Select ${item.name}`}
-      />
-      <TypeChip type={item.type} size="md" />
+      <Table.Cell>
+        <Checkbox
+          checked={selected}
+          onChange={(next) => onToggle(item.id, next)}
+          label={`Select ${item.name}`}
+        />
+      </Table.Cell>
 
-      <div className="lib-row-main">
-        <div className="lib-row-name">{item.name}</div>
-        <div className="lib-row-meta">
-          <OriginBadge origin={item.origin} />
-          {item.link ? (
-            <SourceLink link={item.link} />
+      <Table.Cell>
+        <TypeChip type={item.type} size="md" />
+      </Table.Cell>
+
+      <Table.Cell className="lib-row-main">
+        <Table.CellTitle>
+          {onOpen ? (
+            <button
+              type="button"
+              className="lib-row-open"
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpen(item.id);
+              }}
+            >
+              {item.name}
+            </button>
           ) : (
-            <span>{item.source}</span>
+            item.name
           )}
-          {item.meta && <span>{item.meta}</span>}
-        </div>
-      </div>
+        </Table.CellTitle>
+        <Table.CellMeta>
+          <OriginBadge origin={item.origin} />
+          <ItemMeta type={item.type} parts={item.meta} link={item.link} />
+        </Table.CellMeta>
+      </Table.Cell>
 
-      <div className="lib-row-conf">
-        <span className="lib-conf-bar" aria-hidden>
-          <span style={{ width: `${item.confidence}%` }} />
-        </span>
-        <span>{item.confidence}%</span>
-      </div>
-
-      <div className="lib-row-model">{item.model}</div>
-
-      <div>
-        <Pill tone={item.verdict} dot compact>
-          {item.verdictLabel}
+      <Table.Cell className="lib-row-verdict">
+        <Pill tone={tone} compact dot>
+          {label}
         </Pill>
-      </div>
+        <span className="lib-row-verdict-pct">{aiPct}%</span>
+      </Table.Cell>
 
-      <div className="lib-row-time">{item.when}</div>
+      <Table.Cell className="lib-row-detector">{detector}</Table.Cell>
 
-      <button
-        type="button"
-        className="lib-row-action"
-        aria-label="Row actions"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <Icon name="more" size={14} />
-      </button>
-    </div>
-  );
-}
+      <Table.Cell align="right" muted>
+        {item.when}
+      </Table.Cell>
 
-function SourceLink({ link }: { link: LibrarySourceLink }) {
-  const [copied, setCopied] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(
-    () => () => {
-      if (timer.current) clearTimeout(timer.current);
-    },
-    [],
-  );
-
-  const handleCopy = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    try {
-      await navigator.clipboard.writeText(link.url);
-      setCopied(true);
-      if (timer.current) clearTimeout(timer.current);
-      timer.current = setTimeout(() => setCopied(false), 1400);
-    } catch {
-      /* clipboard blocked — silently ignore, no toast UI yet */
-    }
-  };
-
-  return (
-    <button
-      type="button"
-      className={`lib-row-link${copied ? " is-copied" : ""}`}
-      onClick={handleCopy}
-      aria-label={`Copy ${link.url}`}
-      title="Copy link"
-    >
-      <span className="fmt">{link.format}</span>
-      <span aria-hidden>·</span>
-      <span>{link.id}</span>
-      <Icon name={copied ? "check" : "link"} size={11} />
-    </button>
+      <Table.Cell>
+        <Table.RowAction />
+      </Table.Cell>
+    </Table.Row>
   );
 }

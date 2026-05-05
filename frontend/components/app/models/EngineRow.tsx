@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { Pill, type PillTone } from "@/components/ui/Pill";
 import {
@@ -7,6 +8,7 @@ import {
   type Engine,
   type EngineBadge,
 } from "@/lib/models-data";
+import { TEAM_SALES_MAILTO } from "@/lib/plans-data";
 import styles from "./EngineRow.module.css";
 
 const BADGE_TONE: Record<EngineBadge, PillTone> = {
@@ -14,7 +16,6 @@ const BADGE_TONE: Record<EngineBadge, PillTone> = {
   recommended: "info",
   fast: "neutral",
   beta: "neutral",
-  byok: "byok",
   local: "local",
   team: "gold",
   enterprise: "gold",
@@ -29,11 +30,13 @@ type Props = {
 /**
  * One engine option row. Selectable via radio + name click; locked rows
  * present a gold lock + upgrade CTA instead and don't toggle selection.
- * BYOK engines render a sunken status strip beneath the row body when
- * `engine.byok` is set.
+ *
+ * API keys are owner-managed in PocketBase, so users see no key/edit
+ * affordances here — only the model name, accuracy, and per-scan cost.
  */
 export function EngineRow({ engine, selected, onSelect }: Props) {
   const locked = !!engine.locked;
+  const router = useRouter();
 
   const rootClasses = [
     styles.row,
@@ -44,7 +47,17 @@ export function EngineRow({ engine, selected, onSelect }: Props) {
     .join(" ");
 
   const handleClick = () => {
-    if (!locked) onSelect();
+    if (!locked) {
+      onSelect();
+      return;
+    }
+    // Locked rows route to the upgrade picker (or sales for the
+    // admin-provisioned tiers).
+    if (engine.locked!.cta === "Contact sales") {
+      window.location.href = TEAM_SALES_MAILTO;
+    } else {
+      router.push("/app/upgrade");
+    }
   };
 
   return (
@@ -105,8 +118,8 @@ export function EngineRow({ engine, selected, onSelect }: Props) {
           <span className={styles.costLabel}>{engine.cost.unit}</span>
         </span>
 
-        <span className={styles.action}>
-          {locked ? (
+        {locked && (
+          <span className={styles.action}>
             <span className={styles.upgrade}>
               <Icon
                 name={engine.locked!.cta === "Contact sales" ? "users" : "sparkle"}
@@ -114,24 +127,9 @@ export function EngineRow({ engine, selected, onSelect }: Props) {
               />
               {engine.locked!.cta}
             </span>
-          ) : (
-            <span className={styles.config} aria-label="Configure engine">
-              <Icon name="settings" size={13} />
-            </span>
-          )}
-        </span>
+          </span>
+        )}
       </button>
-
-      {engine.byok && !locked && (
-        <div className={styles.byok}>
-          <span className={styles.byokDot} aria-hidden />
-          <span className={styles.byokText}>{engine.byok.statusText}</span>
-          <button type="button" className={styles.byokAction}>
-            <Icon name="key" size={11} />
-            Update key
-          </button>
-        </div>
-      )}
     </article>
   );
 }

@@ -27,12 +27,12 @@ export function MonitorPlanUpsell({
             {used} of {cap} monitors
           </strong>{" "}
           on your <em>{plan}</em> plan. Need more watches running at once?{" "}
-          <strong>Team plan unlocks unlimited monitors</strong> and shared
-          alert routing.
+          <strong>Certify lifts the cap</strong> and adds shared alert
+          routing.
         </div>
       </div>
-      <Button variant="primary">
-        See Team plan
+      <Button variant="primary" href="/app/upgrade">
+        Compare plans
         <Icon name="arrow-right" size={13} />
       </Button>
     </div>

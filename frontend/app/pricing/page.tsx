@@ -1,134 +1,165 @@
-import Link from "next/link";
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { Icon } from "@/components/Icon";
-import { Pill } from "@/components/Pill";
+import type { Plan, PlanCycle } from "@heynotai/shared";
+import { useAuth } from "@/lib/auth";
+import { UpgradeHeader } from "@/components/app/upgrade/UpgradeHeader";
+import {
+  PlanGrid,
+  type PlanCardTarget,
+} from "@/components/app/upgrade/PlanGrid";
+import { getPlan, TEAM_SALES_MAILTO } from "@/lib/plans-data";
+import { previewChange, type PreviewItem } from "@/lib/billing-api";
+import s from "./pricing.module.css";
 
-type ToneKey = "neutral" | "green" | "gold";
-
-type Tier = {
-  id: "check" | "verify" | "certify";
-  name: string;
-  tagline: string;
-  price: string;
-  tone: ToneKey;
-  popular?: boolean;
-};
-
-const TIERS: Tier[] = [
-  {
-    id: "check",
-    name: "Check",
-    tagline: "A quick read on any text.",
-    price: "$0",
-    tone: "neutral",
-  },
-  {
-    id: "verify",
-    name: "Verify",
-    tagline: "For writers and editors who ship daily.",
-    price: "$10",
-    tone: "green",
-    popular: true,
-  },
-  {
-    id: "certify",
-    name: "Certify",
-    tagline: "For teams that need a paper trail.",
-    price: "$30",
-    tone: "gold",
-  },
-];
-
-type Tone = {
-  card: string;
-  text: string;
-  textMuted: string;
-  button: string;
-  check: string;
-  checkText: string;
-};
-
-const TONE: Record<ToneKey, Tone> = {
-  neutral: {
-    card: "bg-[var(--color-bg)] border border-[var(--color-line-strong)]",
-    text: "text-[var(--color-fg)]",
-    textMuted: "text-[var(--color-fg-mid)]",
-    button:
-      "bg-[var(--color-fg)] text-[#15171b] hover:bg-white",
-    check:
-      "bg-[color-mix(in_oklch,white_8%,transparent)] border border-[var(--color-line-strong)]",
-    checkText: "text-[var(--color-fg)]",
-  },
-  green: {
-    card: "bg-[#a5c5a8]",
-    text: "text-[#15171b]",
-    textMuted: "text-[#15171b]/70",
-    button: "bg-[#15171b] text-white hover:bg-[#1f2228]",
-    check: "bg-[#a5c5a8]",
-    checkText: "text-[#1d2a1f]",
-  },
-  gold: {
-    card: "bg-[#e3c773]",
-    text: "text-[#15171b]",
-    textMuted: "text-[#15171b]/70",
-    button: "bg-[#15171b] text-white hover:bg-[#1f2228]",
-    check: "bg-[#e3c773]",
-    checkText: "text-[#2a2516]",
-  },
-};
+/* /pricing — public plan-comparison page. Shares the same UpgradeHeader
+ * + PlanGrid as /app/upgrade so the two surfaces stay in lockstep.
+ * Team is split out into its own horizontal block under the comparison
+ * table because it's contact-sales rather than self-serve.
+ * Authenticated users land on /app/upgrade?plan=<id> when they pick a
+ * tier; unauthenticated users bounce to signup with a `next=` query so
+ * they resume the upgrade flow after creating an account. */
 
 const FEATURES: { label: string; values: [boolean, boolean, boolean] }[] = [
-  { label: "AI text detection", values: [true, true, true] },
-  { label: "Confidence score", values: [true, true, true] },
-  { label: "Sentence-level highlighting", values: [true, true, true] },
-  { label: "Browser extension", values: [false, true, true] },
-  { label: "Paraphrase + tone analysis", values: [false, true, true] },
-  { label: "Priority support", values: [false, true, true] },
-  { label: "Shareable verification report", values: [false, false, true] },
-  { label: "Audit history", values: [false, false, true] },
-  { label: "Team workspace", values: [false, false, true] },
-  { label: "API access", values: [false, false, true] },
+  { label: "AI text detection",                     values: [true,  true,  true ] },
+  { label: "Confidence score",                      values: [true,  true,  true ] },
+  { label: "Sentence-level highlighting",           values: [true,  true,  true ] },
+  { label: "Image + video detection",               values: [true,  true,  true ] },
+  { label: "Browser extension on every site",       values: [false, true,  true ] },
+  { label: "Paraphrase + tone forensics",           values: [false, true,  true ] },
+  { label: "Priority support",                      values: [false, true,  true ] },
+  { label: "Shareable verification reports",        values: [false, false, true ] },
+  { label: "12-month audit trail",                  values: [false, false, true ] },
+  { label: "API access",                            values: [false, false, true ] },
+  { label: "Re-scans free on every new model",      values: [true,  true,  true ] },
 ];
 
+const COLUMN_NAMES = ["Check", "Verify", "Certify"] as const;
+
 export default function PricingPage() {
+  const router = useRouter();
+  const { user } = useAuth();
+  const [cycle, setCycle] = useState<PlanCycle>("yearly");
+  const [previews, setPreviews] = useState<Map<string, PreviewItem>>(new Map());
+
+  // Pre-select the toggle to the user's actual cycle on hydration.
+  // We can't initialise via `useState(...)` because `user` may
+  // populate after first render (the auth context hydrates async).
+  useEffect(() => {
+    if (user?.planCycle) setCycle(user.planCycle);
+  }, [user?.planCycle]);
+
+  // Fetch proration previews when the user has an active sub. The
+  // backend ignores the call gracefully when there's no sub, so this
+  // is also safe to fire for free users — but skipping the network
+  // round-trip is cheaper.
+  useEffect(() => {
+    if (!user?.stripeSubscriptionId) {
+      setPreviews(new Map());
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const r = await previewChange();
+        if (cancelled) return;
+        const map = new Map<string, PreviewItem>();
+        for (const item of r.items) map.set(`${item.plan}-${item.cycle}`, item);
+        setPreviews(map);
+      } catch {
+        // best effort — without previews the cards still show sticker
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.stripeSubscriptionId, user?.plan, user?.planCycle]);
+
+  const onPick = useMemo(
+    () => (target: PlanCardTarget) => {
+      const { plan: id, cycle: pickedCycle, kind } = target;
+      if (kind === "contact") {
+        window.location.href = TEAM_SALES_MAILTO;
+        return;
+      }
+      if (kind === "anonymous_signup") {
+        const next =
+          id === "check"
+            ? "/app"
+            : `/app/upgrade?plan=${id}&cycle=${pickedCycle}`;
+        router.push(`/?signup=1&next=${encodeURIComponent(next)}`);
+        return;
+      }
+      if (kind === "cancel_to_free") {
+        router.push("/app/settings");
+        return;
+      }
+      router.push(`/app/upgrade?plan=${id}&cycle=${pickedCycle}`);
+    },
+    [router],
+  );
+
   return (
     <main>
       <div className="relative">
         <Nav />
 
         <section className="relative overflow-hidden pb-24 pt-32 md:pt-40">
-          {/* Aurora backdrop — same drifting, color-shifting bloom used on the
-              home Hero so the pricing page shares its living backdrop. */}
+          {/* Aurora backdrop — same drifting bloom used on the home Hero
+              so the marketing surfaces share one living backdrop. */}
           <div className="hero-aurora" aria-hidden>
             <span />
             <span />
           </div>
 
           <div className="relative mx-auto max-w-6xl px-6">
-            {/* Hero — brand-aligned: centered heading + paragraph */}
-            <div className="text-center">
-              <h1 className="mx-auto max-w-3xl text-5xl font-semibold leading-[1.05] tracking-tight sm:text-6xl md:text-7xl">
-                <span className="text-white">Simple</span>{" "}
-                <span className="grad-highlight">pricing</span>
-                <span className="text-white">.</span>
-              </h1>
-              <p className="mx-auto mt-6 max-w-xl text-[13.5px] leading-relaxed text-white/65">
-                Three tiers, one job — keep human writing honest. Start free,
-                level up when your workflow asks for more.
-              </p>
+            <UpgradeHeader
+              eyebrow="Pricing · Three plans"
+              title="Catch <em>what slips by</em> — at every scale"
+              subtitle="Three tiers built around how seriously you need to verify content. Start free; cancel any time."
+            />
+
+            <div className={s.cycleToggleWrap}>
+              <div className={s.cycleToggle} role="tablist">
+                <button
+                  role="tab"
+                  aria-selected={cycle === "monthly"}
+                  className={`${s.cycleBtn}${cycle === "monthly" ? ` ${s.cycleBtnActive}` : ""}`}
+                  onClick={() => setCycle("monthly")}
+                >
+                  Monthly
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={cycle === "yearly"}
+                  className={`${s.cycleBtn}${cycle === "yearly" ? ` ${s.cycleBtnActive}` : ""}`}
+                  onClick={() => setCycle("yearly")}
+                >
+                  Yearly{" "}
+                  <span className={s.savePill}>· Save 17%</span>
+                </button>
+              </div>
             </div>
 
-            {/* Cards row */}
-            <div className="mt-16 grid gap-5 md:grid-cols-3">
-              {TIERS.map((tier) => (
-                <PlanCard key={tier.id} tier={tier} />
-              ))}
-            </div>
+            <PlanGrid
+              cycle={cycle}
+              currentPlan={(user?.plan as Plan) ?? null}
+              currentCycle={user?.planCycle ?? null}
+              pendingPlanEffective={user?.pendingPlanEffective ?? null}
+              previews={previews}
+              onPick={onPick}
+              hideTeam
+            />
 
             <FeatureTable />
 
-            <EnterpriseCard />
+            <TeamBanner
+              onPick={() => onPick({ plan: "team", cycle, kind: "contact" })}
+            />
           </div>
         </section>
 
@@ -138,79 +169,37 @@ export default function PricingPage() {
   );
 }
 
-function PlanCard({ tier }: { tier: Tier }) {
-  const tone = TONE[tier.tone];
-  return (
-    <div
-      className={`relative flex flex-col p-7 ${tone.card}`}
-      style={{ borderRadius: 32 }}
-    >
-      {tier.popular && (
-        <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[var(--color-fg)] px-3 py-1 text-[11px] font-medium text-[#15171b] shadow-sm">
-          Most Popular!
-        </span>
-      )}
-
-      <h3 className={`text-[24px] font-semibold tracking-tight ${tone.text}`}>
-        {tier.name}
-      </h3>
-      <p
-        className={`mt-1.5 max-w-[14rem] text-[13.5px] leading-snug ${tone.textMuted}`}
-      >
-        {tier.tagline}
-      </p>
-
-      <div
-        className={`mt-10 text-[42px] font-semibold leading-none tracking-tight ${tone.text}`}
-      >
-        {tier.price}
-        <span className={`ml-1 text-[13.5px] font-normal ${tone.textMuted}`}>
-          /mo
-        </span>
-      </div>
-
-      <Link
-        href="#signup"
-        className={`mt-6 inline-flex h-12 items-center justify-center rounded-full text-[14px] font-medium transition-colors ${tone.button}`}
-      >
-        Get started
-      </Link>
-    </div>
-  );
-}
-
 function FeatureTable() {
   return (
-    <div className="mt-24">
-      <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-        Key Features
-      </h2>
+    <div className={s.tableWrap}>
+      <div className="mb-2">
+        <div className={s.tableEyebrow}>What you get</div>
+        <h2 className={s.tableTitle}>Detection coverage by plan</h2>
+      </div>
 
-      <div className="mt-6 border-t border-[var(--color-line)]">
-        {FEATURES.map((row) => (
-          <div
-            key={row.label}
-            className="grid grid-cols-[1.4fr_repeat(3,1fr)] items-center border-b border-[var(--color-line)] px-1 py-4 text-[13.5px]"
-          >
-            <span className="font-medium text-[var(--color-fg)]">
-              {row.label}
+      <div className={s.table}>
+        <div className={`${s.row} ${s.rowHead}`}>
+          <span>{/* feature label column */}</span>
+          {COLUMN_NAMES.map((n) => (
+            <span key={n} className={s.colName}>
+              {n}
             </span>
-            {row.values.map((on, idx) => {
-              const tone = TONE[TIERS[idx].tone];
-              return (
-                <div key={idx} className="flex justify-center">
-                  {on ? (
-                    <span
-                      className={`inline-flex h-6 w-6 items-center justify-center rounded-full ${tone.check} ${tone.checkText}`}
-                    >
-                      <Icon name="check" size={13} />
-                    </span>
-                  ) : (
-                    <span className="text-[var(--color-fg-dim)]">—</span>
-                  )}
-                </div>
-              );
-            })}
+          ))}
+        </div>
+        {FEATURES.map((row) => (
+          <div key={row.label} className={s.row}>
+            <span className={s.featureLabel}>{row.label}</span>
+            {row.values.map((on, idx) => (
+              <div key={idx} className={s.cell}>
+                {on ? (
+                  <span className={s.checkChip} aria-label="included">
+                    <Icon name="check" size={12} />
+                  </span>
+                ) : (
+                  <span className={s.dash} aria-label="not included">—</span>
+                )}
+              </div>
+            ))}
           </div>
         ))}
       </div>
@@ -218,41 +207,50 @@ function FeatureTable() {
   );
 }
 
-function EnterpriseCard() {
+function TeamBanner({ onPick }: { onPick: () => void }) {
+  const team = getPlan("team");
   return (
-    <div
-      className="mt-20 flex flex-col gap-8 bg-[var(--color-surface-sunken)] p-10 text-[var(--color-fg)] sm:p-12 lg:flex-row lg:items-center lg:justify-between"
-      style={{ borderRadius: 32 }}
-    >
-      <div className="max-w-xl">
-        <Pill>
-          <Icon name="shield" size={12} /> Enterprise
-        </Pill>
-        <h3 className="mt-5 text-[28px] font-semibold leading-tight tracking-tight sm:text-[36px]">
-          Need a custom rollout?
-        </h3>
-        <p className="mt-4 max-w-lg text-[13.5px] leading-relaxed text-[var(--color-fg-mid)]">
-          For publishers, universities, and platforms running detection at
-          scale. SSO, dedicated infrastructure, custom detection models, and a
-          contract built around your compliance needs.
-        </p>
-      </div>
+    <section className={s.teamBanner} aria-labelledby="team-plan-title">
+      <div className={s.teamBannerInner}>
+        <div className={s.teamLead}>
+          <div className={s.teamEyebrow}>For organizations</div>
+          <h3 id="team-plan-title" className={s.teamTitle}>
+            {team.name}
+          </h3>
+          <p className={s.teamTagline}>{team.tagline}</p>
 
-      <div className="flex flex-col items-start gap-3 lg:items-end">
-        <Link
-          href="#contact"
-          className="inline-flex h-12 items-center justify-center rounded-full bg-[var(--color-fg)] px-7 text-[14px] font-medium text-[#15171b] transition-colors hover:bg-white"
-        >
-          Contact us
-        </Link>
-        <Link
-          href="mailto:sales@heynotai.io"
-          className="inline-flex items-center gap-2 text-[13px] text-[var(--color-fg-mid)] transition-colors hover:text-[var(--color-fg)]"
-        >
-          sales@heynotai.io
-          <Icon name="arrow-right" size={12} />
-        </Link>
+          <div className={s.teamMetrics}>
+            <div className={s.teamMetric}>
+              <span className={s.teamMetricNumber}>Custom</span>
+              <span className={s.teamMetricLabel}>tailored to your team</span>
+            </div>
+            <div className={s.teamMetricDivider} aria-hidden />
+            <div className={s.teamMetric}>
+              <span className={s.teamMetricNumber}>Custom</span>
+              <span className={s.teamMetricLabel}>tokens / month</span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className={s.teamCta}
+            onClick={onPick}
+          >
+            Talk to us
+          </button>
+        </div>
+
+        <ul className={s.teamFeatures}>
+          {team.features.map((f) => (
+            <li key={f}>
+              <span className={s.teamCheckIcon} aria-hidden>
+                <Icon name="check" size={12} />
+              </span>
+              <span>{f}</span>
+            </li>
+          ))}
+        </ul>
       </div>
-    </div>
+    </section>
   );
 }

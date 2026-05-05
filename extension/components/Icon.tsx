@@ -4,8 +4,9 @@ export type IconName =
   | 'info' | 'chevron-right' | 'chevron-left' | 'arrow-left' | 'check' | 'refresh' | 'filter' | 'plus'
   | 'text' | 'image' | 'audio' | 'video'
   | 'globe' | 'sparkle' | 'bell' | 'shield' | 'lock' | 'log-out'
-  | 'sun' | 'moon' | 'pause' | 'activity' | 'layers' | 'user' | 'bolt' | 'home'
-  | 'facebook' | 'youtube' | 'instagram' | 'settings' | 'trash';
+  | 'sun' | 'moon' | 'pause' | 'activity' | 'layers' | 'user' | 'users' | 'bolt' | 'home'
+  | 'facebook' | 'youtube' | 'instagram' | 'settings' | 'trash'
+  | 'puzzle' | 'upload' | 'link' | 'paperclip' | 'external-link';
 
 const PATHS: Record<IconName, ReactElement> = {
   info:            <g><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01"/></g>,
@@ -39,6 +40,12 @@ const PATHS: Record<IconName, ReactElement> = {
   instagram:       <g><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.3" cy="6.7" r="1" fill="currentColor" stroke="none"/></g>,
   settings:        <g><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></g>,
   trash:           <g><path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/><path d="M9 7V4h6v3"/></g>,
+  users:           <g><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20v-1a6 6 0 0 1 6.5-6 6 6 0 0 1 6.5 6v1"/><circle cx="17" cy="6.5" r="2.5"/><path d="M21.5 19v-.5a4 4 0 0 0-3-3.9"/></g>,
+  puzzle:          <path d="M10 3h4v3a2 2 0 1 0 4 0V3h3v4h-3a2 2 0 1 0 0 4h3v3h-3a2 2 0 1 0 0 4h3v3h-4v-3a2 2 0 1 0-4 0v3H6v-4h3a2 2 0 1 0 0-4H6v-3h3a2 2 0 1 0 0-4H6V3h4z"/>,
+  upload:          <g><path d="M12 4v12"/><path d="M7 9l5-5 5 5"/><path d="M5 20h14"/></g>,
+  link:            <g><path d="M10.5 13.5a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M13.5 10.5a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></g>,
+  paperclip:       <path d="M21 11.5l-9.5 9.5a5 5 0 0 1-7-7l9.5-9.5a3.5 3.5 0 0 1 5 5L9 19a2 2 0 0 1-3-3l8.5-8.5"/>,
+  'external-link': <g><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M19 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/></g>,
 };
 
 interface IconProps extends Omit<SVGProps<SVGSVGElement>, 'name'> {

@@ -27,15 +27,15 @@
 }
 
 /* Drop optional columns at narrow viewports. We can't reference CSS
-   Module class names from this global file, so we target the cells by
-   their position within each row (.reports-grid wraps the header row
-   and every body row; each row is itself a grid with 7 children). */
+   Module class names from this global file, so target rows + cells by
+   their ARIA roles — the shared Table primitive uses role="row" /
+   role="cell" / role="columnheader" on its grid lanes. */
 @media (max-width: 1100px) {
   .reports-page {
     --reports-cols: 44px minmax(0, 1fr) 120px 100px 36px;
   }
-  .reports-page .reports-grid > * > :nth-child(5),
-  .reports-page .reports-grid > * > :nth-child(6) {
+  .reports-page .reports-grid [role="row"] > :nth-child(5),
+  .reports-page .reports-grid [role="row"] > :nth-child(6) {
     display: none;
   }
 }
@@ -44,7 +44,7 @@
   .reports-page {
     --reports-cols: 44px minmax(0, 1fr) 100px 36px;
   }
-  .reports-page .reports-grid > * > :nth-child(3) {
+  .reports-page .reports-grid [role="row"] > :nth-child(3) {
     display: none;
   }
 }

@@ -8,10 +8,7 @@ import {
   LastScanCard,
   type LastScan,
 } from "@/components/app/home/LastScanCard";
-import {
-  ActivityTable,
-  type ActivityRow,
-} from "@/components/app/home/ActivityTable";
+import { ActivityTableClient } from "@/components/app/home/ActivityTableClient";
 
 export const metadata: Metadata = { title: "Home" };
 
@@ -102,64 +99,6 @@ const LAST_SCAN: LastScan = {
   ],
 };
 
-const ACTIVITY: ActivityRow[] = [
-  {
-    id: "a1",
-    type: "vid",
-    name: "Celebrity Interview — Exclusive Reveal",
-    origin: "ext",
-    source: "youtube.com/watch?v=xK2Qjm4…",
-    confidence: 87,
-    verdict: "ai",
-    verdictLabel: "Deepfake",
-    when: "12m ago",
-  },
-  {
-    id: "a2",
-    type: "img",
-    name: "linkedin_headshot.jpg",
-    origin: "up",
-    source: "1024 × 1024 · recruiting review",
-    confidence: 92,
-    verdict: "ai",
-    verdictLabel: "AI-generated",
-    when: "42m ago",
-  },
-  {
-    id: "a3",
-    type: "txt",
-    name: '"Breaking: A new study shows that AI-generated images..."',
-    origin: "ext",
-    source: "x.com/techaccount/status/1823…",
-    confidence: 84,
-    verdict: "ai",
-    verdictLabel: "AI · post",
-    when: "1h ago",
-  },
-  {
-    id: "a4",
-    type: "aud",
-    name: "voicemail_from_boss.mp3",
-    origin: "mon",
-    source: "0:42 · monitor: voicemail drops",
-    confidence: 88,
-    verdict: "ai",
-    verdictLabel: "Cloned voice",
-    when: "3h ago",
-  },
-  {
-    id: "a5",
-    type: "web",
-    name: "EU agrees new framework on synthetic media labelling",
-    origin: "url",
-    source: "bbc.com/news/technology-68921",
-    confidence: 96,
-    verdict: "human",
-    verdictLabel: "Authentic",
-    when: "Yesterday",
-  },
-];
-
 /**
  * Home — the dashboard cold-open. Server component, dark theme, same
  * tokens + visual language as the extension popup.
@@ -176,7 +115,6 @@ export default function HomePage() {
       <section className="home-hero">
         <Greeting
           greeting="Good morning"
-          accentName="Boufarssi"
           subtitle="Three monitors flagged new AI content overnight, and your last scan finished in 2.1 seconds."
         />
         <DropCard />
@@ -213,7 +151,7 @@ export default function HomePage() {
             linkLabel="View library"
             linkHref="/app/library"
           />
-          <ActivityTable rows={ACTIVITY} />
+          <ActivityTableClient />
         </section>
       </div>
     </div>

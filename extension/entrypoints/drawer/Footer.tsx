@@ -14,7 +14,7 @@ export function Footer() {
       <span>last scan · 00:01.4s ago</span>
       <span className="usage">
         <Icon name="bolt" size={10} />
-        <span>{count}</span> / 25,000 scans
+        <span>{count.toLocaleString()}</span> / 100 tokens
       </span>
     </footer>
   );

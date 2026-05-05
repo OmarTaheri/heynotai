@@ -1,0 +1,70 @@
+/* Floating scrub strip — sits directly above the editor toolbar
+   capsule and matches its width and left edge via JS measurement.
+   Mirrors the toolbar's dark-capsule styling so the two read as a
+   single stacked control. */
+
+.bar {
+  position: fixed;
+  bottom: 78px;
+  padding: 14px 20px;
+  background: #0b0c0f;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 12px;
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
+  z-index: 30;
+  cursor: pointer;
+  user-select: none;
+  box-sizing: border-box;
+}
+
+.bar:focus-visible {
+  outline: none;
+}
+
+.track {
+  position: relative;
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--color-line-strong) 90%, transparent);
+  transition: height 140ms ease;
+}
+
+.bar:hover .track {
+  height: 6px;
+}
+
+.played {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  background: var(--color-fg);
+  border-radius: 999px;
+  opacity: 0.92;
+}
+
+.head {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--color-fg);
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 4px color-mix(in oklch, var(--color-fg) 16%, transparent);
+  transition: width 140ms ease, height 140ms ease;
+}
+
+.bar:hover .head {
+  width: 14px;
+  height: 14px;
+}
+
+.bar:focus-visible .head {
+  box-shadow:
+    0 0 0 4px color-mix(in oklch, var(--color-info) 35%, transparent),
+    0 0 0 1px var(--color-info);
+}

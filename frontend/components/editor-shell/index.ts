@@ -1,6 +1,6 @@
 export { EditorShell } from "./EditorShell";
 export { EditorTopBar } from "./EditorTopBar";
-export type { Collaborator } from "./EditorTopBar";
+export type { MemberPresence } from "./EditorTopBar";
 export { Toolbar } from "./EditorToolbar";
 export { ScoreRing, verdictFromScore } from "./ScoreRing";
 export type { Verdict } from "./ScoreRing";

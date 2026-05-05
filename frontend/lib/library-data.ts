@@ -1,34 +1,43 @@
 import type { ScanType } from "@/components/ui/TypeChip";
 import type { Origin } from "@/components/ui/OriginBadge";
-import type { PillTone } from "@/components/ui/Pill";
+import type { ActivityRow } from "@/components/app/home/ActivityTable";
+import type { Scan } from "./scan-types";
+import {
+  deriveItemMeta,
+  isSocialType,
+  stripExtFromTitle,
+  type ItemMetaCollection,
+  type ItemMetaLink,
+  type ItemMetaParts,
+} from "./item-meta";
 
-export type LibraryVerdict = PillTone;
-
-/** Structured replacement for the noisy full-URL source string on social
- *  posts. `format` is the human-friendly content-type ("video" / "short"
- *  / "reel" / "post"); `id` is the post's unique slug; `url` is the full
- *  https URL copied to the clipboard when the row's link is clicked. */
-export type LibrarySourceLink = {
-  format: string;
-  id: string;
-  url: string;
-};
+export { formatBytes, formatDuration } from "./item-meta";
 
 export type LibraryItem = {
   id: string;
   type: ScanType;
   name: string;
   origin: Origin;
-  source: string;
-  /** When set, the row renders a clickable "format · id" link in place
-   *  of the plain `source` string. */
-  link?: LibrarySourceLink;
-  meta?: string;
+  meta: ItemMetaParts;
+  /** When set, the row's meta line becomes a clipboard-copy button on
+   *  social subtypes. The full URL is what gets copied. */
+  link?: ItemMetaLink;
   confidence: number;
+  /** Unified AI-generated probability 0-100. Carried alongside
+   *  `confidence` so downstream surfaces (collection detail table) can
+   *  read the AI signal directly. Optional so legacy mock arrays don't
+   *  have to be back-filled. */
+  aiPct?: number;
   model: string;
-  verdict: LibraryVerdict;
-  verdictLabel: string;
+  /** Engine slug from `Scan.engineId`, forwarded so callers can map to
+   *  a display name without re-querying the scan. */
+  engineId?: string;
   when: string;
+  /** Raw ISO timestamp (`scan.created`). The library Date filter uses
+   *  this to bucket rows into Today / Last 7 / Last 30 without having
+   *  to re-parse `when` (the formatted relative string). Optional so
+   *  legacy mock rows that only carry `when` don't need backfill. */
+  whenIso?: string;
 };
 
 export type OriginTabKey =
@@ -39,13 +48,34 @@ export type OriginTabKey =
   | "paste"
   | "mon";
 
-export const ORIGIN_TABS: { key: OriginTabKey; label: string; count: number }[] = [
-  { key: "all", label: "All", count: 470 },
-  { key: "up", label: "Uploads", count: 128 },
-  { key: "ext", label: "Extension", count: 298 },
-  { key: "url", label: "URLs", count: 28 },
-  { key: "paste", label: "Pasted", count: 12 },
-  { key: "mon", label: "Monitors", count: 4 },
+export type OriginTabSpec = {
+  key: OriginTabKey;
+  label: string;
+  /** Marks the surface as gated — drives the lock icon. The tab still
+   *  filters normally; the icon just signals parity with the gated
+   *  /app/<surface> page. */
+  locked?: boolean;
+};
+
+/** Tab labels + locked flag. Counts are derived from the rendered data
+ *  on the page so they stay honest. */
+export const ORIGIN_TABS: OriginTabSpec[] = [
+  { key: "all", label: "All" },
+  { key: "up", label: "Uploads" },
+  { key: "ext", label: "Extension" },
+  { key: "url", label: "URLs" },
+  { key: "paste", label: "Pasted" },
+  { key: "mon", label: "Monitors", locked: true },
+];
+
+/** Sub-tabs inside Uploads. Same visual language as ORIGIN_TABS. */
+export type UploadSubTabKey = "all" | "img" | "vid" | "aud";
+
+export const UPLOAD_SUBTABS: { key: UploadSubTabKey; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "img", label: "Image" },
+  { key: "vid", label: "Video" },
+  { key: "aud", label: "Audio" },
 ];
 
 /** Human-readable labels for every supported content type. Keep in sync
@@ -67,214 +97,131 @@ export const TYPE_LABELS: Record<ScanType, string> = {
   "yt-reel": "YouTube short",
 };
 
-export const LIBRARY_ITEMS: LibraryItem[] = [
+/** Map a saved Scan record into the row shape the existing library +
+ *  activity tables expect. Pass `collection` (title + optional href)
+ *  when the scan's parent collection is known so the meta line can
+ *  render it as an internal link to the collection detail page. */
+export function scanToLibraryItem(
+  scan: Scan,
+  opts: { collection?: ItemMetaCollection } = {},
+): LibraryItem {
+  const type = scan.subtype ? (scan.subtype as ScanType) : (scan.type as ScanType);
+  const origin = scanOriginToBadge(scan.origin);
+  const parts = deriveItemMeta(scan, { collection: opts.collection });
+  const link =
+    isSocialType(type) && scan.sourceUrl
+      ? ({ url: scan.sourceUrl } satisfies ItemMetaLink)
+      : undefined;
+  const title = stripExtFromTitle(scan.title || "Untitled scan", parts.ext);
+
+  return {
+    id: scan.id,
+    type,
+    name: title,
+    origin,
+    meta: parts,
+    link,
+    confidence: Math.round(scan.confidence),
+    aiPct: Math.round(scan.aiPct ?? 0),
+    model: scan.model || "—",
+    engineId: scan.engineId || "",
+    when: formatRelative(scan.created),
+    whenIso: scan.created || undefined,
+  };
+}
+
+function scanOriginToBadge(origin: Scan["origin"]): Origin {
+  switch (origin) {
+    case "paste":
+      return "paste";
+    case "link":
+    case "url":
+      return "url";
+    case "upload":
+    case "record":
+      return "up";
+    case "ext":
+      return "ext";
+    case "mon":
+      return "mon";
+    default:
+      return "up";
+  }
+}
+
+export function formatRelative(iso: string): string {
+  if (!iso) return "—";
+  const ts = new Date(iso).getTime();
+  if (!Number.isFinite(ts)) return "—";
+  const delta = Date.now() - ts;
+  const sec = Math.round(delta / 1000);
+  if (sec < 60) return "just now";
+  const min = Math.round(sec / 60);
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.round(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const day = Math.round(hr / 24);
+  if (day === 1) return "Yesterday";
+  if (day < 7) return `${day}d ago`;
+  const wk = Math.round(day / 7);
+  if (wk < 5) return `${wk}w ago`;
+  const mo = Math.round(day / 30);
+  if (mo < 12) return `${mo}mo ago`;
+  return `${Math.round(day / 365)}y ago`;
+}
+
+/**
+ * TODO(demo-data): remove these once real scans populate the home
+ * Activity table reliably. Distinct shape from `LibraryItem` so the
+ * home table doesn't pull confidence bars / model columns it doesn't
+ * render. Ids `d1..d5` are short on purpose — they don't collide with
+ * 15-char PB ids and clicking them routes to the friendly not-found.
+ */
+export const DEMO_ACTIVITY_ROWS: ActivityRow[] = [
   {
-    id: "l1",
-    type: "vid",
-    name: "Celebrity Interview — Exclusive Reveal About Upcoming Project",
-    origin: "up",
-    source: "interview_cut.mp4 · 2:14",
-    meta: "1080p",
+    id: "d1",
+    type: "yt-vid",
+    name: "Celebrity Interview — Exclusive Reveal",
+    origin: "ext",
+    meta: { socialFormat: "video", socialId: "xK2Qjm4" },
+    link: { url: "https://youtube.com/watch?v=xK2Qjm4" },
     confidence: 87,
-    model: "Sora 2",
-    verdict: "ai",
-    verdictLabel: "Deepfake",
     when: "12m ago",
   },
   {
-    id: "l2",
+    id: "d2",
     type: "img",
-    name: "linkedin_headshot.jpg",
+    name: "linkedin_headshot",
     origin: "up",
-    source: "1024 × 1024",
-    meta: "recruiting review",
+    meta: { size: "1024 × 1024" },
     confidence: 92,
-    model: "Midjourney v7",
-    verdict: "ai",
-    verdictLabel: "AI-generated",
     when: "42m ago",
   },
   {
-    id: "l3",
+    id: "d3",
     type: "txt",
-    name: "student_essay_214.txt",
-    origin: "up",
-    source: "1,430 words",
-    meta: "Fall semester",
-    confidence: 89,
-    model: "GPT-5",
-    verdict: "ai",
-    verdictLabel: "AI-written",
-    when: "1h ago",
-  },
-  {
-    id: "l4",
-    type: "aud",
-    name: "voicemail_from_boss.mp3",
-    origin: "mon",
-    source: "0:42",
-    meta: "monitor: voicemail drops",
-    confidence: 88,
-    model: "ElevenLabs v3",
-    verdict: "ai",
-    verdictLabel: "Cloned voice",
-    when: "1h ago",
-  },
-  {
-    id: "l5",
-    type: "web",
-    name: "EU agrees new framework on synthetic media labelling",
-    origin: "url",
-    source: "bbc.com/news/technology-68921",
-    meta: "full page scan",
-    confidence: 96,
-    model: "—",
-    verdict: "human",
-    verdictLabel: "Authentic",
-    when: "2h ago",
-  },
-  {
-    id: "l6",
-    type: "yt-vid",
-    name: "“The science of why we procrastinate (and how to stop)”",
+    name: "\"Breaking: A new study shows that AI-generated images...\"",
     origin: "ext",
-    source: "youtube.com/watch?v=xK2Qjm4bN7",
-    link: {
-      format: "video",
-      id: "xK2Qjm4bN7",
-      url: "https://youtube.com/watch?v=xK2Qjm4bN7",
-    },
-    meta: "8:42",
-    confidence: 73,
-    model: "ElevenLabs v3",
-    verdict: "mixed",
-    verdictLabel: "AI narration",
+    meta: { wordCount: "612 words" },
+    confidence: 84,
+    when: "1h ago",
+  },
+  {
+    id: "d4",
+    type: "aud",
+    name: "voicemail_from_boss",
+    origin: "mon",
+    meta: { length: "0:42", ext: "mp3" },
+    confidence: 88,
     when: "3h ago",
   },
   {
-    id: "l7",
-    type: "yt-reel",
-    name: "“POV: I tried the productivity method nobody talks about”",
-    origin: "ext",
-    source: "youtube.com/shorts/7234kqLm",
-    link: {
-      format: "short",
-      id: "7234kqLm",
-      url: "https://youtube.com/shorts/7234kqLm",
-    },
-    meta: "0:28 vertical",
-    confidence: 82,
-    model: "ElevenLabs v3",
-    verdict: "ai",
-    verdictLabel: "AI voice",
-    when: "4h ago",
-  },
-  {
-    id: "l8",
-    type: "ig-reel",
-    name: "“Sunrise at Lake Como — 24 hours in Italy”",
-    origin: "ext",
-    source: "instagram.com/reel/C8jK4nRoP",
-    link: {
-      format: "reel",
-      id: "C8jK4nRoP",
-      url: "https://instagram.com/reel/C8jK4nRoP",
-    },
-    meta: "0:31 · vertical",
-    confidence: 78,
-    model: "Sora 2",
-    verdict: "ai",
-    verdictLabel: "AI clip",
-    when: "5h ago",
-  },
-  {
-    id: "l9",
-    type: "ig-post-img",
-    name: "“Golden hour, no filter ✨” — travel influencer post",
-    origin: "ext",
-    source: "instagram.com/p/C7nB2qwLk",
-    link: {
-      format: "post",
-      id: "C7nB2qwLk",
-      url: "https://instagram.com/p/C7nB2qwLk",
-    },
-    meta: "single image",
-    confidence: 88,
-    model: "Midjourney v7",
-    verdict: "ai",
-    verdictLabel: "AI image",
+    id: "d5",
+    type: "web",
+    name: "EU agrees new framework on synthetic media labelling",
+    origin: "url",
+    meta: { domain: "bbc.com", pathTail: "technology-68921" },
+    confidence: 96,
     when: "Yesterday",
-  },
-  {
-    id: "l10",
-    type: "ig-post-vid",
-    name: "“Behind the scenes from yesterday's shoot 🎬”",
-    origin: "ext",
-    source: "instagram.com/p/C7vM9xRoS",
-    link: {
-      format: "post",
-      id: "C7vM9xRoS",
-      url: "https://instagram.com/p/C7vM9xRoS",
-    },
-    meta: "0:48 in-feed",
-    confidence: 64,
-    model: "Runway Gen-4",
-    verdict: "mixed",
-    verdictLabel: "Some AI",
-    when: "Yesterday",
-  },
-  {
-    id: "l11",
-    type: "fb-vid",
-    name: "“Local hero saves dog from frozen lake — full footage”",
-    origin: "ext",
-    source: "facebook.com/watch?v=8312",
-    link: {
-      format: "video",
-      id: "8312",
-      url: "https://facebook.com/watch?v=8312",
-    },
-    meta: "1:42",
-    confidence: 91,
-    model: "Sora 2",
-    verdict: "ai",
-    verdictLabel: "Deepfake",
-    when: "Yesterday",
-  },
-  {
-    id: "l12",
-    type: "fb-reel",
-    name: "“What nobody tells you about your 30s”",
-    origin: "ext",
-    source: "facebook.com/reel/c7wQ9p",
-    link: {
-      format: "reel",
-      id: "c7wQ9p",
-      url: "https://facebook.com/reel/c7wQ9p",
-    },
-    meta: "0:22 vertical",
-    confidence: 70,
-    model: "ElevenLabs v3",
-    verdict: "mixed",
-    verdictLabel: "AI voice",
-    when: "2d ago",
-  },
-  {
-    id: "l13",
-    type: "fb-post",
-    name: "“Breaking: A new study shows that AI-generated images now fool 8 in 10…”",
-    origin: "ext",
-    source: "facebook.com/posts/1823",
-    link: {
-      format: "post",
-      id: "1823",
-      url: "https://facebook.com/posts/1823",
-    },
-    meta: "text + link",
-    confidence: 85,
-    model: "GPT-5",
-    verdict: "ai",
-    verdictLabel: "AI-written",
-    when: "2d ago",
   },
 ];

@@ -1,3 +1,7 @@
+"use client";
+
+import { useAuth } from "@/lib/auth";
+
 /**
  * Hero-style greeting at the top of the home page.
  *
@@ -5,6 +9,9 @@
  * the surrounding phrase renders dimmed, the addressee renders at full
  * opacity so it pops as the line's anchor. Inter only — weight + size
  * + letter-spacing carry the editorial feel.
+ *
+ * `accentName` is optional — when omitted, the user's onboarding handle
+ * (with a fallback chain handled in mapUser → user.displayName) is used.
  */
 export function Greeting({
   greeting,
@@ -12,14 +19,16 @@ export function Greeting({
   subtitle,
 }: {
   greeting: string;
-  accentName: string;
+  accentName?: string;
   subtitle: string;
 }) {
+  const { user } = useAuth();
+  const name = accentName ?? user?.displayName ?? "there";
   return (
     <header className="home-greet">
       <div>
         <h1 className="home-greet-h1">
-          {greeting}, <em>{accentName}</em>
+          {greeting}, <em>{name}</em>
         </h1>
         <p className="home-greet-sub">{subtitle}</p>
       </div>

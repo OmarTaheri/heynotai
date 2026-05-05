@@ -1,6 +1,10 @@
 /// <reference path="../pb_data/types.d.ts" />
 migrate(
   (app) => {
+    try {
+      app.findCollectionByNameOrId("appearance_prefs");
+      return;
+    } catch (_) {}
     const users = app.findCollectionByNameOrId("users");
     const c = new Collection({
       type: "base",
@@ -21,7 +25,6 @@ migrate(
         },
         { name: "dateFormat", type: "text", max: 40 },
         { name: "showAuthenticVerdicts", type: "bool" },
-        { name: "reduceMotion", type: "bool" },
         { name: "created", type: "autodate", onCreate: true },
         { name: "updated", type: "autodate", onCreate: true, onUpdate: true },
       ],

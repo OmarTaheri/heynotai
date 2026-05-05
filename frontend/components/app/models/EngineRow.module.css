@@ -32,10 +32,10 @@
   cursor: default;
 }
 
-/* Click target. Grid columns: radio | info | accuracy | cost | action. */
+/* Click target. Grid columns: radio | info | accuracy | cost [| upgrade]. */
 .body {
   display: grid;
-  grid-template-columns: auto 1fr auto auto auto;
+  grid-template-columns: auto 1fr auto auto;
   gap: 18px;
   align-items: center;
   width: 100%;
@@ -46,6 +46,10 @@
   color: inherit;
   cursor: pointer;
   text-align: left;
+}
+
+.row.locked .body {
+  grid-template-columns: auto 1fr auto auto auto;
 }
 
 .body:focus-visible {
@@ -195,34 +199,12 @@
   margin-left: 2px;
 }
 
-/* Action slot — config gear (default) or upgrade pill (locked). */
+/* Action slot — only used by locked rows (upgrade pill). */
 .action {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-}
-
-.config {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  border: 1px solid var(--color-line);
-  background: var(--color-surface-alt);
-  color: var(--color-fg-dim);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition:
-    background 0.12s ease,
-    color 0.12s ease,
-    border-color 0.12s ease;
-}
-
-.body:hover .config {
-  border-color: var(--color-line-strong);
-  color: var(--color-fg);
-  background: var(--color-surface);
 }
 
 .upgrade {
@@ -240,67 +222,13 @@
   border: 1px solid color-mix(in oklch, var(--color-gold) 40%, transparent);
 }
 
-/* Sunken BYOK detail strip — appears beneath the row body for engines
-   that have a configured external key. */
-.byok {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 20px;
-  background: var(--color-surface-sunken);
-  border-top: 1px solid var(--color-line);
-}
-
-.byokDot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--color-human);
-  flex-shrink: 0;
-  box-shadow: 0 0 0 3px color-mix(in oklch, var(--color-human) 18%, transparent);
-}
-
-.byokText {
-  flex: 1;
-  min-width: 0;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--color-fg-mid);
-  letter-spacing: 0.01em;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.byokAction {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
-  border-radius: 7px;
-  border: 1px solid var(--color-line-strong);
-  background: var(--color-surface);
-  color: var(--color-fg-mid);
-  font-family: inherit;
-  font-size: 11.5px;
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    background 0.12s ease,
-    color 0.12s ease,
-    border-color 0.12s ease;
-}
-
-.byokAction:hover {
-  color: var(--color-fg);
-  border-color: var(--color-line-medium);
-  background: var(--color-surface-alt);
-}
-
-/* On narrow widths, spec + cost + action collapse out so the row keeps
+/* On narrow widths, spec + action collapse out so the row keeps
    the radio + body legible. */
 @media (max-width: 1100px) {
   .body {
+    grid-template-columns: auto 1fr auto;
+  }
+  .row.locked .body {
     grid-template-columns: auto 1fr auto;
   }
   .spec,

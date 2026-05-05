@@ -31,6 +31,20 @@ export function AuthGuard({ children }: { children: ReactNode }) {
       // until auth.tsx finishes its own timeout and clears the user.
       const next = encodeURIComponent(pathname || "/app");
       router.replace(`/?login=1&next=${next}`);
+      return;
+    }
+    // First-time users land in the dashboard with onboardingCompleted=false.
+    // Send them to /app/onboarding before they see anything else. The
+    // onboarding page itself bounces back here once it's done. Excluding
+    // /app/onboarding from this guard avoids a redirect loop.
+    if (
+      !loading &&
+      user &&
+      !user.onboardingCompleted &&
+      pathname &&
+      !pathname.startsWith("/app/onboarding")
+    ) {
+      router.replace("/app/onboarding");
     }
   }, [loading, user, signingOut, pathname, router]);
 

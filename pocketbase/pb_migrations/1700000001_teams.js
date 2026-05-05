@@ -4,6 +4,14 @@
  * read. */
 migrate(
   (app) => {
+    // Idempotent guard: if `teams` already exists (created by a prior
+    // app run before migrations were tracked), record the migration
+    // as applied without trying to recreate it.
+    try {
+      app.findCollectionByNameOrId("teams");
+      return;
+    } catch (_) {}
+
     const c = new Collection({
       type: "base",
       name: "teams",
@@ -20,12 +28,15 @@ migrate(
         { name: "created", type: "autodate", onCreate: true },
         { name: "updated", type: "autodate", onCreate: true, onUpdate: true },
       ],
-      // A user can read a team if they are the manager OR a member.
-      // Membership is checked via the team_members back-relation.
+      // Manager-only access at create time. The full
+      // "manager OR member via team_members" rule can't be set here
+      // because team_members doesn't exist yet at this migration's
+      // apply time — that broader rule should be applied by a later
+      // migration once team_members is in the schema.
       listRule:
-        "@request.auth.id != '' && (manager = @request.auth.id || @collection.team_members.user.id ?= @request.auth.id && @collection.team_members.team.id ?= id)",
+        "@request.auth.id != '' && manager = @request.auth.id",
       viewRule:
-        "@request.auth.id != '' && (manager = @request.auth.id || @collection.team_members.user.id ?= @request.auth.id && @collection.team_members.team.id ?= id)",
+        "@request.auth.id != '' && manager = @request.auth.id",
       createRule: "@request.auth.id != '' && manager = @request.auth.id",
       updateRule: "manager = @request.auth.id",
       deleteRule: "manager = @request.auth.id",
@@ -35,23 +46,21 @@ migrate(
     // Add the `team` rel on users now that the collection exists.
     const users = app.findCollectionByNameOrId("users");
     if (!users.fields.find((f) => f.name === "team")) {
-      users.fields.add({
+      users.fields.add(new RelationField({
         name: "team",
-        type: "relation",
         collectionId: c.id,
         maxSelect: 1,
-      });
+      }));
       app.save(users);
     }
   },
   (app) => {
     const users = app.findCollectionByNameOrId("users");
-    const teamField = users.fields.find((f) => f.name === "team");
-    if (teamField) {
-      users.fields.remove(teamField.id);
-      app.save(users);
-    }
-    const c = app.findCollectionByNameOrId("teams");
-    if (c) app.delete(c);
+    users.fields.removeByName("team");
+    app.save(users);
+    try {
+      const c = app.findCollectionByNameOrId("teams");
+      if (c) app.delete(c);
+    } catch (_) {}
   },
 );

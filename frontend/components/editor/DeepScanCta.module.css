@@ -19,6 +19,34 @@
   background: rgba(255, 255, 255, 0.05);
 }
 
+/* While a plagiarism scan is in flight: keep the button visually flat
+   (no shimmer or hover lift), dim the CTA, and disable interaction so
+   the user can't double-trigger. The tab strip surfaces a spinner —
+   this card just stays calm. */
+.cta:disabled,
+.scanning {
+  cursor: default;
+  opacity: 0.78;
+}
+
+.cta:disabled:hover,
+.scanning:hover {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+/* Locked preview — the plagiarism deep scan isn't built yet. Render
+   the CTA as a gated card: dimmed, dashed border, lock cursor, no
+   hover lift. */
+.locked {
+  cursor: not-allowed;
+  opacity: 0.62;
+  border-style: dashed;
+}
+
+.locked:hover {
+  background: rgba(255, 255, 255, 0.025);
+}
+
 .icon {
   width: 36px;
   height: 36px;

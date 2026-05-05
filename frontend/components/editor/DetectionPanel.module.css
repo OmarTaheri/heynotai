@@ -1,15 +1,35 @@
+/* Outer panel: flex column that fills the inspector cell. The body
+   region scrolls; the footer (engine card) stays pinned at the very
+   bottom of the sidebar so the user always has the engine swap +
+   "Test again" button in reach. */
 .scroll {
+  display: flex;
+  flex-direction: column;
   height: 100%;
-  overflow-y: auto;
-  padding: 18px 18px 120px;
+  overflow: hidden;
+  padding: 0;
 }
 
-.scroll::-webkit-scrollbar {
+.body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 18px 18px 24px;
+}
+
+.body::-webkit-scrollbar {
   width: 10px;
 }
-.scroll::-webkit-scrollbar-thumb {
+.body::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.06);
   border-radius: 10px;
+}
+
+.footer {
+  flex-shrink: 0;
+  padding: 12px 18px 18px;
+  border-top: 1px solid var(--color-line);
+  background: var(--color-bg);
 }
 
 .header {
@@ -49,71 +69,827 @@
   color: var(--color-fg);
 }
 
-.seg {
+/* Panel-level engine card. Sits at the BOTTOM of the analyzer/findings
+   tabs (hidden on plagiarism, since the engine doesn't drive that
+   scan). Pushed below the verdict + findings so it doesn't compete for
+   attention with the actual results. Echoes the /app/models EngineRow
+   rhythm (label + name on the left, accuracy/cost specs below) so users
+   move between pages without learning a new vocabulary. */
+.engineCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+}
+
+.engineMain {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.engineHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.engineLabel {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-fg-dim);
+  font-weight: 600;
+}
+
+.engineName {
+  display: inline-flex;
+  align-items: baseline;
+  min-width: 0;
+}
+
+.engineNameText {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-fg);
+  letter-spacing: -0.2px;
+  line-height: 1.2;
+}
+
+.engineVersion {
+  font-style: italic;
+  font-weight: 400;
+  color: var(--color-fg-mid);
+  margin-left: 2px;
+}
+
+.engineSpecs {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 2px;
+}
+
+.spec {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.specValue {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-fg);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.specWarn { color: var(--color-warn); }
+.specFree { color: var(--color-human); }
+.specHigh { color: var(--color-warn); }
+
+.specUnit {
+  font-size: 11px;
+  color: var(--color-fg-mid);
+  font-weight: 500;
+  margin-left: 1px;
+}
+
+.specLabel {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.specDot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--color-fg-dim);
+  align-self: center;
+}
+
+.engineActions {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.retestBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--color-fg);
+  color: var(--color-bg);
+  font-size: 12.5px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  white-space: nowrap;
+  transition: filter 0.12s ease;
+}
+
+.retestBtn:hover {
+  filter: brightness(1.08);
+}
+
+/* ----- Engine swap dropdown ----- */
+.picker {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.pickerLabel {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-fg-dim);
+  font-weight: 600;
+}
+
+.pickerBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--color-line-strong);
+  background: var(--color-surface-alt);
+  color: var(--color-fg);
+  font: inherit;
+  cursor: pointer;
+  transition:
+    border-color 0.12s ease,
+    background 0.12s ease;
+}
+
+.pickerBtn:hover {
+  border-color: var(--color-line-medium);
+  background: var(--color-surface);
+}
+
+.pickerBtn[aria-expanded="true"] {
+  border-color: var(--color-line-medium);
+}
+
+.pickerCurrent {
+  flex: 1;
+  text-align: left;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-fg);
+  letter-spacing: -0.1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line-strong);
+  border-radius: 10px;
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.45);
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+/* Flip variant — used when the picker sits near the bottom of the
+   inspector and there isn't room for the menu to open downward. */
+.menuUp {
+  top: auto;
+  bottom: calc(100% + 4px);
+  box-shadow: 0 -16px 32px rgba(0, 0, 0, 0.45);
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  color: var(--color-fg);
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.menuItem:hover {
+  background: var(--color-surface-alt);
+}
+
+.menuItemSelected {
+  background: var(--color-surface-alt);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--color-info) 38%, transparent);
+}
+
+.menuItemLocked {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.menuItemLocked:hover {
+  background: transparent;
+}
+
+.menuItemName {
+  flex: 1;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: -0.1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menuItemMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--color-fg-mid);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.menuItemDot {
+  opacity: 0.6;
+}
+
+/* ----- Tab strip ----- */
+.tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  margin-bottom: 14px;
+  border-radius: 10px;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-line);
+}
+
+.tab {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--color-fg-mid);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: -0.1px;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.tab:hover:not(:disabled) {
+  color: var(--color-fg);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.tabActive {
+  background: var(--color-surface);
+  color: var(--color-fg);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.tabLocked {
+  cursor: not-allowed;
+  color: var(--color-fg-dim);
+}
+
+.tabLocked:hover {
+  background: transparent;
+  color: var(--color-fg-dim);
+}
+
+.tabBadge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--color-fg) 14%, transparent);
+  color: var(--color-fg);
+}
+
+.tabActive .tabBadge {
+  background: color-mix(in oklch, var(--color-fg) 18%, transparent);
+}
+
+.tabSpinner {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 1.5px solid color-mix(in oklch, var(--color-info) 28%, transparent);
+  border-top-color: var(--color-info);
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ----- Findings tab ----- */
+.findings {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ----- Plagiarism tab ----- */
+.plagList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.plagSource {
+  background: var(--color-cream-surface);
+  color: var(--color-cream-fg);
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+
+.plagSourceHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.plagSimPct {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 5px;
+  background: color-mix(in oklch, var(--color-info) 18%, white);
+  color: oklch(0.4 0.12 265);
+  letter-spacing: 0.04em;
+}
+
+.plagSourceTitle {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-cream-fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.plagSourceUrl {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-info);
+  text-decoration: none;
+  word-break: break-all;
+  margin-bottom: 8px;
+}
+
+.plagSourceUrl:hover {
+  text-decoration: underline;
+}
+
+.plagSourceQuote {
+  margin: 0;
+  padding: 8px 10px;
+  background: var(--color-cream-surface-sunken);
+  border-left: 2px solid var(--color-info);
+  border-radius: 6px;
+  font-style: italic;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-cream-fg-mid);
+}
+
+.plagScan {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+
+.plagScanHead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   margin-bottom: 14px;
 }
 
-.findings {
-  margin-top: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+.plagSpinner {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid color-mix(in oklch, var(--color-info) 24%, transparent);
+  border-top-color: var(--color-info);
+  animation: spin 0.85s linear infinite;
+  flex-shrink: 0;
 }
 
-.skeleton {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 14px 0 8px;
+.plagScanTitle {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--color-fg);
 }
 
-.skeletonCard {
-  height: 96px;
-  background: var(--color-surface-alt);
-  border-radius: 14px;
+.plagScanSub {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.04em;
+  margin-top: 2px;
+}
+
+.plagSteps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.plagSteps li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--color-fg-dim);
+}
+
+.plagStepDone {
+  color: var(--color-human) !important;
+}
+
+.plagStepActive {
+  color: var(--color-fg) !important;
+}
+
+.plagStepDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.5;
+}
+
+.plagStepActive .plagStepDot {
+  opacity: 1;
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--color-info) 22%, transparent);
+}
+
+/* ----- Verdict skeleton ----- */
+/* Mirrors VerdictCard: same cream surface, same rainbow border, same
+   bar/stat layout. Real labels read from the start ("Likely",
+   "AI-generated", "Model match", "Plagiarism", "Burstiness",
+   "Perplexity", "AI rate"); only the numbers, the bar fills, and the
+   ring center shimmer. */
+.verdictSkeleton {
+  position: relative;
+  background: var(--color-cream-surface);
+  color: var(--color-cream-fg);
+  border-radius: 18px;
+  padding: 18px 18px 16px;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.05) inset,
+    0 8px 24px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.verdictSkeleton::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  pointer-events: none;
+  background: linear-gradient(
+    135deg,
+    oklch(0.74 0.14 165 / 0.7),
+    oklch(0.85 0.13 85 / 0.7) 30%,
+    oklch(0.62 0.22 27 / 0.7) 55%,
+    oklch(0.72 0.13 290 / 0.7) 78%,
+    oklch(0.7 0.12 265 / 0.7)
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+.vsTop {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.vsRing {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  border: 5px dashed rgba(26, 25, 22, 0.18);
+  position: relative;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vsRingDigits {
+  display: block;
+  height: 22px;
+  width: 38px;
+  border-radius: 5px;
+  background: rgba(26, 25, 22, 0.08);
   position: relative;
   overflow: hidden;
 }
 
-.skeletonCardSm {
-  height: 60px;
+.vsTopText {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
 }
 
-.skeletonCard::after {
+.vsHead {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-cream-fg);
+  letter-spacing: -0.01em;
+}
+
+.vsHeadDim {
+  font-style: italic;
+  font-weight: 500;
+  color: var(--color-cream-fg-mid);
+  opacity: 0.55;
+}
+
+.vsSub {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-cream-fg-mid);
+  letter-spacing: 0.02em;
+}
+
+.vsInline {
+  display: inline-block;
+  height: 11px;
+  width: 18px;
+  border-radius: 4px;
+  background: rgba(26, 25, 22, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.vsBarRow {
+  display: grid;
+  grid-template-columns: 90px 1fr 38px;
+  align-items: center;
+  gap: 10px;
+  margin: 6px 0;
+}
+
+.vsBarLbl {
+  font-size: 12px;
+  color: var(--color-cream-fg-mid);
+}
+
+.vsBarTrack {
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(26, 25, 22, 0.08);
+  overflow: hidden;
+  display: block;
+  position: relative;
+}
+
+.vsBarFill {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  width: 0;
+  animation: barLoad 1.6s ease-in-out infinite;
+}
+
+.barFillGen { background: var(--color-ai); }
+.barFillMatch { background: var(--color-mixed); }
+.barFillPlag { background: var(--color-info); }
+
+.vsBarPct {
+  height: 11px;
+  width: 30px;
+  border-radius: 4px;
+  background: rgba(26, 25, 22, 0.1);
+  justify-self: end;
+  position: relative;
+  overflow: hidden;
+}
+
+.vsStatRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-cream-line);
+}
+
+.vsStat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.vsStatNum {
+  height: 18px;
+  width: 56px;
+  border-radius: 5px;
+  background: rgba(26, 25, 22, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.vsStatLbl {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-cream-fg-mid);
+}
+
+/* Shared shimmer: applied to every "value-shaped" placeholder inside
+   the verdict skeleton so labels stay calm while the data shimmers. */
+.vsRingDigits::after,
+.vsInline::after,
+.vsBarPct::after,
+.vsStatNum::after {
   content: "";
   position: absolute;
   inset: 0;
   background: linear-gradient(
     90deg,
     transparent,
-    color-mix(in oklch, white 8%, transparent),
+    rgba(26, 25, 22, 0.12),
     transparent
   );
   transform: translateX(-100%);
-  animation: shimmer 1.6s infinite;
+  animation: shimmerCream 1.6s infinite;
 }
 
-@keyframes shimmer {
+@keyframes shimmerCream {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
 }
 
-.skeletonMeta {
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  color: var(--color-fg-dim);
-  letter-spacing: 0.04em;
-  text-align: center;
-  margin-top: 6px;
+@keyframes barLoad {
+  0% { width: 0; opacity: 0.6; }
+  60% { width: 70%; opacity: 1; }
+  100% { width: 100%; opacity: 0.6; }
 }
 
+/* ----- Findings skeleton ----- */
+.findingsSk {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.findingSk {
+  background: var(--color-cream-surface);
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+}
+
+.findingSkHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.findingSkTag {
+  height: 16px;
+  width: 80px;
+  border-radius: 5px;
+  background: rgba(26, 25, 22, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.findingSkConf {
+  height: 11px;
+  width: 88px;
+  border-radius: 4px;
+  background: rgba(26, 25, 22, 0.08);
+  position: relative;
+  overflow: hidden;
+}
+
+.findingSkLineLg,
+.findingSkLineMd,
+.findingSkLineSm {
+  display: block;
+  height: 10px;
+  border-radius: 4px;
+  background: rgba(26, 25, 22, 0.08);
+  position: relative;
+  overflow: hidden;
+}
+
+.findingSkLineLg { width: 90%; }
+.findingSkLineMd { width: 75%; }
+.findingSkLineSm { width: 55%; }
+
+.findingSkTag::after,
+.findingSkConf::after,
+.findingSkLineLg::after,
+.findingSkLineMd::after,
+.findingSkLineSm::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(26, 25, 22, 0.12),
+    transparent
+  );
+  transform: translateX(-100%);
+  animation: shimmerCream 1.6s infinite;
+}
+
+/* ----- Empty + idle states ----- */
 .empty {
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding: 36px 18px;
-  gap: 8px;
+  padding: 28px 18px;
+  gap: 10px;
+}
+
+.emptyIcon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid var(--color-line);
+  background: var(--color-surface-alt);
+  color: var(--color-fg-dim);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .emptyTitle {
@@ -127,4 +903,5 @@
   color: var(--color-fg-dim);
   line-height: 1.5;
   max-width: 240px;
+  margin-bottom: 4px;
 }

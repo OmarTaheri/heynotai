@@ -9,24 +9,52 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { ClientResponseError } from "pocketbase";
 import {
   DEFAULT_EXTENSION_PREFS,
+  describeAuthError,
+  type AuthErrorContext,
   type Plan,
+  type PlanCycle,
 } from "@heynotai/shared";
 import { pb, type PBUserRecord } from "./pocketbase";
 
-export type { Plan };
+export type { Plan, PlanCycle };
 
 export type AppUser = {
   id: string;
   email: string;
   name: string;
+  handle: string;
+  /** Best-effort label for greetings + the sidebar profile.
+   *  Order of preference: handle → first name → email local-part. */
+  displayName: string;
   initials: string;
   plan: Plan;
+  /** Subscription cycle for the current plan, or null for the free
+   *  `check` tier. Drives /pricing's CTA decisions and the toggle
+   *  default — without this, the page can't distinguish a verify-
+   *  monthly user from a verify-yearly one. */
+  planCycle: PlanCycle | null;
+  /** Stripe subscription identifier when the user has an active paid
+   *  plan. Surfaced so /pricing and /app/upgrade can decide between
+   *  the new-checkout flow and the in-place /billing/change flow. */
+  stripeSubscriptionId: string | null;
+  /** When a downgrade has been scheduled, these describe the plan +
+   *  cycle that takes effect at `pendingPlanEffective`. The active
+   *  `plan`/`planCycle` stay on the higher tier through period end. */
+  pendingPlan: Plan | null;
+  pendingPlanCycle: PlanCycle | null;
+  pendingPlanEffective: string | null;
   avatar?: string;
+  /** Resolved URL for the user's avatar image, or null when none.
+   *  Prefers the uploaded `avatar` file; falls back to the URL stored in
+   *  `avatarUrl` (set during onboarding when the user pasted a link). */
+  avatarSrc: string | null;
   verified?: boolean;
   mfa?: boolean;
+  onboardingCompleted: boolean;
 };
 
 export type AuthResult =
@@ -64,23 +92,65 @@ function isPlan(p: unknown): p is Plan {
   return p === "check" || p === "verify" || p === "certify" || p === "team";
 }
 
+function isCycle(c: unknown): c is PlanCycle {
+  return c === "monthly" || c === "yearly";
+}
+
 function mapUser(record: PBUserRecord | null | undefined): AppUser | null {
   if (!record) return null;
   const name = (record.name as string | undefined) ?? "";
+  const handle = (record.handle as string | undefined) ?? "";
   const plan: Plan = isPlan(record.plan) ? record.plan : "check";
+  const planCycle: PlanCycle | null =
+    plan === "check" ? null : isCycle(record.planCycle) ? record.planCycle : null;
+  const pendingPlan: Plan | null = isPlan(record.pendingPlan)
+    ? record.pendingPlan
+    : null;
+  const pendingPlanCycle: PlanCycle | null = isCycle(record.pendingPlanCycle)
+    ? record.pendingPlanCycle
+    : null;
+  const pendingPlanEffective =
+    typeof record.pendingPlanEffective === "string" &&
+    record.pendingPlanEffective.length > 0
+      ? record.pendingPlanEffective
+      : null;
+  const stripeSubscriptionId =
+    typeof record.stripeSubscriptionId === "string" &&
+    record.stripeSubscriptionId.length > 0
+      ? record.stripeSubscriptionId
+      : null;
+  const firstName = name.trim().split(/\s+/)[0] ?? "";
+  const emailLocal = record.email.split("@")[0] ?? "";
+  const displayName = handle || firstName || emailLocal || "you";
+  const avatarFile = record.avatar as string | undefined;
+  const avatarUrlField = (record as { avatarUrl?: string }).avatarUrl;
+  const avatarSrc = avatarFile
+    ? pb.files.getURL(record, avatarFile)
+    : avatarUrlField || null;
   return {
     id: record.id,
     email: record.email,
     name,
+    handle,
+    displayName,
     initials: deriveInitials(name) || (record.email[0] ?? "U").toUpperCase(),
     plan,
-    avatar: record.avatar as string | undefined,
+    planCycle,
+    stripeSubscriptionId,
+    pendingPlan,
+    pendingPlanCycle,
+    pendingPlanEffective,
+    avatar: avatarFile,
+    avatarSrc,
     verified: record.verified as boolean | undefined,
     mfa: record.mfa as boolean | undefined,
+    onboardingCompleted: Boolean(record.onboardingCompleted),
   };
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const router = useRouter();
+  const pathname = usePathname();
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [signingOut, setSigningOut] = useState(false);
@@ -137,10 +207,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               otpId: otp.otpId,
             };
           } catch (otpErr) {
-            return mapAuthError(otpErr);
+            return mapAuthError(otpErr, "mfa");
           }
         }
-        return mapAuthError(err);
+        return mapAuthError(err, "signIn");
       }
     },
     [],
@@ -168,7 +238,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await seedDefaultPrefs(r.record.id).catch(() => undefined);
         return { ok: true };
       } catch (err) {
-        return mapAuthError(err);
+        return mapAuthError(err, "signUp");
       }
     },
     [],
@@ -184,7 +254,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(mapUser(r.record));
       return { ok: true };
     } catch (err) {
-      return mapAuthError(err);
+      return mapAuthError(err, "oauth");
     }
   }, []);
 
@@ -197,7 +267,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(mapUser(r.record));
         return { ok: true };
       } catch (err) {
-        return mapAuthError(err);
+        return mapAuthError(err, "mfa");
       }
     },
     [],
@@ -207,11 +277,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setFarewell(FAREWELLS[Math.floor(Math.random() * FAREWELLS.length)]);
     setSigningOut(true);
     window.setTimeout(() => {
-      pb.authStore.clear();
-      setUser(null);
-      setSigningOut(false);
+      router.push("/");
     }, GOODBYE_MS);
-  }, []);
+  }, [router]);
+
+  // Finalise sign-out once the navigation away from /app/* lands.
+  // Clearing the auth store before AuthGuard unmounts would let its
+  // logged-out effect race ahead and redirect to /?login=1 — which is
+  // exactly the popup-on-logout bug we're avoiding.
+  useEffect(() => {
+    if (!signingOut) return;
+    if (pathname && pathname.startsWith("/app")) return;
+    pb.authStore.clear();
+    setUser(null);
+    setSigningOut(false);
+  }, [signingOut, pathname]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -256,12 +336,11 @@ function deriveInitials(name: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-function mapAuthError(err: unknown): AuthResult {
-  if (err instanceof ClientResponseError) {
-    return { ok: false, error: err.message || "Authentication failed." };
-  }
-  if (err instanceof Error) return { ok: false, error: err.message };
-  return { ok: false, error: "Authentication failed." };
+function mapAuthError(
+  err: unknown,
+  ctx: AuthErrorContext = "signIn",
+): AuthResult {
+  return { ok: false, error: describeAuthError(err, ctx).message };
 }
 
 function extractMfaId(err: unknown): string | null {
@@ -281,7 +360,6 @@ async function seedDefaultPrefs(userId: string): Promise<void> {
       theme: "system",
       dateFormat: "DD MMM YYYY",
       showAuthenticVerdicts: true,
-      reduceMotion: false,
     }),
     pb.collection("privacy_prefs").create({
       userId,

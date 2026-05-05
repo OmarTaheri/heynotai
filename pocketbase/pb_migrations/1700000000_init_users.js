@@ -7,33 +7,36 @@ migrate(
     const users = app.findCollectionByNameOrId("users");
 
     const existing = new Set(users.fields.map((f) => f.name));
-    const add = (def) => {
-      if (!existing.has(def.name)) users.fields.add(def);
+    const add = (field) => {
+      if (!existing.has(field.name)) users.fields.add(field);
     };
 
-    add({ name: "name", type: "text", max: 200 });
-    add({ name: "handle", type: "text", max: 60 });
-    add({ name: "avatar", type: "file", maxSelect: 1, maxSize: 5_242_880, mimeTypes: ["image/jpeg", "image/png", "image/webp", "image/gif"] });
-    add({ name: "timezone", type: "text", max: 80 });
-    add({
+    add(new TextField({ name: "name", max: 200 }));
+    add(new TextField({ name: "handle", max: 60 }));
+    add(new FileField({ name: "avatar", maxSelect: 1, maxSize: 5_242_880, mimeTypes: ["image/jpeg", "image/png", "image/webp", "image/gif"] }));
+    add(new TextField({ name: "timezone", max: 80 }));
+    add(new SelectField({
       name: "language",
-      type: "select",
       maxSelect: 1,
       values: ["en", "es", "fr", "de", "zh", "ar", "ja"],
-    });
-    add({
+    }));
+    add(new SelectField({
       name: "plan",
-      type: "select",
       maxSelect: 1,
       values: ["check", "verify", "certify", "team"],
-    });
-    add({ name: "planBadge", type: "text", max: 40 });
-    add({ name: "planRenewsOn", type: "date" });
-    add({ name: "billingEmail", type: "email" });
-    add({ name: "billingAddress", type: "text", max: 500 });
-    add({ name: "paymentMethodLast4", type: "text", max: 8 });
-    add({ name: "paymentExpires", type: "text", max: 8 });
-    add({ name: "taxId", type: "text", max: 60 });
+    }));
+    add(new TextField({ name: "planCycle", max: 16 }));
+    add(new TextField({ name: "planBadge", max: 40 }));
+    add(new DateField({ name: "planRenewsOn" }));
+    add(new EmailField({ name: "billingEmail" }));
+    add(new TextField({ name: "billingAddress", max: 500 }));
+    add(new TextField({ name: "billingCountry", max: 4 }));
+    add(new TextField({ name: "paymentBrand", max: 32 }));
+    add(new TextField({ name: "paymentLast4", max: 8 }));
+    add(new TextField({ name: "paymentExpires", max: 8 }));
+    add(new TextField({ name: "taxId", max: 60 }));
+    add(new TextField({ name: "stripeCustomerId", max: 80 }));
+    add(new TextField({ name: "stripeSubscriptionId", max: 80 }));
 
     // `team` rel is added in 1700000001_teams once the teams collection
     // exists — keeping the dependency order one-way.
@@ -49,17 +52,21 @@ migrate(
       "timezone",
       "language",
       "plan",
+      "planCycle",
       "planBadge",
       "planRenewsOn",
       "billingEmail",
       "billingAddress",
-      "paymentMethodLast4",
+      "billingCountry",
+      "paymentBrand",
+      "paymentLast4",
       "paymentExpires",
       "taxId",
+      "stripeCustomerId",
+      "stripeSubscriptionId",
     ];
     for (const name of drop) {
-      const f = users.fields.find((x) => x.name === name);
-      if (f) users.fields.remove(f.id);
+      users.fields.removeByName(name);
     }
     app.save(users);
   },

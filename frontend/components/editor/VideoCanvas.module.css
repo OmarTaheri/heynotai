@@ -1,0 +1,103 @@
+.player {
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #000;
+  border: 1px solid var(--color-line);
+  aspect-ratio: 16 / 9;
+}
+
+.player video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}
+
+/* ----- Scanning overlay: AI object-detection boxes ----- */
+
+/* Light dim over the video so the detections pop without burying
+   the underlying frame. Lighter than the image's heavy dim because
+   the boxes themselves already clutter the surface. */
+.scan {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: color-mix(in oklch, #000 28%, transparent);
+}
+
+/* AI bounding-box detection. Rounded rectangle outline in info-blue
+   with a soft outer glow + tinted fill. */
+.detectBox {
+  position: absolute;
+  border: 1.5px solid color-mix(in oklch, var(--color-info) 88%, white);
+  border-radius: 8px;
+  background: color-mix(in oklch, var(--color-info) 8%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in oklch, var(--color-info) 22%, transparent),
+    0 0 16px color-mix(in oklch, var(--color-info) 40%, transparent);
+  opacity: 0;
+  animation: video-box-flash 1.4s ease-in-out infinite;
+  will-change: opacity, transform;
+}
+
+@keyframes video-box-flash {
+  0%   { opacity: 0; transform: scale(0.94); }
+  15%  { opacity: 1; transform: scale(1); }
+  85%  { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.02); }
+}
+
+/* Confidence / class label that sits just above some boxes. */
+.detectLabel {
+  position: absolute;
+  top: -18px;
+  left: 0;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: color-mix(in oklch, #000 70%, transparent);
+  border: 1px solid color-mix(in oklch, var(--color-info) 50%, transparent);
+  color: color-mix(in oklch, var(--color-info) 80%, white);
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+/* Status chip — same vocabulary as the image scan's "Analyzing" pill,
+   labelled "Scanning frames" to match the video context. */
+.scanLabel {
+  position: absolute;
+  top: 14px;
+  left: 16px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: color-mix(in oklch, var(--color-info) 75%, white);
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: color-mix(in oklch, #000 55%, transparent);
+  border: 1px solid color-mix(in oklch, var(--color-info) 40%, transparent);
+}
+
+.scanLabel::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-info);
+  box-shadow: 0 0 6px var(--color-info);
+  margin-right: 6px;
+  vertical-align: 1px;
+  animation: video-scan-pulse 1s ease-in-out infinite;
+}
+
+@keyframes video-scan-pulse {
+  0%, 100% { opacity: 0.4; }
+  50%      { opacity: 1; }
+}

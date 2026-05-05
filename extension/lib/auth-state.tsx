@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 import { ClientResponseError, type AuthRecord } from 'pocketbase';
+import { describeAuthError, type AuthErrorContext } from '@heynotai/shared';
 import { pb } from './pocketbase';
 
 export type Plan = 'check' | 'verify' | 'certify' | 'team';
@@ -115,10 +116,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const otp = await pb.collection('users').requestOTP(trimmed);
           return { ok: false, mfaRequired: true, mfaId, otpId: otp.otpId };
         } catch (otpErr) {
-          return mapAuthError(otpErr);
+          return mapAuthError(otpErr, 'mfa');
         }
       }
-      return mapAuthError(err);
+      return mapAuthError(err, 'signIn');
     }
   }, []);
 
@@ -140,7 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(mapUser(r.record));
       return { ok: true };
     } catch (err) {
-      return mapAuthError(err);
+      return mapAuthError(err, 'signUp');
     }
   }, []);
 
@@ -197,7 +198,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(mapUser(r.record));
       return { ok: true };
     } catch (err) {
-      return mapAuthError(err);
+      return mapAuthError(err, 'oauth');
     }
   }, []);
 
@@ -210,7 +211,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(mapUser(r.record));
         return { ok: true };
       } catch (err) {
-        return mapAuthError(err);
+        return mapAuthError(err, 'mfa');
       }
     },
     [],
@@ -253,12 +254,11 @@ export function useAuth(): Ctx {
   return ctx;
 }
 
-function mapAuthError(err: unknown): AuthResult {
-  if (err instanceof ClientResponseError) {
-    return { ok: false, error: err.message || 'Authentication failed.' };
-  }
-  if (err instanceof Error) return { ok: false, error: err.message };
-  return { ok: false, error: 'Authentication failed.' };
+function mapAuthError(
+  err: unknown,
+  ctx: AuthErrorContext = 'signIn',
+): AuthResult {
+  return { ok: false, error: describeAuthError(err, ctx).message };
 }
 
 function extractMfaId(err: unknown): string | null {

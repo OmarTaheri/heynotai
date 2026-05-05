@@ -3,9 +3,9 @@
 
    The chrome (top bar, toolbar, inspector, doc layout) is owned by
    per-component .module.css files. This file is ONLY for class names
-   that React doesn't author — Tiptap-rendered ProseMirror nodes,
-   `.ai-flag-*` decorations from AiFlagExtension, and `.ws-word` spans
-   injected by WordScanRunner. CSS modules can't scope those.
+   that React doesn't author — Tiptap-rendered ProseMirror nodes and
+   `.ai-flag-*` decorations from AiFlagExtension. CSS modules can't
+   scope those.
    ───────────────────────────────────────────── */
 
 .ProseMirror,
@@ -122,49 +122,63 @@
   outline-color: color-mix(in oklch, var(--color-info) 70%, transparent);
 }
 
-/* ── Word-by-word scan animation — spans injected by WordScanRunner. ── */
-.ws-word {
+/* ── Static scan view rendered during scanState === "scanning" ── */
+.scan-text {
+  position: relative;
+}
+
+.scan-text p {
+  margin: 0 0 20px;
+}
+
+.scan-word {
   display: inline-block;
   position: relative;
-  color: rgba(236, 235, 229, 0.28);
-  transition: color 0.25s ease, text-shadow 0.25s ease;
+  color: rgba(236, 235, 229, 0.18);
+  animation-name: scan-word-pulse;
+  animation-timing-function: ease-out;
+  animation-fill-mode: forwards;
+  will-change: color, text-shadow;
 }
 
-.ws-word.scanned {
-  color: var(--color-fg);
-}
-
-.ws-word.scan-active {
-  color: #ffffff;
-  text-shadow:
-    0 0 14px color-mix(in oklch, var(--color-info) 80%, transparent),
-    0 0 4px color-mix(in oklch, var(--color-info) 50%, transparent);
-}
-
-.ws-word.scan-active::before {
+.scan-word::before {
   content: "";
   position: absolute;
-  left: -2px;
-  right: -2px;
-  top: -2px;
-  bottom: -2px;
-  background: color-mix(in oklch, var(--color-info) 28%, transparent);
+  inset: -2px -2px;
   border-radius: 4px;
+  opacity: 0;
+  background: color-mix(in oklch, var(--color-info) 28%, transparent);
   box-shadow: 0 0 12px color-mix(in oklch, var(--color-info) 50%, transparent);
   z-index: -1;
-  animation: editor-word-pop 0.42s ease-out;
+  animation-name: scan-word-glow;
+  animation-duration: inherit;
+  animation-delay: inherit;
+  animation-timing-function: ease-out;
+  animation-fill-mode: forwards;
 }
 
-@keyframes editor-word-pop {
+@keyframes scan-word-pulse {
+  0%   { color: rgba(236, 235, 229, 0.18); text-shadow: none; }
+  35%  {
+    color: #ffffff;
+    text-shadow:
+      0 0 14px color-mix(in oklch, var(--color-info) 80%, transparent),
+      0 0 4px color-mix(in oklch, var(--color-info) 50%, transparent);
+  }
+  100% { color: var(--color-fg); text-shadow: none; }
+}
+
+@keyframes scan-word-glow {
   0%   { opacity: 0; transform: scaleX(0.6); }
-  40%  { opacity: 1; transform: scaleX(1.08); }
-  100% { opacity: 0.6; transform: scaleX(1); }
+  35%  { opacity: 1; transform: scaleX(1.06); }
+  100% { opacity: 0; transform: scaleX(1); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ws-word,
-  .ws-word.scan-active::before {
+  .scan-word,
+  .scan-word::before {
     animation: none !important;
-    transition: none !important;
+    color: var(--color-fg);
   }
 }
+

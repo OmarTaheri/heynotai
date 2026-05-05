@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { Icon } from "@/components/Icon";
 import type { Plan } from "@/lib/auth";
+import { TOP_PLANS } from "@/lib/plans-data";
 import styles from "./UsageCard.module.css";
 
 /** Total bars in the battery meter. Stays fixed so the visual rhythm
@@ -19,7 +21,7 @@ const TIER_CLASS: Record<Plan, string> = {
 };
 
 /**
- * Sidebar usage card — shows how many checks the current user still has
+ * Sidebar usage card — shows how many tokens the current user still has
  * on their plan, rendered as an equalizer-style battery meter with a
  * plan badge and an "Upgrade" CTA underneath.
  *
@@ -44,6 +46,10 @@ export function UsageCard({
   const ratio = total > 0 ? Math.max(0, Math.min(1, remaining / total)) : 0;
   const filledBars = Math.round(ratio * BAR_COUNT);
   const level = ratio < 0.1 ? "critical" : ratio < 0.3 ? "low" : "ok";
+  // Hide the upgrade affordance when the user is already on the top
+  // self-serve tier (or on Team, which is contact-sales). They've got
+  // nowhere to go from the picker.
+  const showUpgrade = !TOP_PLANS.has(plan);
 
   return (
     <div className={styles.card} data-level={level}>
@@ -52,12 +58,12 @@ export function UsageCard({
           <span className={styles.countIcon} aria-hidden>
             <Icon name="sparkle" size={14} />
           </span>
-          {remaining.toLocaleString()}
+          {formatRemaining(remaining)}
         </span>
         <span className={`${styles.plan} ${TIER_CLASS[plan]}`}>{plan}</span>
       </div>
 
-      <div className={styles.label}>checks left</div>
+      <div className={styles.label}>tokens left</div>
 
       <div
         className={styles.battery}
@@ -65,7 +71,7 @@ export function UsageCard({
         aria-valuemin={0}
         aria-valuemax={total}
         aria-valuenow={remaining}
-        aria-label={`${remaining} of ${total} checks remaining`}
+        aria-label={`${remaining} of ${total} tokens remaining`}
       >
         {Array.from({ length: BAR_COUNT }).map((_, i) => {
           const filled = i < filledBars;
@@ -82,17 +88,43 @@ export function UsageCard({
         })}
       </div>
 
-      <button
-        type="button"
-        className={styles.upgrade}
-        onClick={onUpgrade}
-        aria-label="Upgrade plan"
-      >
-        <span className={styles.upgradeIcon} aria-hidden>
-          <Icon name="bolt" size={14} />
-        </span>
-        Upgrade Plan
-      </button>
+      {showUpgrade &&
+        (onUpgrade ? (
+          <button
+            type="button"
+            className={styles.upgrade}
+            onClick={onUpgrade}
+            aria-label="Upgrade plan"
+          >
+            <span className={styles.upgradeIcon} aria-hidden>
+              <Icon name="bolt" size={14} />
+            </span>
+            Upgrade Plan
+          </button>
+        ) : (
+          <Link
+            href="/app/upgrade"
+            className={styles.upgrade}
+            aria-label="Upgrade plan"
+          >
+            <span className={styles.upgradeIcon} aria-hidden>
+              <Icon name="bolt" size={14} />
+            </span>
+            Upgrade Plan
+          </Link>
+        ))}
     </div>
   );
+}
+
+// Token counts get large fast — render millions/thousands compactly so
+// they don't overflow the sidebar card. Below 10k we keep the raw
+// number so the user can see exactly what's left.
+function formatRemaining(n: number): string {
+  if (n >= 1_000_000) {
+    const m = n / 1_000_000;
+    return Number.isInteger(m) ? `${m}M` : `${m.toFixed(1)}M`;
+  }
+  if (n >= 10_000) return `${Math.round(n / 1_000)}K`;
+  return n.toLocaleString();
 }

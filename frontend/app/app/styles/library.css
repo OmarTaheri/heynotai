@@ -72,8 +72,40 @@
   border-color: transparent;
 }
 
+/* Lock glyph rendered before a gated tab's label (Monitors mirrors
+   /app/monitors which is itself gated by ComingSoon). */
+.lib-tab-lock {
+  color: var(--color-fg-dim);
+  margin-right: -2px;
+}
+
+.lib-tab.is-active .lib-tab-lock {
+  color: var(--color-bg);
+  opacity: 0.7;
+}
+
+/* Sub-tab strip rendered inside the Uploads tab (Image / Video /
+   Audio). Same visual language as .lib-tabs, slightly smaller text +
+   tighter padding so the hierarchy reads cleanly. */
+.lib-tabs.lib-subtabs {
+  padding: 2px;
+  margin-top: -8px;
+}
+
+.lib-subtabs .lib-tab {
+  font-size: 12px;
+  padding: 6px 10px;
+}
+
 /* ── Filter bar ─────────────────────────────── */
+/* The page wrapper (`.lib.panel-reveal`) animates each direct child via
+   a `transform` keyframe, which makes every child a stacking context.
+   Without an explicit z-index here, the table sibling (later in DOM
+   order) would render on top of the filter chips' popovers. Lifting
+   the filter bar above the table fixes the popover layering. */
 .lib-filter-bar {
+  position: relative;
+  z-index: 30;
   display: flex;
   gap: 8px;
   align-items: center;
@@ -223,6 +255,15 @@
   background: color-mix(in oklch, var(--color-bg) 22%, transparent);
 }
 
+.lib-sel-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.lib-sel-btn:disabled:hover {
+  background: color-mix(in oklch, var(--color-bg) 12%, transparent);
+}
+
 .lib-sel-close {
   display: inline-flex;
   align-items: center;
@@ -243,62 +284,7 @@
   background: color-mix(in oklch, var(--color-bg) 14%, transparent);
 }
 
-/* ── Table ─────────────────────────────────── */
-.lib-tbl-head,
-.lib-row {
-  display: grid;
-  grid-template-columns:
-    20px 36px minmax(0, 1fr) 120px 110px 150px 90px 36px;
-  gap: 14px;
-  align-items: center;
-  padding: 12px 18px;
-}
-
-.lib-tbl-head {
-  border-bottom: 1px solid var(--color-line);
-  background: var(--color-surface-sunken);
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  color: var(--color-fg-dim);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  font-weight: 600;
-}
-
-.lib-tbl-head > span {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.lib-tbl-head .is-sorted { color: var(--color-fg); }
-
-.lib-row {
-  position: relative;
-  border-top: 1px solid var(--color-line);
-  cursor: pointer;
-  transition: background 0.12s ease;
-}
-
-.lib-row:first-of-type { border-top: none; }
-
-.lib-row:hover {
-  background: color-mix(in oklch, white 2.5%, transparent);
-}
-
-.lib-row.is-selected {
-  background: color-mix(in oklch, white 3.5%, transparent);
-}
-
-.lib-row.is-selected::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: var(--color-fg);
-}
+/* Table grid + row chrome live in components/ui/Table.module.css. */
 
 /* Checkbox primitive */
 .lib-ck {
@@ -326,40 +312,45 @@
 
 .lib-row-main { min-width: 0; }
 
-.lib-row-name {
-  font-size: 13.5px;
-  font-weight: 600;
+/* Title-cell open button — turns the scan name into a link target so
+   clicking it navigates to /editor/<id>. Plain-text styling so the row
+   continues to read as a list, with a subtle hover underline. */
+.lib-row-open {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  text-align: left;
+  letter-spacing: inherit;
+}
+
+.lib-row-open:hover {
   color: var(--color-fg);
-  line-height: 1.3;
-  margin-bottom: 4px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
-.lib-row-meta {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  font-family: var(--font-mono);
-  font-size: 11px;
+.lib-row-open:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* Empty / error state when listScans returns nothing or 401. */
+.lib-empty {
+  padding: 48px 16px;
+  text-align: center;
   color: var(--color-fg-dim);
-  letter-spacing: 0.01em;
-  overflow: hidden;
-  min-width: 0;
+  font-size: 13px;
 }
 
-.lib-row-meta > span:not([class]) {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-}
-
-/* Compact "format · id" copy button on platform rows. Sits inside
-   .lib-row-meta so it inherits the mono font + size; only color +
-   interactive states are owned here. Stops propagation in JS so the
-   row's selection toggle isn't fired by a copy click. */
+/* Compact "format · id" copy button on platform rows. Sits inside the
+   shared Table.CellMeta so it inherits the mono font + size; only
+   color + interactive states are owned here. Stops propagation in JS
+   so the row's selection toggle isn't fired by a copy click. */
 .lib-row-link {
   display: inline-flex;
   align-items: center;
@@ -398,36 +389,46 @@
   color: var(--color-cta);
 }
 
-/* Confidence cell — small bar + numeric */
-.lib-row-conf {
+/* Collection name in the row meta line — when the scan is linked to a
+   collection, the title becomes an internal link to that collection's
+   detail page. Styled as a subtle inline link that overrides the row's
+   default click target without screaming for attention. */
+.lib-row-collection {
+  color: var(--color-fg-mid);
+  font: inherit;
+  text-decoration: none;
+  border-radius: 3px;
+  transition: color 0.12s ease, text-decoration-color 0.12s ease;
+  text-underline-offset: 3px;
+}
+
+.lib-row-collection:hover {
+  color: var(--color-fg);
+  text-decoration: underline;
+}
+
+.lib-row-collection:focus-visible {
+  outline: 1px solid var(--color-line-medium);
+  outline-offset: 2px;
+}
+
+/* Verdict cell — colored Pill + AI% (mirrors .coll-itbl-verdict so the
+   library and collection-detail tables read identically). */
+.lib-row-verdict {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+}
+
+.lib-row-verdict-pct {
   font-family: var(--font-mono);
   font-size: 12px;
+  font-weight: 600;
   color: var(--color-fg);
   font-variant-numeric: tabular-nums;
-  font-weight: 600;
 }
 
-.lib-conf-bar {
-  display: inline-block;
-  width: 36px;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--color-surface-alt);
-  border: 1px solid var(--color-line);
-  overflow: hidden;
-  flex-shrink: 0;
-}
-
-.lib-conf-bar > span {
-  display: block;
-  height: 100%;
-  background: var(--color-fg);
-}
-
-.lib-row-model {
+.lib-row-detector {
   font-family: var(--font-mono);
   font-size: 11.5px;
   font-weight: 500;
@@ -437,48 +438,7 @@
   white-space: nowrap;
 }
 
-.lib-row-time {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--color-fg-dim);
-  letter-spacing: 0.01em;
-  text-align: right;
-}
-
-/* Trailing action — only shows on hover. */
-.lib-row-action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--color-fg-dim);
-  border: none;
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
-}
-
-.lib-row:hover .lib-row-action { opacity: 1; }
-
-.lib-row-action:hover {
-  background: var(--color-surface-alt);
-  color: var(--color-fg);
-}
-
-/* ── Footer + pagination ────────────────────── */
-.lib-tbl-foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 18px;
-  border-top: 1px solid var(--color-line);
-  background: var(--color-surface-sunken);
-  flex-wrap: wrap;
-}
+/* Row action + footer chrome live in components/ui/Table.module.css. */
 
 .lib-tbl-meta {
   font-family: var(--font-mono);
@@ -540,32 +500,85 @@
   padding: 0 4px;
 }
 
-/* ── Responsive collapse ─────────────────────
-   Drop the Model column at <1200px and the When + Confidence-bar at
-   <820px so the row stays readable on narrower viewports. Mirrors the
-   responsive pattern used by .home-act-* in home.css. */
+/* ── Library table columns ───────────────────
+   Column widths flow through the shared Table primitive via the
+   `--lib-cols` custom property; this lets us collapse the responsive
+   columns the same way the rest of /app does (Reports, API). */
+.lib {
+  --lib-cols: 20px 36px minmax(0, 1fr) 150px 150px 90px 36px;
+}
+
 @media (max-width: 1200px) {
-  .lib-tbl-head,
-  .lib-row {
-    grid-template-columns: 20px 36px minmax(0, 1fr) 110px 150px 90px 36px;
+  .lib {
+    --lib-cols: 20px 36px minmax(0, 1fr) 150px 90px 36px;
   }
-  .lib-tbl-head > span:nth-child(5),
-  .lib-row > *:nth-child(5) {
+  .lib .lib-tbl [role="row"] > :nth-child(5) {
     display: none;
   }
 }
 
 @media (max-width: 820px) {
-  .lib-tbl-head,
-  .lib-row {
-    grid-template-columns: 20px 36px minmax(0, 1fr) 130px 36px;
-    gap: 10px;
-    padding: 12px 14px;
+  .lib {
+    --lib-cols: 20px 36px minmax(0, 1fr) 36px;
   }
-  .lib-tbl-head > span:nth-child(4),
-  .lib-row > *:nth-child(4),
-  .lib-tbl-head > span:nth-child(7),
-  .lib-row > *:nth-child(7) {
+  .lib .lib-tbl [role="row"] > :nth-child(4),
+  .lib .lib-tbl [role="row"] > :nth-child(6) {
     display: none;
   }
+}
+
+/* ── Add-to-collection modal (library SelectionBar) ───
+   Reuses the .coll-modal-* + .coll-add-* chrome from
+   collections.css so the picker matches the existing
+   AddItemsModal visually. Only the per-row pick button
+   is library-scoped because the collections variant
+   is a 4-col grid for scan rows, not a single title. */
+.lib-add-card {
+  width: min(440px, 96vw);
+}
+
+.lib-add-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-line);
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-fg);
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.12s ease, background-color 0.12s ease;
+}
+
+.lib-add-row:hover:not(:disabled) {
+  border-color: var(--color-line-medium);
+  background: var(--color-surface-alt);
+}
+
+.lib-add-row:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.lib-add-row-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lib-add-row-hint {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-fg-dim);
+}
+
+.lib-add-link {
+  color: var(--color-fg);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }

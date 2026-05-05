@@ -92,7 +92,7 @@ export function Nav() {
                 <button
                   type="button"
                   onClick={() => setAuthMode("login")}
-                  className="hidden items-center gap-1 text-sm text-[var(--color-fg)] transition-colors hover:text-white sm:inline-flex"
+                  className="hidden cursor-pointer items-center gap-1 text-sm text-[var(--color-fg)] transition-colors hover:text-white sm:inline-flex"
                 >
                   Login
                 </button>

@@ -9,6 +9,10 @@
   box-shadow: var(--shadow-soft);
 }
 
+.bandLoading {
+  opacity: 0.6;
+}
+
 .head {
   display: flex;
   justify-content: space-between;

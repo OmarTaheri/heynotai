@@ -52,6 +52,285 @@
   flex-wrap: wrap;
 }
 
+/* ── Invoice history table ────────────────────────────────── */
+.invoiceHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px 22px 14px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--color-line);
+}
+
+.invoiceTitle {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--color-fg);
+  letter-spacing: -0.01em;
+  margin-bottom: 4px;
+}
+
+.invoiceSub {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--color-fg-mid);
+  margin: 0;
+}
+
+.invoiceActions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Compact list: date · amount on the left, status + receipt pinned
+   right. Each row is its own flex container, separated by a thin
+   line. No column-header row — the data is self-describing. */
+.invoiceList {
+  display: flex;
+  flex-direction: column;
+}
+
+.invoiceItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--color-line);
+  transition: background 0.12s ease;
+}
+
+.invoiceItem:last-child {
+  border-bottom: none;
+}
+
+.invoiceItem:hover {
+  background: color-mix(in oklch, var(--color-fg) 3%, transparent);
+}
+
+.invoiceLead {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.invoiceDate {
+  font-size: 13px;
+  color: var(--color-fg);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.invoiceLeadDivider {
+  color: var(--color-fg-dim);
+  font-size: 11px;
+  user-select: none;
+}
+
+.invoiceAmount {
+  font-size: 13px;
+  color: var(--color-fg);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.invoiceCurrency {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--color-fg-dim);
+  margin-left: 4px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+.invoiceTrail {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+/* Status pill — bright text on a soft tint so it reads on dark
+   surfaces. The dot is solid, the text uses the cta colour. */
+.invoiceStatusPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 8px;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: color-mix(in oklch, var(--color-cta) 16%, transparent);
+  color: var(--color-cta);
+  border: 1px solid color-mix(in oklch, var(--color-cta) 32%, transparent);
+  white-space: nowrap;
+}
+
+.invoiceStatusDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-cta);
+  box-shadow: 0 0 0 2px color-mix(in oklch, var(--color-cta) 18%, transparent);
+}
+
+.invoiceDownload {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-fg-mid);
+  text-decoration: none;
+  border: 1px solid var(--color-line-strong);
+  background: transparent;
+  padding: 6px 11px;
+  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  white-space: nowrap;
+}
+
+.invoiceDownload:hover {
+  color: var(--color-fg);
+  border-color: var(--color-line-medium);
+  background: var(--color-surface);
+}
+
+.invoiceDownloadIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.invoiceDownloadEmpty {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.invoiceEmpty {
+  padding: 28px 22px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--color-fg-mid);
+}
+
+@media (max-width: 560px) {
+  .invoiceItem {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .invoiceLead {
+    flex-basis: 100%;
+  }
+  .invoiceTrail {
+    margin-left: auto;
+  }
+}
+
+.emptyActions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: stretch;
+}
+
+/* ── Scheduled downgrade banner ───────────────────────────── */
+.pendingBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 22px;
+}
+
+.pendingIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: color-mix(in oklch, var(--color-gold) 14%, transparent);
+  color: var(--color-gold-ink);
+  flex-shrink: 0;
+}
+
+.pendingBody {
+  flex: 1 1 auto;
+}
+
+.pendingTitle {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--color-fg);
+  letter-spacing: -0.005em;
+  margin-bottom: 3px;
+}
+
+.pendingTitle strong {
+  font-weight: 600;
+  color: var(--color-fg);
+}
+
+.pendingText {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-fg-mid);
+  line-height: 1.5;
+}
+
+/* ── Free-plan empty state ─────────────────────────────────── */
+.empty {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 22px 24px;
+  flex-wrap: wrap;
+}
+
+.emptyIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: color-mix(in oklch, var(--color-cta) 14%, transparent);
+  color: var(--color-cta);
+  flex-shrink: 0;
+}
+
+.emptyBody {
+  flex: 1 1 280px;
+  min-width: 240px;
+}
+
+.emptyTitle {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--color-fg);
+  letter-spacing: -0.01em;
+  margin-bottom: 4px;
+}
+
+.emptyText {
+  font-size: 12.5px;
+  color: var(--color-fg-mid);
+  line-height: 1.55;
+  margin: 0;
+}
+
 @media (max-width: 760px) {
   .grid {
     grid-template-columns: 1fr;

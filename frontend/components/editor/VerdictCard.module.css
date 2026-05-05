@@ -33,13 +33,18 @@
 .top {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
   margin-bottom: 14px;
 }
 
-.ringNum {
-  font-size: 15px !important;
-  color: var(--color-cream-fg) !important;
+/* The ui/ScoreRing reads --color-fg / --color-fg-mid for its center
+   label. Locally remap them to the cream surface tokens so the number +
+   % unit stay legible on the verdict card. */
+.ringWrap {
+  display: inline-flex;
+  --color-fg: var(--color-cream-fg);
+  --color-fg-mid: var(--color-cream-fg-mid);
+  --color-line-strong: rgba(26, 25, 22, 0.15);
 }
 
 .head {

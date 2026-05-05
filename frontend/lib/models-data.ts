@@ -1,9 +1,13 @@
 /* ─────────────────────────────────────────────
    Detection-engine catalog backing /app/models.
-   The page composes pure data — copy/numbers all
-   live here so the UI files stay layout-only and
-   the catalog can later be swapped for an API call
-   without touching component code.
+
+   /app/models now fetches engines + defaults from
+   the API (`GET /models`, `GET /models/defaults`),
+   so the constants here are a fallback used only
+   by the editor clients (TextEditorClient et al.)
+   when offline or pre-hydration. They mirror the
+   seed in `pocketbase/seed-models.sh` so the two
+   surfaces don't diverge.
    ───────────────────────────────────────────── */
 
 import type { ScanType } from "@/components/ui/TypeChip";
@@ -15,7 +19,6 @@ export type EngineBadge =
   | "recommended"
   | "fast"
   | "beta"
-  | "byok"
   | "local"
   | "team"
   | "enterprise";
@@ -25,7 +28,6 @@ export type LockTier = "team" | "enterprise";
 export type EngineCostUnit =
   | "/ scan"
   | "/ minute"
-  | "via your API"
   | "runs locally";
 
 export type Engine = {
@@ -37,10 +39,9 @@ export type Engine = {
   description: string;
   /** 0–100. */
   accuracy: number;
-  /** Cost is rendered in mono; "free" shows in green, "high" in warn, otherwise neutral. */
+  /** Cost is rendered in mono; "high" in warn, otherwise neutral. */
   cost: { value: number; unit: EngineCostUnit; tone: "neutral" | "free" | "high" };
   locked?: { tier: LockTier; cta: "Upgrade" | "Contact sales" };
-  byok?: { statusText: string };
 };
 
 export type TypeTab = {
@@ -55,206 +56,128 @@ export const TYPE_TABS: TypeTab[] = [
   { type: "vid", label: "Video" },
 ];
 
+/** Fallback catalog. Mirrors seed-models.sh — keep in sync if you
+ *  add/remove models there. /app/models reads the live list from
+ *  `/models`; this is what shows up if that fetch hasn't resolved. */
 export const ENGINES: Record<EngineType, Engine[]> = {
   txt: [
     {
-      id: "atlas-pro",
-      name: "Atlas Pro",
-      version: "v3",
+      id: "fakespot-roberta",
+      name: "Fakespot AI Detector",
       badges: ["default", "recommended"],
       description:
-        "Our flagship text detector. Trained on 40+ LLMs, updated weekly. Best balance of accuracy, speed, and cost. Detects GPT-5, Claude 4.5, Gemini 3, Llama 4, and more.",
-      accuracy: 94,
-      cost: { value: 2, unit: "/ scan", tone: "neutral" },
-    },
-    {
-      id: "atlas-lite",
-      name: "Atlas Lite",
-      badges: ["fast"],
-      description:
-        "3× faster than Atlas Pro at the cost of ~5% accuracy. Best for high-volume batch scans where speed matters more than precision (essay grading, social monitors).",
-      accuracy: 89,
+        "RoBERTa-based detector trained on a broad mix of human and AI text. Solid general-purpose pick.",
+      accuracy: 91,
       cost: { value: 1, unit: "/ scan", tone: "neutral" },
     },
     {
-      id: "openai-classifier",
-      name: "OpenAI Classifier",
-      badges: ["byok"],
+      id: "openai-roberta",
+      name: "OpenAI RoBERTa Detector",
+      badges: [],
       description:
-        "Use your own OpenAI API key for text classification. We charge nothing — you pay OpenAI directly at their rates. Fast and accurate, but limited to detecting GPT family.",
-      accuracy: 88,
-      cost: { value: 0, unit: "via your API", tone: "free" },
-      byok: {
-        statusText:
-          "API key configured · sk-•••••••••••••••8a2f · last validated 4 days ago",
-      },
+        "OpenAI's classic RoBERTa-based GPT-2 detector. Useful as a baseline; weaker on newer LLMs.",
+      accuracy: 84,
+      cost: { value: 1, unit: "/ scan", tone: "neutral" },
     },
     {
-      id: "atlas-local",
-      name: "Atlas Local",
-      badges: ["local", "beta"],
+      id: "simpleai-chatgpt",
+      name: "SimpleAI ChatGPT Detector",
+      badges: ["fast"],
       description:
-        "Run detection entirely on your device — no content ever leaves your computer. Slower and slightly less accurate, but ideal for confidential or regulated material.",
-      accuracy: 86,
-      cost: { value: 0, unit: "runs locally", tone: "free" },
-    },
-    {
-      id: "atlas-forensics",
-      name: "Atlas Forensics",
-      badges: ["team"],
-      description:
-        "Heavyweight forensic-grade engine with paragraph-level attribution, model fingerprinting, and chain-of-custody export. Built for legal evidence and academic publication.",
-      accuracy: 97,
-      cost: { value: 8, unit: "/ scan", tone: "high" },
-      locked: { tier: "team", cta: "Upgrade" },
-    },
-    {
-      id: "atlas-adversarial",
-      name: "Atlas Adversarial",
-      badges: ["enterprise"],
-      description:
-        "Specialized engine trained against paraphrasing attacks, prompt injection laundering, and human-edited AI text. Used by major newsrooms and university integrity offices.",
-      accuracy: 98,
-      cost: { value: 14, unit: "/ scan", tone: "high" },
-      locked: { tier: "enterprise", cta: "Contact sales" },
+        "Tuned specifically against ChatGPT outputs. High recall on GPT-family text.",
+      accuracy: 89,
+      cost: { value: 1, unit: "/ scan", tone: "neutral" },
     },
   ],
   img: [
     {
-      id: "pixel-forensics",
-      name: "Pixel Forensics",
-      version: "v2",
-      badges: ["byok", "recommended"],
+      id: "deepfake-v2",
+      name: "Deep-Fake Detector v2",
+      badges: ["default", "recommended"],
       description:
-        "Detects diffusion-model artifacts, GAN signatures, and metadata inconsistencies. Configured with your Sightengine API key. Catches Midjourney, Stable Diffusion, FLUX, DALL-E.",
-      accuracy: 93,
-      cost: { value: 0, unit: "via your API", tone: "free" },
-      byok: {
-        statusText:
-          "Sightengine key configured · 12,400 / 50,000 calls used this month",
-      },
+        "ViT-based deepfake detector. Reports ~92% accuracy on standard benchmarks.",
+      accuracy: 92,
+      cost: { value: 2, unit: "/ scan", tone: "neutral" },
     },
     {
-      id: "pixel-standard",
-      name: "Pixel Standard",
-      badges: ["default"],
+      id: "deepfake-v2-onnx",
+      name: "Deep-Fake Detector v2 (ONNX)",
+      badges: ["fast"],
       description:
-        "Our managed image detection engine — no API key required. Slightly less accurate than Forensics on highly post-processed images.",
-      accuracy: 90,
-      cost: { value: 3, unit: "/ scan", tone: "neutral" },
+        "ONNX-quantized variant of Deep-Fake v2 — same architecture, lower latency.",
+      accuracy: 91,
+      cost: { value: 2, unit: "/ scan", tone: "neutral" },
     },
     {
-      id: "pixel-provenance",
-      name: "Pixel Provenance",
-      badges: ["enterprise"],
+      id: "vit-deepfake",
+      name: "ViT Deepfake Detection",
+      badges: [],
       description:
-        "C2PA-aware image forensics with provenance chain reconstruction. Detects edits, generations, and authentic camera-to-publish workflows.",
-      accuracy: 96,
-      cost: { value: 12, unit: "/ scan", tone: "high" },
-      locked: { tier: "enterprise", cta: "Contact sales" },
+        "Vision Transformer fine-tuned for deepfake detection. Reports 98.7% on its evaluation set.",
+      accuracy: 98,
+      cost: { value: 2, unit: "/ scan", tone: "neutral" },
+    },
+    {
+      id: "siglip2-deepfake",
+      name: "Deepfake Detect SigLIP2",
+      badges: ["beta"],
+      description:
+        "SigLIP2-backbone deepfake detector. Newer architecture, strong on stylized AI imagery.",
+      accuracy: 94,
+      cost: { value: 2, unit: "/ scan", tone: "neutral" },
     },
   ],
   aud: [
     {
-      id: "vocal-print",
-      name: "Vocal Print",
-      version: "v2",
-      badges: ["default"],
+      id: "melody-deepfake-v2",
+      name: "MelodyMachine Deepfake Audio",
+      badges: ["default", "recommended"],
       description:
-        "Detects voice cloning from ElevenLabs, Play.ht, Resemble, OpenAI Voice. Works on calls, voicemails, and music. Spectral analysis + speaker fingerprinting.",
-      accuracy: 89,
-      cost: { value: 5, unit: "/ scan", tone: "neutral" },
-    },
-    {
-      id: "resemble-detect",
-      name: "Resemble Detect",
-      badges: ["byok"],
-      description:
-        "Use your own Resemble.ai detection key. Great for catching their own clones plus others, with very fast turnaround.",
-      accuracy: 87,
-      cost: { value: 0, unit: "via your API", tone: "free" },
-    },
-    {
-      id: "vocal-forensics",
-      name: "Vocal Forensics",
-      badges: ["team"],
-      description:
-        "Court-grade voice authentication with speaker verification, anti-replay analysis, and comparison against known reference samples.",
-      accuracy: 95,
-      cost: { value: 11, unit: "/ scan", tone: "high" },
-      locked: { tier: "team", cta: "Upgrade" },
+        "wav2vec2-based detector for cloned/synthetic voice. Works on calls and short clips.",
+      accuracy: 90,
+      cost: { value: 3, unit: "/ scan", tone: "neutral" },
     },
   ],
   vid: [
     {
-      id: "framewatch-pro",
-      name: "FrameWatch Pro",
-      badges: ["default"],
+      id: "frames-deepfake-v2",
+      name: "Frame-by-frame Deep-Fake v2",
+      badges: ["default", "recommended"],
       description:
-        "Frame-level deepfake detection with face-swap, lip-sync, and Sora/Veo/Runway signature recognition. Token cost scales with video duration.",
-      accuracy: 86,
-      cost: { value: 15, unit: "/ minute", tone: "high" },
+        "Samples 16 evenly-spaced frames and runs Deep-Fake Detector v2 on each, then aggregates.",
+      accuracy: 88,
+      cost: { value: 8, unit: "/ minute", tone: "high" },
     },
     {
-      id: "framewatch-lite",
-      name: "FrameWatch Lite",
-      badges: ["fast"],
+      id: "frames-vit-deepfake",
+      name: "Frame-by-frame ViT Deepfake",
+      badges: [],
       description:
-        "Keyframe sampling instead of full-frame analysis. 4× faster, lower token cost. Best for screening large video batches before deeper review.",
-      accuracy: 79,
-      cost: { value: 4, unit: "/ minute", tone: "neutral" },
-    },
-    {
-      id: "reality-defender",
-      name: "Reality Defender",
-      badges: ["team"],
-      description:
-        "Multi-model ensemble combining 5 deepfake detectors plus geometric analysis. The standard for newsroom-grade video verification.",
-      accuracy: 94,
-      cost: { value: 28, unit: "/ minute", tone: "high" },
-      locked: { tier: "team", cta: "Upgrade" },
-    },
-    {
-      id: "framewatch-forensics",
-      name: "FrameWatch Forensics",
-      badges: ["enterprise"],
-      description:
-        "Court-admissible video analysis with chain-of-custody, expert-witness reports, and per-frame attribution. Used by intelligence and law enforcement clients.",
-      accuracy: 99,
-      cost: { value: 60, unit: "/ minute", tone: "high" },
-      locked: { tier: "enterprise", cta: "Contact sales" },
+        "Samples 16 frames and runs the ViT_Deepfake_Detection image model on each, then aggregates.",
+      accuracy: 92,
+      cost: { value: 8, unit: "/ minute", tone: "high" },
     },
   ],
 };
 
-/** Default selected engine per type — the one carrying the "default" or
- *  "recommended" badge in each list. */
+/** Default selected engine per type — mirrors `defaultForPlans` in
+ *  the seed. Editor clients use this as a fallback when the scan
+ *  record has no `engineId` yet. */
 export const DEFAULT_SELECTION: Record<EngineType, string> = {
-  txt: "atlas-pro",
-  img: "pixel-forensics",
-  aud: "vocal-print",
-  vid: "framewatch-pro",
+  txt: "fakespot-roberta",
+  img: "deepfake-v2",
+  aud: "melody-deepfake-v2",
+  vid: "frames-deepfake-v2",
 };
 
+/** Real per-user usage now comes from `GET /me/usage`. Kept here for
+ *  type compatibility with `<TokenUsageBand>`. */
 export type TokenUsage = {
   used: number;
-  total: number;
+  total: number | null;
   resetsOn: string;
   avgPerDay: number;
   segments: { type: EngineType; value: number }[];
-};
-
-export const TOKEN_USAGE: TokenUsage = {
-  used: 62_400,
-  total: 100_000,
-  resetsOn: "May 1",
-  avgPerDay: 2_080,
-  segments: [
-    { type: "txt", value: 14_800 },
-    { type: "img", value: 11_200 },
-    { type: "aud", value: 5_600 },
-    { type: "vid", value: 30_800 },
-  ],
 };
 
 export const TYPE_LABEL: Record<EngineType, string> = {
@@ -269,7 +192,6 @@ export const BADGE_LABEL: Record<EngineBadge, string> = {
   recommended: "RECOMMENDED",
   fast: "FAST",
   beta: "BETA",
-  byok: "BYOK",
   local: "ON-DEVICE",
   team: "TEAM PLAN",
   enterprise: "ENTERPRISE",

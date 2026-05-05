@@ -1,0 +1,122 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.waveCard {
+  position: relative;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--color-line);
+  padding: 18px 16px 14px;
+  overflow: hidden;
+}
+
+.wave {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 110px;
+  cursor: pointer;
+}
+
+.bar {
+  flex: 1 1 0;
+  background: color-mix(in oklch, var(--color-fg) 22%, transparent);
+  border-radius: 2px;
+  min-height: 4px;
+  transform-origin: center;
+  transition: background 120ms ease;
+}
+
+.barPlayed {
+  background: color-mix(in oklch, var(--color-fg) 70%, transparent);
+}
+
+/* Radar bounce. Each bar runs TWO short pulses (LTR pass + RTL pass)
+   with their own delays set inline. The LTR pass walks the wave front
+   left → right; the RTL pass starts the moment the front reaches the
+   right edge, so the rightmost bars fire both pulses overlapping —
+   which is what makes the wave visually bounce off the wall and head
+   back instead of teleporting. `animation-fill-mode: forwards` parks
+   each bar on its 100% keyframe (= base) after each pulse completes. */
+.barBounce {
+  animation-name: bar-radar-pulse, bar-radar-pulse;
+  animation-duration: 600ms, 600ms;
+  animation-timing-function: ease-out, ease-out;
+  animation-iteration-count: 1, 1;
+  animation-fill-mode: forwards, forwards;
+  will-change: transform, background;
+}
+
+@keyframes bar-radar-pulse {
+  0% {
+    background: color-mix(in oklch, var(--color-fg) 22%, transparent);
+    transform: scaleY(1);
+  }
+  15% {
+    background: color-mix(in oklch, var(--color-info) 75%, white);
+    transform: scaleY(1.32);
+  }
+  35% {
+    background: color-mix(in oklch, var(--color-info) 50%, white);
+    transform: scaleY(1.18);
+  }
+  60% {
+    background: color-mix(in oklch, var(--color-info) 25%, var(--color-fg));
+    transform: scaleY(1.08);
+  }
+  100% {
+    background: color-mix(in oklch, var(--color-fg) 22%, transparent);
+    transform: scaleY(1);
+  }
+}
+
+/* Finale — the whole waveform bursts together with the same lit
+   treatment as the radar peak, then eases back to base. Plays once
+   (no infinite loop) so the bars settle on the base state ready for
+   the analyzer card to take over. */
+.barFinale {
+  animation: bar-finale 1.5s ease-out forwards;
+  will-change: transform, background;
+}
+
+@keyframes bar-finale {
+  0% {
+    background: color-mix(in oklch, var(--color-fg) 22%, transparent);
+    transform: scaleY(1);
+  }
+  20% {
+    background: color-mix(in oklch, var(--color-info) 80%, white);
+    transform: scaleY(1.4);
+  }
+  55% {
+    background: color-mix(in oklch, var(--color-info) 55%, white);
+    transform: scaleY(1.22);
+  }
+  100% {
+    background: color-mix(in oklch, var(--color-fg) 22%, transparent);
+    transform: scaleY(1);
+  }
+}
+
+.head {
+  position: absolute;
+  top: -6px;
+  bottom: -6px;
+  width: 2px;
+  background: var(--color-fg);
+  z-index: 3;
+  pointer-events: none;
+}
+
+.times {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-fg-dim);
+}

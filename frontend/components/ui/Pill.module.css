@@ -80,10 +80,13 @@
   border-color: color-mix(in oklch, var(--color-human) 28%, transparent);
 }
 
-/* Premium tier (Team plan, Enterprise) — gold, used on locked rows and
-   the upgrade button bg. */
+/* Premium tier (Team plan, Enterprise) — gold, used on locked rows,
+   the upgrade button bg, and the "NEW MODEL" tag on /app/updates.
+   Uses the bright `--color-gold` directly as ink because `*-ink` for
+   gold is a low-lightness value tuned for light backgrounds; on the
+   dark theme it goes muddy. */
 .gold {
-  color: var(--color-gold-ink);
-  background: color-mix(in oklch, var(--color-gold-soft) 35%, transparent);
-  border-color: color-mix(in oklch, var(--color-gold) 35%, transparent);
+  color: var(--color-gold);
+  background: color-mix(in oklch, var(--color-gold) 14%, transparent);
+  border-color: color-mix(in oklch, var(--color-gold) 32%, transparent);
 }

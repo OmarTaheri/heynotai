@@ -15,7 +15,11 @@ export function Toolbar({ children, ariaLabel = "Editor toolbar" }: {
   ariaLabel?: string;
 }) {
   return (
-    <nav className={styles.toolbar} aria-label={ariaLabel}>
+    <nav
+      className={styles.toolbar}
+      aria-label={ariaLabel}
+      data-editor-toolbar="true"
+    >
       {children}
     </nav>
   );

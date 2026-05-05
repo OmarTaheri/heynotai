@@ -1,45 +1,68 @@
-import { ScoreRing, verdictFromScore } from "@/components/editor-shell";
+import { verdictFromScore } from "@/components/editor-shell";
+import { ScoreRing, type RingTone } from "@/components/ui/ScoreRing";
 import type { ScanResult, FlagKind } from "@/lib/detection-types";
 import styles from "./VerdictCard.module.css";
 
+const VERDICT_TONE: Record<"human" | "ai" | "mixed", RingTone> = {
+  human: "human",
+  ai: "ai",
+  mixed: "mixed",
+};
+
 interface Props {
   result: ScanResult;
-  burstiness?: number;
-  perplexity?: number;
-  aiRate?: number;
 }
 
-const VERDICT_COPY = {
-  human: { label: "Likely", emph: "human-written" },
-  ai: { label: "Likely", emph: "AI-generated" },
-  mixed: { label: "Mixed", emph: "signals" },
-} as const;
+type VerdictKind = "human" | "ai" | "mixed";
 
-export function VerdictCard({
-  result,
-  burstiness = 3.2,
-  perplexity = 22.4,
-  aiRate,
-}: Props) {
+// Above 90% / below 10% AI we drop the "Likely" hedge — the detector is
+// unambiguous, so the soft language reads as weaker than the signal.
+function pickVerdictCopy(
+  verdict: VerdictKind,
+  aiPct: number,
+): { label: string | null; emph: string } {
+  if (verdict === "ai") {
+    return { label: aiPct >= 90 ? null : "Likely", emph: "AI-generated" };
+  }
+  if (verdict === "human") {
+    return { label: aiPct <= 10 ? null : "Likely", emph: "human-written" };
+  }
+  return { label: "Mixed", emph: "signals" };
+}
+
+export function VerdictCard({ result }: Props) {
   const verdict = verdictFromScore(result.authenticity);
-  const copy = VERDICT_COPY[verdict];
+  const copy = pickVerdictCopy(verdict, result.aiPct);
   const flagCount = result.flags.length;
-  const aiPct = aiRate ?? 100 - result.authenticity;
+
+  // Today's HF detectors only emit a single AI-generated probability.
+  // The card shows match/plag/burstiness/perplexity rows ONLY when the
+  // underlying data is actually present — so per-model views collapse
+  // to score-ring + AI-bar, and richer detectors (or legacy mock-era
+  // records with a saved breakdown) light the extra rows back up.
+  const matchPct = result.breakdown?.match;
+  const plagPct = result.breakdown?.plag;
+  const showMatch = typeof matchPct === "number" && matchPct > 0;
+  const showPlag = typeof plagPct === "number" && plagPct > 0;
+  const hasBurstiness = typeof result.burstiness === "number";
+  const hasPerplexity = typeof result.perplexity === "number";
+  const showStats = hasBurstiness || hasPerplexity;
 
   return (
     <article className={styles.card}>
       <div className={styles.top}>
-        <ScoreRing
-          value={result.authenticity}
-          size={54}
-          stroke={4}
-          verdict={verdict}
-          trackColor="rgba(26,25,22,0.1)"
-          numClassName={styles.ringNum}
-        />
+        <span className={styles.ringWrap}>
+          <ScoreRing
+            score={result.aiPct}
+            tone={VERDICT_TONE[verdict]}
+            size={76}
+            strokeWidth={5}
+          />
+        </span>
         <div>
           <div className={styles.head}>
-            {copy.label} <em>{copy.emph}</em>
+            {copy.label && <>{copy.label} </>}
+            <em>{copy.emph}</em>
           </div>
           <div className={styles.sub}>
             {flagCount} detection{flagCount === 1 ? "" : "s"}
@@ -47,15 +70,24 @@ export function VerdictCard({
         </div>
       </div>
 
-      <BarRow label="AI-generated" pct={result.breakdown.gen} kind="gen" />
-      <BarRow label="Model match" pct={result.breakdown.match} kind="match" />
-      <BarRow label="Plagiarism" pct={result.breakdown.plag} kind="plag" />
+      <BarRow label="AI-generated" pct={result.aiPct} kind="gen" />
+      {showMatch && <BarRow label="Model match" pct={matchPct!} kind="match" />}
+      {showPlag && <BarRow label="Plagiarism" pct={plagPct!} kind="plag" />}
 
-      <div className={styles.statRow}>
-        <Stat value={burstiness.toFixed(1)} suffix="/10" label="Burstiness" />
-        <Stat value={perplexity.toFixed(1)} label="Perplexity" />
-        <Stat value={Math.round(aiPct).toString()} suffix="%" label="AI rate" />
-      </div>
+      {showStats && (
+        <div className={styles.statRow}>
+          {hasBurstiness && (
+            <Stat
+              value={result.burstiness!.toFixed(1)}
+              suffix="/10"
+              label="Burstiness"
+            />
+          )}
+          {hasPerplexity && (
+            <Stat value={result.perplexity!.toFixed(1)} label="Perplexity" />
+          )}
+        </div>
+      )}
     </article>
   );
 }

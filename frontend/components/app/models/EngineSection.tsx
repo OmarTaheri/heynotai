@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  ENGINES,
   TYPE_LABEL,
   type Engine,
   type EngineType,
@@ -11,6 +10,7 @@ import styles from "./EngineSection.module.css";
 
 type Props = {
   type: EngineType;
+  engines: Engine[];
   selectedId: string;
   onSelect: (id: string) => void;
 };
@@ -20,8 +20,7 @@ type Props = {
  * top right summarize how many rows are selectable vs. locked, matching
  * the mockup's "1 selected · 4 available · 2 locked" pattern.
  */
-export function EngineSection({ type, selectedId, onSelect }: Props) {
-  const engines: Engine[] = ENGINES[type];
+export function EngineSection({ type, engines, selectedId, onSelect }: Props) {
   const lockedCount = engines.filter((e) => !!e.locked).length;
   const availableCount = engines.length - lockedCount;
 
