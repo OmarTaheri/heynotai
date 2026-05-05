@@ -10,6 +10,12 @@
 # All `${VAR}` references are filled in by Coolify's Environment
 # Variables section per resource. See Coolify deployment notes in
 # /home/waaa3/.claude/plans/luminous-squishing-twilight.md.
+#
+# `environment:` blocks use the map form (KEY: VALUE) rather than the
+# list form (- KEY=VALUE). Coolify's compose-file parser fails with
+# "non-string key in services.<svc>.environment: 0" on bare list
+# entries like `- SERVICE_FQDN_*` (no `=` value), so map form keeps
+# things portable.
 
 services:
   pocketbase:
@@ -21,8 +27,8 @@ services:
     volumes:
       - pb_data:/pb_data
     environment:
-      - TZ=UTC
-      - SERVICE_FQDN_POCKETBASE_8090
+      TZ: UTC
+      SERVICE_FQDN_POCKETBASE_8090: ${SERVICE_FQDN_POCKETBASE_8090:-}
 
   api:
     build:
@@ -35,24 +41,24 @@ services:
     expose:
       - "8787"
     environment:
-      - PORT=8787
+      PORT: "8787"
       # Internal service-name routing — never set this to a public URL,
       # the api hits PocketBase over the docker network.
-      - POCKETBASE_URL=http://pocketbase:8090
-      - CORS_ORIGINS=${CORS_ORIGINS}
-      - PB_ADMIN_EMAIL=${PB_ADMIN_EMAIL}
-      - PB_ADMIN_PASSWORD=${PB_ADMIN_PASSWORD}
-      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
-      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
-      - STRIPE_PRICE_VERIFY_MONTHLY=${STRIPE_PRICE_VERIFY_MONTHLY}
-      - STRIPE_PRICE_VERIFY_YEARLY=${STRIPE_PRICE_VERIFY_YEARLY}
-      - STRIPE_PRICE_CERTIFY_MONTHLY=${STRIPE_PRICE_CERTIFY_MONTHLY}
-      - STRIPE_PRICE_CERTIFY_YEARLY=${STRIPE_PRICE_CERTIFY_YEARLY}
-      - STRIPE_PRICE_TEAM_MONTHLY=${STRIPE_PRICE_TEAM_MONTHLY}
-      - STRIPE_PRICE_TEAM_YEARLY=${STRIPE_PRICE_TEAM_YEARLY}
-      - VELMA_BASE_URL=${VELMA_BASE_URL}
-      - VELMA_DETECT_PATH=${VELMA_DETECT_PATH}
-      - SERVICE_FQDN_API_8787
+      POCKETBASE_URL: http://pocketbase:8090
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      PB_ADMIN_EMAIL: ${PB_ADMIN_EMAIL:-}
+      PB_ADMIN_PASSWORD: ${PB_ADMIN_PASSWORD:-}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      STRIPE_PRICE_VERIFY_MONTHLY: ${STRIPE_PRICE_VERIFY_MONTHLY:-}
+      STRIPE_PRICE_VERIFY_YEARLY: ${STRIPE_PRICE_VERIFY_YEARLY:-}
+      STRIPE_PRICE_CERTIFY_MONTHLY: ${STRIPE_PRICE_CERTIFY_MONTHLY:-}
+      STRIPE_PRICE_CERTIFY_YEARLY: ${STRIPE_PRICE_CERTIFY_YEARLY:-}
+      STRIPE_PRICE_TEAM_MONTHLY: ${STRIPE_PRICE_TEAM_MONTHLY:-}
+      STRIPE_PRICE_TEAM_YEARLY: ${STRIPE_PRICE_TEAM_YEARLY:-}
+      VELMA_BASE_URL: ${VELMA_BASE_URL:-}
+      VELMA_DETECT_PATH: ${VELMA_DETECT_PATH:-}
+      SERVICE_FQDN_API_8787: ${SERVICE_FQDN_API_8787:-}
 
   frontend:
     build:
@@ -61,9 +67,9 @@ services:
       # NEXT_PUBLIC_* are baked into the client bundle at build time —
       # they have to be passed as args here, not just runtime env vars.
       args:
-        NEXT_PUBLIC_POCKETBASE_URL: ${NEXT_PUBLIC_POCKETBASE_URL}
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
-        NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}
+        NEXT_PUBLIC_POCKETBASE_URL: ${NEXT_PUBLIC_POCKETBASE_URL:-}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
+        NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:-}
     container_name: heynotai-frontend
     restart: unless-stopped
     depends_on:
@@ -71,8 +77,8 @@ services:
     expose:
       - "3000"
     environment:
-      - NODE_ENV=production
-      - SERVICE_FQDN_FRONTEND_3000
+      NODE_ENV: production
+      SERVICE_FQDN_FRONTEND_3000: ${SERVICE_FQDN_FRONTEND_3000:-}
 
 volumes:
   pb_data:
