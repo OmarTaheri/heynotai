@@ -29,6 +29,11 @@ services:
     environment:
       TZ: UTC
       SERVICE_FQDN_POCKETBASE_8090: ${SERVICE_FQDN_POCKETBASE_8090:-}
+      # Read by pocketbase/entrypoint.sh on every boot to upsert the
+      # admin account, so /_/ login uses these credentials instead of
+      # requiring a manual `superuser create` step after each deploy.
+      PB_ADMIN_EMAIL: ${PB_ADMIN_EMAIL:-}
+      PB_ADMIN_PASSWORD: ${PB_ADMIN_PASSWORD:-}
 
   api:
     build:
