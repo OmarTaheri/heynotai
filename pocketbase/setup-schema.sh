@@ -241,20 +241,24 @@ JSON
 )" > /tmp/pb-coll.json
 python3 -c "import json; d=json.load(open('/tmp/pb-coll.json')); print(' ', d.get('message') or 'created')"
 
-# ── Service secrets — single-row, superuser-only. Holds the shared
-#    Hugging Face Inference API token. The api service reads it via a
-#    superuser PB client at scan time. Token is owner-rotated from PB
-#    admin UI, no env-var roundtrip needed.
-echo "→ creating service_secrets collection"
-curl -s -X POST "$PB_URL/api/collections" \
-  -H "Authorization: $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d "$(cat <<'JSON'
-{
+# ── Service secrets — single-row, superuser-only. Holds the third-
+#    party API tokens used at scan time:
+#      - huggingfaceToken: text/image/video detection via HF Inference
+#      - velmaApiKey:      audio detection via Modulate Velma
+#    The api service reads these via a superuser PB client at scan
+#    time. Tokens are owner-rotated from PB admin UI, no env-var
+#    roundtrip needed.
+#
+#    Try to create first; if it already exists (older deploys had only
+#    `huggingfaceToken`), PATCH to ensure both fields are present. PB
+#    PATCH on collections replaces the entire `fields` list, so we
+#    re-declare every field we want here.
+SECRETS_PAYLOAD='{
   "type": "base",
   "name": "service_secrets",
   "fields": [
     { "name": "huggingfaceToken", "type": "text", "max": 200, "hidden": true },
+    { "name": "velmaApiKey", "type": "text", "max": 200, "hidden": true },
     { "name": "created", "type": "autodate", "onCreate": true },
     { "name": "updated", "type": "autodate", "onCreate": true, "onUpdate": true }
   ],
@@ -263,10 +267,22 @@ curl -s -X POST "$PB_URL/api/collections" \
   "createRule": null,
   "updateRule": null,
   "deleteRule": null
-}
-JSON
-)" > /tmp/pb-coll.json
-python3 -c "import json; d=json.load(open('/tmp/pb-coll.json')); print(' ', d.get('message') or 'created')"
+}'
+
+echo "→ ensuring service_secrets collection"
+curl -s -X POST "$PB_URL/api/collections" \
+  -H "Authorization: $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "$SECRETS_PAYLOAD" > /tmp/pb-coll.json
+if grep -q "validation_collection_name_exists" /tmp/pb-coll.json 2>/dev/null; then
+  # Collection already exists — PATCH to merge the velmaApiKey field
+  # in (and any future additions to SECRETS_PAYLOAD).
+  curl -s -X PATCH "$PB_URL/api/collections/service_secrets" \
+    -H "Authorization: $TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "$SECRETS_PAYLOAD" > /tmp/pb-coll.json
+fi
+python3 -c "import json; d=json.load(open('/tmp/pb-coll.json')); print(' ', d.get('message') or 'ok')"
 
 # ── Detection models — one row per HF model the catalog exposes. Owner
 #    edits everything (model id, token cost, plan gating, defaults) via
