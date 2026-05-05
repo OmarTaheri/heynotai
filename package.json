@@ -11,8 +11,8 @@
     "build:api": "pnpm --filter @heynotai/api build",
     "typecheck": "pnpm -r --parallel typecheck",
     "test": "pnpm -r --parallel --if-present test",
-    "pb:up": "docker-compose up -d pocketbase",
-    "pb:down": "docker-compose down"
+    "pb:up": "docker-compose -f docker-compose.yaml -f docker-compose.override.local.yaml up -d pocketbase",
+    "pb:down": "docker-compose -f docker-compose.yaml -f docker-compose.override.local.yaml down"
   },
   "devDependencies": {
     "typescript": "^5.7.2"

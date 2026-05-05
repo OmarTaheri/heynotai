@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import type { YoutubeMeta } from './messaging';
 
 export type Platform = 'facebook' | 'youtube' | 'instagram' | 'other';
 export type Surface = 'videos' | 'reels' | 'posts' | null;
@@ -9,6 +10,10 @@ export interface PlatformInfo {
   url: string;
   host: string;
   tabId: number | null;
+  /** Real video + channel metadata scraped from the YouTube watch page
+   *  by the content script. Populated for `platform === 'youtube'` and
+   *  `surface === 'videos'`; otherwise undefined. */
+  youtube?: YoutubeMeta;
 }
 
 function classifyHost(host: string): Platform {
@@ -115,7 +120,16 @@ export function usePlatform(): PlatformInfo {
     }
 
     const onMessage = (
-      msg: { type?: string; payload?: { platform: Platform; surface: Surface; url: string; host: string } },
+      msg: {
+        type?: string;
+        payload?: {
+          platform: Platform;
+          surface: Surface;
+          url: string;
+          host: string;
+          youtube?: YoutubeMeta;
+        };
+      },
       sender: chrome.runtime.MessageSender,
     ) => {
       if (msg?.type !== 'PAGE_CHANGED' || !msg.payload) return;
@@ -123,13 +137,21 @@ export function usePlatform(): PlatformInfo {
       // drawers across tabs don't cross-contaminate.
       if (params.tabId != null && sender.tab?.id !== params.tabId) return;
       const p = msg.payload;
-      setInfo({
+      setInfo((prev) => ({
         platform: p.platform,
         surface: p.surface,
         url: p.url,
         host: p.host,
         tabId: params.tabId,
-      });
+        // The content script may broadcast PAGE_CHANGED multiple times
+        // as YouTube hydrates its DOM. Keep the previous metadata when
+        // a re-broadcast omits it (avoids flicker), but reset when the
+        // platform changes off YouTube.
+        youtube:
+          p.platform === 'youtube'
+            ? (p.youtube ?? prev.youtube)
+            : undefined,
+      }));
     };
     chrome.runtime.onMessage.addListener(onMessage);
     return () => chrome.runtime.onMessage.removeListener(onMessage);

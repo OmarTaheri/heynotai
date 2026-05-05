@@ -1,6 +1,11 @@
 import { detectionFromScan, simulateDetection } from '@/lib/detector';
 import { pushScan } from '@/lib/storage';
-import { sendMessage, type ExtensionMessage, type PageInfoPayload } from '@/lib/messaging';
+import {
+  sendMessage,
+  type ExtensionMessage,
+  type PageInfoPayload,
+  type YoutubeMeta,
+} from '@/lib/messaging';
 import type { ScanDetection, ScanEntry, ScanState } from '@/lib/types';
 import '@/styles/content.css';
 
@@ -17,7 +22,166 @@ function pageInfoPayload(info: PageInfo | null): PageInfoPayload {
   const url = window.location.href;
   const host = window.location.hostname.replace(/^www\./, '');
   if (!info) return { platform: 'other', surface: null, url, host };
-  return { platform: info.platform, surface: info.surface, url, host };
+  const payload: PageInfoPayload = {
+    platform: info.platform,
+    surface: info.surface,
+    url,
+    host,
+  };
+  if (info.platform === 'youtube' && info.surface === 'videos') {
+    const yt = extractYoutubeMeta(info.mediaId);
+    if (yt) payload.youtube = yt;
+  }
+  return payload;
+}
+
+/** Pull video + channel metadata from the YouTube watch page DOM. Used
+ *  to replace the drawer's hardcoded sample data with real values. All
+ *  selectors are best-effort and fall back to '' so a YouTube redesign
+ *  degrades to partial data instead of breaking the drawer. */
+function extractYoutubeMeta(videoId: string): YoutubeMeta | null {
+  // Title — `meta[itemprop="name"]` is the most stable (SEO-stable),
+  // h1 inside ytd-watch-metadata is the visual one.
+  const title =
+    text('meta[itemprop="name"]', 'content') ||
+    text('h1.ytd-watch-metadata yt-formatted-string') ||
+    text('h1.title.style-scope.ytd-video-primary-info-renderer') ||
+    document.title.replace(/ - YouTube$/, '').trim();
+
+  // Channel — link inside #upload-info / #owner.
+  const channelLinkEl = document.querySelector<HTMLAnchorElement>(
+    'ytd-channel-name a, #owner #channel-name a, #upload-info ytd-channel-name a',
+  );
+  const channelName =
+    channelLinkEl?.textContent?.trim() ||
+    text('span[itemprop="author"] link[itemprop="name"]', 'content') ||
+    '';
+
+  // Handle — extract from /@handle in the channel link href.
+  const channelHandle = (() => {
+    const href = channelLinkEl?.getAttribute('href') || '';
+    const m = href.match(/\/@([^/?#]+)/);
+    return m ? `@${m[1]}` : '';
+  })();
+
+  const channelVerified = !!document.querySelector(
+    'ytd-channel-name .badge.verified, ytd-channel-name [aria-label*="Verified"], ytd-channel-name [aria-label*="erified"]',
+  );
+
+  // Subscriber count — youtube renders this as "128K subscribers"
+  // inside #owner-sub-count.
+  const channelSubs = text('#owner-sub-count') || '';
+
+  // Duration — pull from the <video> element's metadata if loaded;
+  // fall back to the duration meta tag (ISO 8601 like "PT12M4S").
+  const videoEl = document.querySelector<HTMLVideoElement>('video.html5-main-video, video');
+  let duration = '';
+  if (videoEl && Number.isFinite(videoEl.duration) && videoEl.duration > 0) {
+    duration = formatSecondsClock(videoEl.duration);
+  } else {
+    const iso = text('meta[itemprop="duration"]', 'content');
+    if (iso) duration = isoDurationToClock(iso);
+  }
+
+  // Views — `#info span` with `views` text. The watch page exposes a
+  // raw count in `meta[itemprop="interactionCount"]`; format that for
+  // a friendlier display.
+  let views = '';
+  const viewCountRaw = text('meta[itemprop="interactionCount"]', 'content');
+  if (viewCountRaw) {
+    const n = Number.parseInt(viewCountRaw, 10);
+    if (Number.isFinite(n)) views = `${formatCount(n)} views`;
+  }
+  if (!views) {
+    const infoText = Array.from(
+      document.querySelectorAll<HTMLElement>('#info span, ytd-watch-info-text span'),
+    )
+      .map((el) => el.textContent?.trim() || '')
+      .find((t) => /views/i.test(t));
+    if (infoText) views = infoText;
+  }
+
+  // Age — `meta[itemprop="datePublished"]` is the publish date; format
+  // as "Nd ago". Falls back to whatever YouTube renders inline.
+  let age = '';
+  const datePublished = text('meta[itemprop="datePublished"]', 'content');
+  if (datePublished) {
+    const ts = Date.parse(datePublished);
+    if (Number.isFinite(ts)) age = formatRelativeAge(ts);
+  }
+  if (!age) {
+    const ageInline = Array.from(
+      document.querySelectorAll<HTMLElement>('#info span, ytd-watch-info-text span'),
+    )
+      .map((el) => el.textContent?.trim() || '')
+      .find((t) => /\bago\b/i.test(t));
+    if (ageInline) age = ageInline;
+  }
+
+  // If we got nothing meaningful yet, signal "not ready" so the drawer
+  // keeps any prior payload instead of replacing with empty fields.
+  // Title is the most reliable — if even that's missing, bail.
+  if (!title) return null;
+
+  return {
+    videoId,
+    title,
+    channelName,
+    channelHandle,
+    channelVerified,
+    channelSubs,
+    duration,
+    views,
+    age,
+  };
+}
+
+function text(selector: string, attr?: string): string {
+  const el = document.querySelector(selector);
+  if (!el) return '';
+  if (attr) return el.getAttribute(attr) || '';
+  return el.textContent?.trim() || '';
+}
+
+function formatSecondsClock(seconds: number): string {
+  const total = Math.max(0, Math.round(seconds));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+function isoDurationToClock(iso: string): string {
+  // Parses YouTube's ISO 8601 like PT12M4S / PT1H2M3S.
+  const m = /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/i.exec(iso);
+  if (!m) return '';
+  const h = Number.parseInt(m[1] || '0', 10);
+  const min = Number.parseInt(m[2] || '0', 10);
+  const sec = Number.parseInt(m[3] || '0', 10);
+  return formatSecondsClock(h * 3600 + min * 60 + sec);
+}
+
+function formatCount(n: number): string {
+  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1).replace(/\.0$/, '')}B`;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace(/\.0$/, '')}K`;
+  return String(n);
+}
+
+function formatRelativeAge(ts: number): string {
+  const ms = Date.now() - ts;
+  if (ms < 0) return 'just now';
+  const minutes = Math.floor(ms / 60_000);
+  if (minutes < 60) return `${Math.max(1, minutes)}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months}mo ago`;
+  const years = Math.floor(months / 12);
+  return `${years}y ago`;
 }
 
 interface CachedPrefs {
@@ -47,6 +211,10 @@ export default defineContentScript({
     let actionBtnEl: HTMLElement | null = null;
     let attachedContainer: HTMLElement | null = null;
     let cachedPrefs: CachedPrefs | null = null;
+    // Mirrors heynotai_auth in chrome.storage.local so we can cheaply
+    // gate the YouTube scan path without an async storage round-trip on
+    // every URL change. Updated by chrome.storage.onChanged below.
+    let isAuthed = false;
     // Scan-state mirror so the drawer can ask "what happened on this tab
     // before I opened?" via QUERY_STATE.
     let isScanning = false;
@@ -271,6 +439,22 @@ export default defineContentScript({
       }
     }
 
+    // ── Auth gating ──────────────────────────────────────
+    // Read the stored auth blob mirrored by the drawer's auth-state.tsx.
+    // We only need to know "is there a non-empty token", not the value
+    // itself — the background SW reads the actual token when calling
+    // /scans. Keeping this boolean cached avoids an async hop every time
+    // the user navigates between videos.
+    async function loadAuth(): Promise<void> {
+      try {
+        const out = await chrome.storage.local.get('heynotai_auth');
+        const auth = out.heynotai_auth as { token?: string } | undefined;
+        isAuthed = !!auth?.token && auth.token.length > 0;
+      } catch {
+        isAuthed = false;
+      }
+    }
+
     function shouldAutoScan(info: PageInfo): boolean {
       const prefs = cachedPrefs;
       // Default-on until the drawer ever runs to seed prefs (fresh
@@ -285,19 +469,37 @@ export default defineContentScript({
 
     chrome.storage.onChanged.addListener((changes, area) => {
       if (area !== 'local') return;
-      if (!changes.extensionPrefs) return;
-      cachedPrefs =
-        (changes.extensionPrefs.newValue as CachedPrefs | undefined) ?? null;
-      const info = classifyPage();
-      if (!info) return;
-      if (shouldAutoScan(info)) {
-        if (!borderEl) {
+      if (changes.extensionPrefs) {
+        cachedPrefs =
+          (changes.extensionPrefs.newValue as CachedPrefs | undefined) ?? null;
+        const info = classifyPage();
+        if (!info) return;
+        if (shouldAutoScan(info)) {
+          if (!borderEl) {
+            currentMediaId = null;
+            runScan();
+          }
+        } else {
+          cleanup();
+          currentMediaId = null;
+        }
+      }
+      if (changes.heynotai_auth) {
+        const next = changes.heynotai_auth.newValue as { token?: string } | undefined;
+        const wasAuthed = isAuthed;
+        isAuthed = !!next?.token && next.token.length > 0;
+        // Auth flipped on (sign-in via drawer): retry the scan that we
+        // skipped earlier. Auth flipped off (sign-out): clear any
+        // overlay so a stale verdict doesn't linger.
+        if (!wasAuthed && isAuthed) {
           currentMediaId = null;
           runScan();
+        } else if (wasAuthed && !isAuthed) {
+          cleanup();
+          currentMediaId = null;
+          lastScanResult = null;
+          lastScanDetection = null;
         }
-      } else {
-        cleanup();
-        currentMediaId = null;
       }
     });
 
@@ -316,6 +518,23 @@ export default defineContentScript({
       try {
         sendMessage({ type: 'PAGE_CHANGED', payload: pageInfoPayload(info) });
       } catch {}
+      // YouTube loads watch-page metadata asynchronously — the title,
+      // channel name, view count, etc. show up over the first few
+      // seconds. Re-broadcast a couple of times so the drawer's card
+      // gets populated even if the user opens it before YouTube has
+      // hydrated. Skipped for non-YouTube to avoid pointless work.
+      if (info?.platform === 'youtube' && info.surface === 'videos') {
+        const settle = (delayMs: number) =>
+          setTimeout(() => {
+            const stillSame = classifyPage();
+            if (!stillSame || stillSame.mediaId !== info.mediaId) return;
+            try {
+              sendMessage({ type: 'PAGE_CHANGED', payload: pageInfoPayload(stillSame) });
+            } catch {}
+          }, delayMs);
+        settle(1500);
+        settle(3500);
+      }
     }
 
     // ── Overlay ─────────────────────────────────────────
@@ -579,6 +798,16 @@ export default defineContentScript({
 
     function mountWithRetry(info: PageInfo, retries = 0) {
       if (retries > 12) return;
+      // YouTube scans require auth — they hit the real backend.
+      // When the user isn't signed in, stay quiet: no overlay, no
+      // badge, nothing. The previous behavior fell back to a
+      // deterministic mock, which made the extension look like it
+      // was checking the video when it wasn't.
+      if (info.platform === 'youtube' && !isAuthed) {
+        cleanup();
+        currentMediaId = null;
+        return;
+      }
       const container = getContainer(info);
       if (!container) {
         setTimeout(() => mountWithRetry(info, retries + 1), 500);
@@ -599,17 +828,45 @@ export default defineContentScript({
       // YT_SCAN_COMPLETE in the message listener below. Other
       // platforms (IG/FB) still use the deterministic mock.
       if (info.platform === 'youtube') {
+        // Scrape video + channel meta once, at click/scan time —
+        // YouTube has fully hydrated by the time the user (or
+        // auto-scan logic) actually triggers a check, which is
+        // more reliable than the on-page-load timing of broadcasts.
+        const ytMeta = extractYoutubeMeta(info.mediaId);
+        // Re-broadcast PAGE_CHANGED with the freshly-captured meta so
+        // the drawer's video header + channel card show exactly the
+        // data the backend is about to receive — no risk of the
+        // drawer reading a partially-hydrated DOM snapshot from an
+        // earlier broadcast.
+        if (ytMeta) {
+          try {
+            sendMessage({
+              type: 'PAGE_CHANGED',
+              payload: {
+                platform: 'youtube',
+                surface: info.surface,
+                url: window.location.href,
+                host: window.location.hostname.replace(/^www\./, ''),
+                youtube: ytMeta,
+              },
+            });
+          } catch {}
+        }
         try {
           sendMessage({
             type: 'YT_SCAN_REQUEST',
             url: window.location.href,
             mediaId: info.mediaId,
+            title: ytMeta?.title,
           });
         } catch {
-          // Background SW unreachable — fall back to the simulator so
-          // the overlay still resolves to *something* instead of
-          // pinwheeling forever.
-          simulateAndApply(info);
+          // Background SW unreachable. Don't simulate — the user's
+          // expectation is "checking with heynotai", not a fake
+          // verdict. Tear down the overlay instead.
+          cleanup();
+          currentMediaId = null;
+          isScanning = false;
+          pendingScanMediaId = null;
         }
         return;
       }
@@ -656,27 +913,9 @@ export default defineContentScript({
       try { sendMessage({ type: 'SCAN_COMPLETE', payload: entry }); } catch {}
     }
 
-    function applyScanFailure(info: PageInfo, _error: string) {
-      // Render a "suspicious" state rather than a dedicated error look —
-      // failure is rare and the user shouldn't be left staring at a
-      // pinwheeling border. The detail panel will still show the
-      // simulated stub data; future polish can surface the error.
-      const result: ScanDetection = {
-        state: 'suspicious',
-        trustScore: 50,
-        label: 'Scan Unavailable',
-        sublabel: 'We could not analyze this video right now.',
-        detectionType: 'Unavailable',
-        faceAnalysis: '—',
-        audioSync: '—',
-        frameConsistency: '—',
-        scanTime: '0.0',
-      };
-      applyDetectionResult(info, result);
-    }
 
     // ── Init ────────────────────────────────────────────
-    void loadPrefs().then(() => {
+    void Promise.all([loadPrefs(), loadAuth()]).then(() => {
       broadcastPageInfo();
 
       let lastUrl = location.href;
@@ -729,20 +968,26 @@ export default defineContentScript({
         if (msg?.type === 'YT_SCAN_FAILED') {
           const m = msg as ExtensionMessage & { type: 'YT_SCAN_FAILED' };
           if (pendingScanMediaId && m.mediaId !== pendingScanMediaId) return;
-          const info = classifyPage();
-          if (!info || info.mediaId !== m.mediaId) return;
-          applyScanFailure(info, m.error);
+          // Real backend couldn't deliver a verdict (api down, yt-dlp
+          // not installed, scan timed out, etc.). Tear the overlay
+          // down so the page doesn't sit with a pinwheeling badge —
+          // we'd rather show nothing than a fake verdict.
+          console.warn('[heynotai] backend scan failed', m.error);
+          cleanup();
+          currentMediaId = null;
+          isScanning = false;
+          pendingScanMediaId = null;
           return;
         }
         if (msg?.type === 'YT_SCAN_AUTH_REQUIRED') {
-          const m = msg as ExtensionMessage & { type: 'YT_SCAN_AUTH_REQUIRED' };
-          if (pendingScanMediaId && m.mediaId !== pendingScanMediaId) return;
-          const info = classifyPage();
-          if (!info || info.mediaId !== m.mediaId) return;
-          // Treat auth-required like a soft failure — the badge stops
-          // pinwheeling so the page doesn't look broken. The user can
-          // sign in via the drawer.
-          applyScanFailure(info, 'auth_required');
+          // The user signed out between scan dispatch and verdict, or
+          // the cached `isAuthed` was stale. Either way: no overlay,
+          // no fake verdict — same as the pre-flight gate.
+          console.info('[heynotai] sign-in required for backend scans');
+          cleanup();
+          currentMediaId = null;
+          isScanning = false;
+          pendingScanMediaId = null;
           return;
         }
       });

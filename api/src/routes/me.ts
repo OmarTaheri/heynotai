@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { requireAuth } from "../middleware/auth.js";
 import { pbAdmin } from "../lib/pb-admin.js";
 import { getMonthlyUsage } from "../lib/usage.js";
+import { getHomeStats } from "../lib/stats.js";
 
 export const me = new Hono();
 
@@ -25,6 +26,18 @@ me.get("/usage", async (c) => {
     plan: user.plan as string | undefined,
   });
   return c.json(usage);
+});
+
+/** Home dashboard KPI tiles. Real numbers aggregated from the user's
+ *  `scans` rows: scan count + month-over-month delta, AI-flagged count
+ *  + share, estimated time saved vs manual review, and monitor alerts
+ *  derived from `origin = "mon"` AI verdicts. See lib/stats.ts. */
+me.get("/stats", async (c) => {
+  const pb = c.get("pb");
+  const user = c.get("user");
+  if (!user) return c.json({ error: "unauthorized" }, 401);
+  const stats = await getHomeStats(pb, { id: user.id });
+  return c.json(stats);
 });
 
 /** Look up a single user by **exact email** for the invite flow.

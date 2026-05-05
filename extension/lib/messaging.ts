@@ -1,6 +1,21 @@
 import type { ScanEntry } from './types';
 import type { Scan } from './scans-api';
 
+// Real metadata scraped from the YouTube watch page DOM by content.ts.
+// All fields are best-effort — selectors might miss when YouTube ships
+// a redesign. Drawer falls back to "—" for missing values.
+export interface YoutubeMeta {
+  videoId: string;
+  title: string;
+  channelName: string;
+  channelHandle: string;     // e.g. "@technotalks" (with leading @)
+  channelVerified: boolean;
+  channelSubs: string;       // raw text e.g. "128K subscribers"
+  duration: string;          // mm:ss e.g. "12:04"
+  views: string;             // raw text e.g. "14K views"
+  age: string;               // relative e.g. "2 days ago"
+}
+
 // Page state shared between content script and drawer — minimal subset
 // of PlatformInfo (drawer reads platform/surface/url/host from this).
 export interface PageInfoPayload {
@@ -8,6 +23,10 @@ export interface PageInfoPayload {
   surface: 'videos' | 'reels' | 'posts' | null;
   url: string;
   host: string;
+  // Populated only when platform === 'youtube' AND the DOM has
+  // already rendered enough metadata. Drawer keeps the previous
+  // values when this is omitted on a re-broadcast.
+  youtube?: YoutubeMeta;
 }
 
 export interface QueryStateResponse {
@@ -39,8 +58,9 @@ export type ExtensionMessage =
   // /scans, polls until done, then pushes the verdict back.
   // `mediaId` (the YouTube video id) lets the content script ignore
   // late responses for a previous video the user has already scrolled
-  // past.
-  | { type: 'YT_SCAN_REQUEST'; url: string; mediaId: string }
+  // past. `title` is the scraped video title — passed up so the
+  // activity table shows readable rows instead of the raw URL.
+  | { type: 'YT_SCAN_REQUEST'; url: string; mediaId: string; title?: string }
   | { type: 'YT_SCAN_COMPLETE'; scan: Scan; mediaId: string }
   | { type: 'YT_SCAN_FAILED'; error: string; mediaId: string }
   | { type: 'YT_SCAN_AUTH_REQUIRED'; mediaId: string }

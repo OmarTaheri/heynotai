@@ -311,7 +311,12 @@ export default defineBackground(() => {
     throw new Error('scans_timeout');
   }
 
-  async function runYouTubeScan(tabId: number, url: string, mediaId: string) {
+  async function runYouTubeScan(
+    tabId: number,
+    url: string,
+    mediaId: string,
+    title?: string,
+  ) {
     // Cancel any previous in-flight scan for this tab — the user has
     // either rescanned or navigated to a different video, and we don't
     // want two polling loops eating the auth token's budget.
@@ -327,7 +332,7 @@ export default defineBackground(() => {
     }
 
     try {
-      const created = await createYouTubeScan(url, auth.token, controller.signal);
+      const created = await createYouTubeScan(url, title, auth.token, controller.signal);
       const finalScan = await pollScan(
         created.id,
         auth.token,
@@ -359,6 +364,7 @@ export default defineBackground(() => {
 
   async function createYouTubeScan(
     url: string,
+    title: string | undefined,
     token: string,
     signal: AbortSignal,
   ): Promise<Scan> {
@@ -367,6 +373,10 @@ export default defineBackground(() => {
     form.set('subtype', 'yt-vid');
     form.set('origin', 'ext');
     form.set('sourceUrl', url);
+    // The activity table key column is `scan.title`. Without this the
+    // backend's deriveTitle falls back to the URL, which renders as a
+    // long unreadable string in the table.
+    if (title && title.trim()) form.set('title', title.trim());
     const r = await fetch(`${API_URL}/scans`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
@@ -451,19 +461,20 @@ export default defineBackground(() => {
       }
     }
     if (msg.type === 'YT_SCAN_REQUEST' && sender.tab?.id != null) {
-      runYouTubeScan(sender.tab.id, msg.url, msg.mediaId).catch(() => {
+      runYouTubeScan(sender.tab.id, msg.url, msg.mediaId, msg.title).catch(() => {
         // runYouTubeScan handles its own error reporting via
         // YT_SCAN_FAILED. Anything reaching here would be a bug.
       });
     }
-    if (msg.type === 'PAGE_CHANGED' && sender.tab?.id != null) {
-      // Navigating to a new video should kill any in-flight scan from
-      // the previous one — mirrors the abort logic at the top of
-      // runYouTubeScan, but covers the no-new-scan case too (e.g.
-      // user navigates from /watch to /feed).
-      inFlightYouTubeScans.get(sender.tab.id)?.abort();
-      inFlightYouTubeScans.delete(sender.tab.id);
-    }
+    // NOTE: we used to abort in-flight scans on PAGE_CHANGED here, but
+    // the content script re-broadcasts PAGE_CHANGED at t=1.5s and
+    // t=3.5s after a YouTube page change to pick up late-rendered DOM
+    // metadata. Those settle broadcasts hit *during* a scan and were
+    // killing it ~1.5s in. The abort path is now handled where it
+    // belongs: at the top of runYouTubeScan (new YT_SCAN_REQUEST kills
+    // the previous one) and in tabs.onRemoved (tab close). Stale
+    // verdicts from a no-longer-current video are filtered out by the
+    // mediaId guard in content.ts.
   });
 
   chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {

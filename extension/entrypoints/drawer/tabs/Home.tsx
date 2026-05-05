@@ -10,6 +10,7 @@ import {
   type PlatformContent, type Hotspot, type Creator,
 } from '@/lib/sample-data';
 import { usePlatform, platformLabel, type Platform } from '@/lib/platform';
+import type { YoutubeMeta } from '@/lib/messaging';
 import { useApp, type PlatformKey, type SurfaceKey } from '@/lib/state';
 import { useAuth } from '@/lib/auth-state';
 import { pb } from '@/lib/pocketbase';
@@ -23,11 +24,55 @@ function platformIcon(p: string): IconName {
     : 'globe';
 }
 
-function contentFor(p: Platform): PlatformContent | null {
-  if (p === 'youtube')   return YOUTUBE_CONTENT;
+function contentFor(p: Platform, yt?: YoutubeMeta): PlatformContent | null {
+  if (p === 'youtube')   return youtubeContentFromMeta(yt);
   if (p === 'facebook')  return FACEBOOK_CONTENT;
   if (p === 'instagram') return INSTAGRAM_CONTENT;
   return null;
+}
+
+/** Build the drawer's YouTube content card from real DOM-scraped meta.
+ *  When `meta` is undefined (YouTube hasn't hydrated yet, or we're on
+ *  a non-watch page), we still return a card so the layout doesn't
+ *  jump — fields fall back to '—' to make missing data visible rather
+ *  than masked behind sample text. */
+function youtubeContentFromMeta(meta: YoutubeMeta | undefined): PlatformContent {
+  // Use the sample as a base for fields we don't yet derive from real
+  // data (verdict, score, signals — those come from the scan record).
+  const base = YOUTUBE_CONTENT;
+  if (!meta) {
+    return {
+      ...base,
+      title: '—',
+      author: '—',
+      meta: '—',
+      creator: { ...base.creator, displayName: '—', handle: '—', sub: '—' },
+    };
+  }
+
+  const metaParts = [meta.duration, meta.views, meta.age].filter(Boolean);
+
+  return {
+    ...base,
+    title: meta.title,
+    author: meta.channelHandle || meta.channelName,
+    meta: metaParts.join(' · ') || '—',
+    creator: {
+      ...base.creator,
+      displayName: meta.channelName || '—',
+      handle: meta.channelHandle || '',
+      verified: meta.channelVerified,
+      sub: meta.channelSubs || '',
+      // Stats below are not derivable from a single page view —
+      // they'd require querying the user's historical scans by
+      // channel. Until that lands, hide the rows by zeroing them
+      // out; CreatorCard renders blanks for zeros below.
+      scanned: 0,
+      avgAi: 0,
+      flagged: 0,
+      lastChecked: '',
+    },
+  };
 }
 
 function contentNoun(p: Platform): string {
@@ -272,7 +317,7 @@ function ContentHeader({
 }
 
 export function Home() {
-  const { platform, surface, host, tabId } = usePlatform();
+  const { platform, surface, host, tabId, youtube } = usePlatform();
   const {
     scanning, progress, scanned, startScan,
     scanMode, setScanMode, sites, platforms, addSite,
@@ -338,7 +383,7 @@ export function Home() {
     }
   }, [autoScan, scanning, scanned, startScan, host, isSocial]);
 
-  const content = contentFor(platform);
+  const content = contentFor(platform, youtube);
   const pageScore = content?.score ?? 62;
   const pageVerdict: Verdict = content?.verdict ?? 'ai';
 
@@ -417,38 +462,10 @@ export function Home() {
 
         {content ? (
           <>
-            <MetricCard
-              title={content.hotspotLabel}
-              action={<span className="skeleton-block s-chip" />}
-            >
-              {content.timelineTotal && (
-                <div className="timeline">
-                  <div className="timeline-track skeleton-bar" />
-                  <div className="timeline-axis mono">
-                    <span>0:00</span>
-                    <span>{content.timelineTotal}</span>
-                  </div>
-                </div>
-              )}
-              <div>
-                {content.hotspots.map((h, i) => (
-                  <div key={i} className="hotspot-row">
-                    <span className="hotspot-at mono">{h.at}</span>
-                    <div className="hotspot-body">
-                      <div className="hotspot-head">
-                        <Icon name={h.kind} size={12} />
-                        <span className="skeleton-block s-count" />
-                      </div>
-                      <div className="hotspot-track">
-                        <div className="hotspot-fill skeleton-bar" style={{ width: '100%' }} />
-                      </div>
-                    </div>
-                    <span className="skeleton-block s-val" />
-                  </div>
-                ))}
-              </div>
-            </MetricCard>
-
+            {/* Timeline-of-signals skeleton dropped in lockstep with
+                the result-state HotspotsCard removal — we don't show
+                that card after the verdict, so showing its skeleton
+                while scanning would mislead about what's coming. */}
             <MetricCard
               title={content.creatorCardTitle}
               action={<span className="skeleton-block s-chip" />}
@@ -763,7 +780,12 @@ export function Home() {
 
         {content ? (
           <>
-            <HotspotsCard content={content} />
+            {/* HotspotsCard removed for the YouTube/IG/FB result view —
+                the timeline of signals was sample data we never had a
+                way to source for a real scan. The verdict + signals
+                summary above carries the actionable info; per-frame
+                hotspots belong in the dedicated /editor view (which
+                does have the per-frame data on the scan record). */}
             <CreatorCard content={content} platform={platform} />
           </>
         ) : (
@@ -886,6 +908,11 @@ function CreatorCard({
 }: { content: PlatformContent; platform: Platform }) {
   const c: Creator = content.creator;
   const v: Verdict = c.avgAi >= 50 ? 'ai' : c.avgAi >= 25 ? 'mixed' : 'human';
+  // We only have historical-stat data for the sample-driven cards
+  // (FB/IG). YouTube currently goes through real metadata (no stats
+  // tracked yet), so `scanned === 0` is the signal to hide the stat
+  // rows entirely instead of showing fake zeros.
+  const hasStats = c.scanned > 0;
   return (
     <MetricCard
       title={content.creatorCardTitle}
@@ -905,18 +932,20 @@ function CreatorCard({
             {c.sub && <><span className="ch-dot">·</span><span>{c.sub}</span></>}
           </div>
         </div>
-        <span className={`verdict-tag ${v}`}>{c.avgAi}% avg</span>
+        {hasStats && <span className={`verdict-tag ${v}`}>{c.avgAi}% avg</span>}
       </div>
-      <div>
-        <Row label="Content scanned" value={String(c.scanned)} />
-        <Row
-          label="Flagged history"
-          value={<span style={{ color: colorVarOf(v) }}>{c.flagged}</span>}
-          hint={`(${Math.round((c.flagged / Math.max(1, c.scanned)) * 100)}%)`}
-        />
-        <Row label="Avg AI-likelihood" value={`${c.avgAi}%`} />
-        <Row label="Last checked" value={c.lastChecked} />
-      </div>
+      {hasStats && (
+        <div>
+          <Row label="Content scanned" value={String(c.scanned)} />
+          <Row
+            label="Flagged history"
+            value={<span style={{ color: colorVarOf(v) }}>{c.flagged}</span>}
+            hint={`(${Math.round((c.flagged / Math.max(1, c.scanned)) * 100)}%)`}
+          />
+          <Row label="Avg AI-likelihood" value={`${c.avgAi}%`} />
+          <Row label="Last checked" value={c.lastChecked} />
+        </div>
+      )}
     </MetricCard>
   );
 }
