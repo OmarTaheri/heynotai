@@ -10,13 +10,20 @@ import {
   subscribeExtensionPrefs,
 } from './extension-prefs-sync';
 import { pb } from './pocketbase';
+import {
+  DEFAULT_EXTENSION_PREFS,
+  migrateLegacyPlatforms,
+  type Platforms,
+  type PlatformKey,
+  type ScanMode,
+  type SurfaceKey,
+} from '@heynotai/shared';
 
 export type Theme = 'light' | 'dark' | 'system';
 export type Mode = 'normal' | 'power';
 export type Language = 'en' | 'es' | 'fr' | 'de' | 'zh' | 'ar' | 'ja';
 export type View = 'main' | 'account' | 'settings';
-export type ScanMode = 'allowlist' | 'manual' | 'everything';
-export type PlatformKey = 'facebook' | 'youtube' | 'instagram';
+export type { PlatformKey, ScanMode, Platforms, SurfaceKey };
 
 export interface NotificationPrefs {
   desktop: boolean;
@@ -49,8 +56,13 @@ interface AppState {
   toggleSiteAt: (index: number) => void;
   removeSiteAt: (index: number) => void;
   setSiteEnabledByHost: (host: string, enabled: boolean) => void;
-  platforms: Record<PlatformKey, boolean>;
+  platforms: Platforms;
   setPlatformEnabled: (k: PlatformKey, v: boolean) => void;
+  setPlatformSurface: <P extends PlatformKey>(
+    platform: P,
+    surface: SurfaceKey<P>,
+    enabled: boolean,
+  ) => void;
 
   view: View;
   setView: (v: View) => void;
@@ -103,7 +115,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState(0);
   const [scanned, setScanned] = useState(false);
-  const intervalRef = useRef<number | null>(null);
 
   const [view, setView] = useState<View>('main');
 
@@ -133,9 +144,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [sites, setSitesState] = useState<Site[]>(() =>
     load<Site[]>('heynotai-sites', DEFAULT_SITES, (v) => Array.isArray(v)),
   );
-  const [platforms, setPlatformsState] = useState<Record<PlatformKey, boolean>>(() =>
-    load<Record<PlatformKey, boolean>>('heynotai-platforms',
-      { facebook: true, youtube: true, instagram: true }),
+  const [platforms, setPlatformsState] = useState<Platforms>(() =>
+    migrateLegacyPlatforms(
+      load<unknown>('heynotai-platforms', DEFAULT_EXTENSION_PREFS.platforms),
+    ),
   );
 
   const [appliedTheme, setAppliedTheme] = useState<'light' | 'dark'>(() => resolveTheme(theme));
@@ -175,6 +187,86 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => { save('heynotai-sites', sites); }, [sites]);
   useEffect(() => { save('heynotai-platforms', platforms); }, [platforms]);
 
+  // Mirror gating prefs into chrome.storage.local so content scripts can
+  // read them without a PB round-trip and react to changes via
+  // chrome.storage.onChanged.
+  useEffect(() => {
+    try {
+      chrome.storage?.local.set({
+        extensionPrefs: { platforms, scanMode },
+      });
+    } catch {}
+  }, [platforms, scanMode]);
+
+  // ── Mirror the host page's scan lifecycle into drawer UI ────────
+  // The drawer's scanning/scanned UI used to be local-only; now the
+  // content script drives it via SCAN_STARTED/SCAN_COMPLETE so the
+  // drawer reflects right-click scans and resets when the user
+  // navigates between videos/reels in the same tab.
+  useEffect(() => {
+    let myTabId: number | null = null;
+    try {
+      const p = new URLSearchParams(window.location.search);
+      const t = parseInt(p.get('tabId') || '', 10);
+      myTabId = Number.isNaN(t) ? null : t;
+    } catch {}
+
+    // Ask the content script (if any) what state the host page is in
+    // right now. Handles "user right-clicked Check before opening
+    // drawer" and "drawer auto-reopened on a tab that already scanned".
+    if (myTabId != null) {
+      try {
+        void chrome.tabs
+          ?.sendMessage(myTabId, { type: 'QUERY_STATE' })
+          .then((response: unknown) => {
+            if (!response || typeof response !== 'object') return;
+            const r = response as {
+              scanning?: boolean;
+              scanned?: boolean;
+            };
+            if (r.scanning) {
+              setProgress(0);
+              setScanned(false);
+              setScanning(true);
+            } else if (r.scanned) {
+              setProgress(100);
+              setScanning(false);
+              setScanned(true);
+            }
+          })
+          .catch(() => {
+            // Content script not present (e.g. tab is on a non-supported
+            // host like nytimes.com). Drawer stays in idle state.
+          });
+      } catch {}
+    }
+
+    const onMessage = (msg: unknown, sender: chrome.runtime.MessageSender) => {
+      const m = msg as { type?: string } | null;
+      if (!m?.type) return;
+      // Only react to events from our own host tab.
+      if (myTabId != null && sender.tab?.id !== myTabId) return;
+
+      if (m.type === 'SCAN_STARTED') {
+        setProgress(0);
+        setScanned(false);
+        setScanning(true);
+      } else if (m.type === 'SCAN_COMPLETE') {
+        setProgress(100);
+        setScanning(false);
+        setScanned(true);
+      } else if (m.type === 'PAGE_CHANGED') {
+        // Different video/reel/post — wipe any prior verdict state so
+        // the drawer doesn't show last page's result for this one.
+        setScanning(false);
+        setScanned(false);
+        setProgress(0);
+      }
+    };
+    chrome.runtime.onMessage.addListener(onMessage);
+    return () => chrome.runtime.onMessage.removeListener(onMessage);
+  }, []);
+
   // ── PB sync: hydrate from server on auth, push changes back ────
   // Hydrate on mount + whenever auth state changes.
   useEffect(() => {
@@ -183,16 +275,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const remote = await loadExtensionPrefs();
       if (!remote || cancelled) return;
       ignoreRealtimeRef.current = true;
+      const migratedPlatforms = migrateLegacyPlatforms(remote.platforms);
       setModeState(remote.mode);
       setAutoModelModeState(remote.autoModelMode);
       setScanModeState(remote.scanMode);
       setSitesState(remote.sites as Site[]);
-      setPlatformsState(remote.platforms as Record<PlatformKey, boolean>);
+      setPlatformsState(migratedPlatforms);
       setNotificationsState(remote.notifications);
       setPrivacyState(remote.privacy);
       setTimeout(() => {
         ignoreRealtimeRef.current = false;
       }, 50);
+      // Heal: if the remote row stored the legacy flat shape, persist
+      // the canonical nested shape back so we stop migrating on every
+      // hydrate.
+      const wasLegacy =
+        remote.platforms &&
+        typeof remote.platforms === 'object' &&
+        Object.values(remote.platforms as Record<string, unknown>).some(
+          (v) => typeof v === 'boolean',
+        );
+      if (wasLegacy && pb.authStore.isValid) {
+        void saveExtensionPrefs({ platforms: migratedPlatforms });
+      }
     };
     void hydrate();
 
@@ -207,7 +312,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setAutoModelModeState(remote.autoModelMode);
       setScanModeState(remote.scanMode);
       setSitesState(remote.sites as Site[]);
-      setPlatformsState(remote.platforms as Record<PlatformKey, boolean>);
+      setPlatformsState(migrateLegacyPlatforms(remote.platforms));
       setNotificationsState(remote.notifications);
       setPrivacyState(remote.privacy);
     }).then((u) => {
@@ -243,24 +348,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   }, [mode, autoModelMode, scanMode, sites, platforms, notifications, privacy]);
 
-  // Scan progress simulation
-  useEffect(() => {
-    if (!scanning) return;
-    let p = 0;
-    const id = window.setInterval(() => {
-      p += 3 + Math.random() * 4;
-      if (p >= 100) {
-        p = 100;
-        setProgress(p);
-        setScanning(false);
-        setScanned(true);
-        return;
-      }
-      setProgress(p);
-    }, 120);
-    intervalRef.current = id;
-    return () => { window.clearInterval(id); intervalRef.current = null; };
-  }, [scanning]);
+  // No simulated progress sweep — the drawer ring is now driven by
+  // SCAN_STARTED/SCAN_COMPLETE messages from the content script (which
+  // in turn reflect real backend status). `progress` toggles between 0
+  // and 100 at the lifecycle bookends; the visual is an indeterminate
+  // spinner regardless. The 0→100 sweep was lying to users when real
+  // YouTube scans took 30-90s.
 
   function setTheme(t: Theme) { setThemeState(t); }
   function setMode(m: Mode) { setModeState(m); }
@@ -304,7 +397,40 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setSitesState(prev => prev.map(s => s.host === clean ? { ...s, enabled } : s));
   }
   function setPlatformEnabled(k: PlatformKey, v: boolean) {
-    setPlatformsState(prev => ({ ...prev, [k]: v }));
+    setPlatformsState(prev => {
+      const cfg = prev[k];
+      // Cascade master → surfaces. Toggling YouTube off should also
+      // turn off Videos+Reels (and vice versa), so the UI never shows
+      // "platform on with nothing enabled" or "off with sub-toggles
+      // still ticked".
+      const surfaceKeys = Object.keys(cfg.surfaces);
+      const newSurfaces = surfaceKeys.reduce<Record<string, boolean>>(
+        (acc, key) => { acc[key] = v; return acc; },
+        {},
+      );
+      return {
+        ...prev,
+        [k]: { ...cfg, enabled: v, surfaces: newSurfaces },
+      } as Platforms;
+    });
+  }
+  function setPlatformSurface<P extends PlatformKey>(
+    platform: P,
+    surface: SurfaceKey<P>,
+    enabled: boolean,
+  ) {
+    setPlatformsState(prev => {
+      const cfg = prev[platform];
+      const newSurfaces = { ...cfg.surfaces, [surface]: enabled };
+      // Auto-derive master from surfaces: on when any surface is on,
+      // off when all are off. Pairs with the master→surface cascade
+      // above to keep the two consistent.
+      const anyOn = Object.values(newSurfaces).some(Boolean);
+      return {
+        ...prev,
+        [platform]: { ...cfg, enabled: anyOn, surfaces: newSurfaces },
+      } as Platforms;
+    });
   }
 
   function toggleAccount() { setView(v => v === 'account' ? 'main' : 'account'); }
@@ -316,7 +442,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       scanning, progress, scanned, startScan, resetScan,
       scanMode, setScanMode,
       sites, setSites, addSite, toggleSiteAt, removeSiteAt, setSiteEnabledByHost,
-      platforms, setPlatformEnabled,
+      platforms, setPlatformEnabled, setPlatformSurface,
       view, setView, toggleAccount, toggleSettings,
       mode, setMode,
       autoModelMode, setAutoModelMode,

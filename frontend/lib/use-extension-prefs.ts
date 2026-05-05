@@ -22,7 +22,14 @@ import { useAuth } from "./auth";
 /** Loads the user's `extension_prefs` row, subscribes to PB realtime
  *  updates so changes from the drawer (or another tab) appear live,
  *  and exposes a `patch` setter that updates local state immediately
- *  while queueing a save through the registry. */
+ *  while queueing a save through the registry.
+ *
+ *  Echo-loop avoidance: PB sometimes fires multiple realtime events
+ *  per save (our own write + the broadcast from another tab). We
+ *  remember the `updated` timestamp from our own writes and drop any
+ *  inbound event whose timestamp is `<=` that — instead of the older
+ *  one-shot `ignoreNextRealtime` boolean which fired exactly once and
+ *  let the second echo through. */
 export function useExtensionPrefs() {
   const { user } = useAuth();
   const [original, setOriginal] = useState<ExtensionPrefs | null>(null);
@@ -30,7 +37,12 @@ export function useExtensionPrefs() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const unsubRef = useRef<(() => void) | null>(null);
-  const ignoreNextRealtime = useRef(false);
+  const lastSavedUpdatedRef = useRef<string>("");
+
+  const recordSelfWrite = (next: ExtensionPrefs) => {
+    const updated = (next as unknown as { updated?: string }).updated;
+    if (updated) lastSavedUpdatedRef.current = updated;
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -42,8 +54,12 @@ export function useExtensionPrefs() {
         setOriginal(r);
         setPrefs(r);
         const unsub = await subscribeExtensionPrefs((next) => {
-          if (ignoreNextRealtime.current) {
-            ignoreNextRealtime.current = false;
+          const updated = (next as unknown as { updated?: string }).updated;
+          if (
+            updated &&
+            lastSavedUpdatedRef.current &&
+            updated <= lastSavedUpdatedRef.current
+          ) {
             return;
           }
           setOriginal(next);
@@ -79,6 +95,26 @@ export function useExtensionPrefs() {
     setPrefs((prev) => (prev ? { ...prev, ...p } : prev));
   }, []);
 
+  /** Patch + immediately persist to PB. Use this for live controls
+   *  (e.g. the Platforms section) where the user expects instant
+   *  propagation to the extension drawer rather than a Save click. */
+  const patchAndSave = useCallback(
+    async (p: Partial<ExtensionPrefs>) => {
+      setPrefs((prev) => (prev ? { ...prev, ...p } : prev));
+      setOriginal((prev) => (prev ? { ...prev, ...p } : prev));
+      setSaving(true);
+      try {
+        const next = await saveExtensionPrefs(p);
+        recordSelfWrite(next);
+        setOriginal(next);
+        setPrefs(next);
+      } finally {
+        setSaving(false);
+      }
+    },
+    [],
+  );
+
   const setFlag = useCallback((id: string, value: boolean) => {
     setPrefs((prev) =>
       prev ? { ...prev, flags: { ...prev.flags, [id]: value } } : prev,
@@ -89,7 +125,6 @@ export function useExtensionPrefs() {
     if (!prefs || !dirty) return;
     setSaving(true);
     try {
-      ignoreNextRealtime.current = true;
       const next = await saveExtensionPrefs({
         mode: prefs.mode,
         autoModelMode: prefs.autoModelMode,
@@ -101,6 +136,7 @@ export function useExtensionPrefs() {
         hotkeys: prefs.hotkeys,
         flags: prefs.flags,
       });
+      recordSelfWrite(next);
       setOriginal(next);
       setPrefs(next);
     } finally {
@@ -115,8 +151,8 @@ export function useExtensionPrefs() {
   const reset = useCallback(async () => {
     setSaving(true);
     try {
-      ignoreNextRealtime.current = true;
       const next = await resetExtensionPrefs();
+      recordSelfWrite(next);
       setOriginal(next);
       setPrefs(next);
     } finally {
@@ -130,6 +166,7 @@ export function useExtensionPrefs() {
     saving,
     dirty,
     patch,
+    patchAndSave,
     setFlag,
     save,
     discard,

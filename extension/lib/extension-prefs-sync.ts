@@ -1,32 +1,36 @@
-import type { ExtensionPrefs } from '@heynotai/shared';
+import {
+  DEFAULT_EXTENSION_PREFS,
+  migrateLegacyPlatforms,
+  type ExtensionPrefs,
+} from '@heynotai/shared';
 import { pb } from './pocketbase';
 
 const COLL = 'extension_prefs';
 
-const DEFAULTS: Omit<ExtensionPrefs, 'userId' | 'id'> = {
-  mode: 'normal',
-  autoModelMode: false,
-  scanMode: 'allowlist',
-  sites: [],
-  platforms: { facebook: true, youtube: true, instagram: true },
-  notifications: { desktop: true, sound: false, threshold: 70 },
-  privacy: { cloud: true, cache: true, shareSignals: false },
-  hotkeys: [],
-  flags: {},
-};
+/** Force every consumer to see the canonical nested `platforms` shape,
+ *  regardless of what's persisted in the row. Old rows from before
+ *  v2 stored a flat `Record<PlatformKey, boolean>`. */
+function normalize(record: ExtensionPrefs): ExtensionPrefs {
+  return {
+    ...record,
+    platforms: migrateLegacyPlatforms(record.platforms),
+  };
+}
 
 export async function loadExtensionPrefs(): Promise<ExtensionPrefs | null> {
   if (!pb.authStore.isValid) return null;
   const userId = pb.authStore.record!.id;
   try {
-    return (await pb
+    const row = await pb
       .collection(COLL)
-      .getFirstListItem<ExtensionPrefs>(`userId="${userId}"`));
+      .getFirstListItem<ExtensionPrefs>(`userId="${userId}"`);
+    return normalize(row);
   } catch {
     try {
-      return (await pb
+      const row = await pb
         .collection(COLL)
-        .create<ExtensionPrefs>({ userId, ...DEFAULTS })) as ExtensionPrefs;
+        .create<ExtensionPrefs>({ userId, ...DEFAULT_EXTENSION_PREFS });
+      return normalize(row);
     } catch {
       return null;
     }
@@ -39,12 +43,10 @@ export async function saveExtensionPrefs(
   if (!pb.authStore.isValid) return null;
   const current = await loadExtensionPrefs();
   if (!current) return null;
-  return (await pb
+  const row = await pb
     .collection(COLL)
-    .update<ExtensionPrefs>(
-      (current as { id: string }).id,
-      patch,
-    )) as ExtensionPrefs;
+    .update<ExtensionPrefs>((current as { id: string }).id, patch);
+  return normalize(row);
 }
 
 export async function subscribeExtensionPrefs(
@@ -54,7 +56,7 @@ export async function subscribeExtensionPrefs(
   if (!current) return () => undefined;
   const id = (current as { id: string }).id;
   await pb.collection(COLL).subscribe(id, (e) => {
-    if (e.action === 'update') cb(e.record as unknown as ExtensionPrefs);
+    if (e.action === 'update') cb(normalize(e.record as unknown as ExtensionPrefs));
   });
   return () => {
     void pb.collection(COLL).unsubscribe(id);

@@ -1,10 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { isModelLocked, type Plan } from "@heynotai/shared";
 import { Icon } from "@/components/Icon";
 import { Pill, type PillTone } from "@/components/ui/Pill";
+import { useAuth } from "@/lib/auth";
 import {
   BADGE_LABEL,
+  TIER_LABEL,
   type Engine,
   type EngineBadge,
 } from "@/lib/models-data";
@@ -21,6 +24,33 @@ const BADGE_TONE: Record<EngineBadge, PillTone> = {
   enterprise: "gold",
 };
 
+/** Plan tiers map to dedicated accent hues: verify=teal (hue 165 via
+ *  `--color-human`), certify=cobalt-blue (hue 220 via
+ *  `--color-certify`), team=gold (hue 85). Free `check` rows stay
+ *  neutral so the eye lands on premium options. */
+const TIER_TONE: Record<Plan, PillTone | null> = {
+  check: null,
+  verify: "human",
+  certify: "certify",
+  team: "gold",
+};
+
+const TIER_CLASS: Record<Plan, string | null> = {
+  check: null,
+  verify: styles.tierVerify ?? null,
+  certify: styles.tierCertify ?? null,
+  team: styles.tierTeam ?? null,
+};
+
+/** Upgrade pill colored to match the row's tier so CTA + card read
+ *  as one surface. `team` falls through to the gold default. */
+const UPGRADE_CLASS: Record<Plan, string | null> = {
+  check: null,
+  verify: styles.upgradeVerify ?? null,
+  certify: styles.upgradeCertify ?? null,
+  team: null,
+};
+
 type Props = {
   engine: Engine;
   selected: boolean;
@@ -28,37 +58,45 @@ type Props = {
 };
 
 /**
- * One engine option row. Selectable via radio + name click; locked rows
- * present a gold lock + upgrade CTA instead and don't toggle selection.
+ * One engine option row. Selectable via radio + name click; rows whose
+ * `tier` is above the user's plan render with a gold lock + Upgrade
+ * CTA and don't toggle selection. The per-tier left border (teal /
+ * violet / gold) renders on every row so users read tier from card
+ * color even when unlocked.
  *
  * API keys are owner-managed in PocketBase, so users see no key/edit
  * affordances here — only the model name, accuracy, and per-scan cost.
  */
 export function EngineRow({ engine, selected, onSelect }: Props) {
-  const locked = !!engine.locked;
+  const { user } = useAuth();
+  const userPlan: Plan = user?.plan ?? "check";
+  const locked = isModelLocked(userPlan, engine.tier);
   const router = useRouter();
 
   const rootClasses = [
     styles.row,
+    TIER_CLASS[engine.tier],
     selected && !locked && styles.selected,
     locked && styles.locked,
   ]
     .filter(Boolean)
     .join(" ");
 
+  const upgradeCta = engine.tier === "team" ? "Contact sales" : "Upgrade";
+
   const handleClick = () => {
     if (!locked) {
       onSelect();
       return;
     }
-    // Locked rows route to the upgrade picker (or sales for the
-    // admin-provisioned tiers).
-    if (engine.locked!.cta === "Contact sales") {
+    if (upgradeCta === "Contact sales") {
       window.location.href = TEAM_SALES_MAILTO;
     } else {
       router.push("/app/upgrade");
     }
   };
+
+  const tierTone = TIER_TONE[engine.tier];
 
   return (
     <article className={rootClasses}>
@@ -85,6 +123,11 @@ export function EngineRow({ engine, selected, onSelect }: Props) {
                 <em className={styles.version}> {engine.version}</em>
               )}
             </span>
+            {tierTone && (
+              <Pill tone={tierTone} compact>
+                {TIER_LABEL[engine.tier]}
+              </Pill>
+            )}
             {engine.badges.map((b) => (
               <Pill key={b} tone={BADGE_TONE[b]} compact>
                 {BADGE_LABEL[b]}
@@ -120,12 +163,16 @@ export function EngineRow({ engine, selected, onSelect }: Props) {
 
         {locked && (
           <span className={styles.action}>
-            <span className={styles.upgrade}>
+            <span
+              className={[styles.upgrade, UPGRADE_CLASS[engine.tier]]
+                .filter(Boolean)
+                .join(" ")}
+            >
               <Icon
-                name={engine.locked!.cta === "Contact sales" ? "users" : "sparkle"}
+                name={upgradeCta === "Contact sales" ? "users" : "sparkle"}
                 size={11}
               />
-              {engine.locked!.cta}
+              {upgradeCta}
             </span>
           </span>
         )}

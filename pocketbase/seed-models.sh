@@ -60,6 +60,7 @@ upsert "$(cat <<'JSON'
   "enabled": true,
   "tokenCost": 1,
   "costUnit": "per_scan",
+  "tier": "check",
   "plansAllowed": ["check","verify","certify","team"],
   "defaultForPlans": ["check","verify","certify","team"]
 }
@@ -76,9 +77,10 @@ upsert "$(cat <<'JSON'
   "accuracy": 84,
   "getKeyUrl": "https://huggingface.co/openai-community/roberta-base-openai-detector",
   "enabled": true,
-  "tokenCost": 1,
+  "tokenCost": 4,
   "costUnit": "per_scan",
-  "plansAllowed": ["check","verify","certify","team"],
+  "tier": "certify",
+  "plansAllowed": ["certify","team"],
   "defaultForPlans": []
 }
 JSON
@@ -94,9 +96,10 @@ upsert "$(cat <<'JSON'
   "accuracy": 89,
   "getKeyUrl": "https://huggingface.co/Hello-SimpleAI/chatgpt-detector-roberta",
   "enabled": true,
-  "tokenCost": 1,
+  "tokenCost": 2,
   "costUnit": "per_scan",
-  "plansAllowed": ["check","verify","certify","team"],
+  "tier": "verify",
+  "plansAllowed": ["verify","certify","team"],
   "defaultForPlans": []
 }
 JSON
@@ -115,6 +118,7 @@ upsert "$(cat <<'JSON'
   "enabled": true,
   "tokenCost": 2,
   "costUnit": "per_scan",
+  "tier": "check",
   "plansAllowed": ["check","verify","certify","team"],
   "defaultForPlans": ["check","verify","certify","team"]
 }
@@ -137,6 +141,7 @@ upsert "$(cat <<'JSON'
   "enabled": false,
   "tokenCost": 2,
   "costUnit": "per_scan",
+  "tier": "check",
   "plansAllowed": ["check","verify","certify","team"],
   "defaultForPlans": []
 }
@@ -153,9 +158,10 @@ upsert "$(cat <<'JSON'
   "accuracy": 98,
   "getKeyUrl": "https://huggingface.co/Wvolf/ViT_Deepfake_Detection",
   "enabled": true,
-  "tokenCost": 2,
+  "tokenCost": 8,
   "costUnit": "per_scan",
-  "plansAllowed": ["check","verify","certify","team"],
+  "tier": "certify",
+  "plansAllowed": ["certify","team"],
   "defaultForPlans": []
 }
 JSON
@@ -171,9 +177,10 @@ upsert "$(cat <<'JSON'
   "accuracy": 94,
   "getKeyUrl": "https://huggingface.co/prithivMLmods/Deepfake-Detect-Siglip2",
   "enabled": true,
-  "tokenCost": 2,
+  "tokenCost": 4,
   "costUnit": "per_scan",
-  "plansAllowed": ["check","verify","certify","team"],
+  "tier": "verify",
+  "plansAllowed": ["verify","certify","team"],
   "defaultForPlans": []
 }
 JSON
@@ -197,10 +204,11 @@ upsert "$(cat <<'JSON'
   "accuracy": 99,
   "getKeyUrl": "https://www.modulate.ai/api/deepfake-detection-model",
   "enabled": true,
-  "tokenCost": 3,
+  "tokenCost": 12,
   "costUnit": "per_scan",
-  "plansAllowed": ["check","verify","certify","team"],
-  "defaultForPlans": ["check","verify","certify","team"]
+  "tier": "verify",
+  "plansAllowed": ["verify","certify","team"],
+  "defaultForPlans": ["verify","certify","team"]
 }
 JSON
 )"
@@ -220,8 +228,9 @@ upsert "$(cat <<'JSON'
   "enabled": true,
   "tokenCost": 8,
   "costUnit": "per_minute",
-  "plansAllowed": ["check","verify","certify","team"],
-  "defaultForPlans": ["check","verify","certify","team"]
+  "tier": "verify",
+  "plansAllowed": ["verify","certify","team"],
+  "defaultForPlans": ["verify","certify","team"]
 }
 JSON
 )"
@@ -238,9 +247,10 @@ upsert "$(cat <<'JSON'
   "accuracy": 92,
   "getKeyUrl": "https://huggingface.co/Wvolf/ViT_Deepfake_Detection",
   "enabled": true,
-  "tokenCost": 8,
+  "tokenCost": 12,
   "costUnit": "per_minute",
-  "plansAllowed": ["check","verify","certify","team"],
+  "tier": "team",
+  "plansAllowed": ["team"],
   "defaultForPlans": []
 }
 JSON

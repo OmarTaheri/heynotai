@@ -3,6 +3,7 @@
 import { ClientResponseError } from "pocketbase";
 import {
   DEFAULT_EXTENSION_PREFS,
+  migrateLegacyPlatforms,
   type AppearancePrefs,
   type ExportKind,
   type ExtensionPrefs,
@@ -171,20 +172,32 @@ export async function savePrivacy(patch: Partial<PrivacyPrefs>): Promise<void> {
 
 /* ── Extension preferences (bidirectional) ──────────────────── */
 
+/** Force every consumer to see the canonical nested `platforms` shape,
+ *  regardless of what's persisted in the row. Old rows from before
+ *  v2 stored a flat `Record<PlatformKey, boolean>`. */
+function normalizeExtensionPrefs(record: ExtensionPrefs): ExtensionPrefs {
+  return {
+    ...record,
+    platforms: migrateLegacyPlatforms(record.platforms),
+  };
+}
+
 export async function getExtensionPrefs(): Promise<ExtensionPrefs> {
-  return firstOrCreate<typeof DEFAULT_EXTENSION_PREFS>(
+  const raw = (await firstOrCreate<typeof DEFAULT_EXTENSION_PREFS>(
     "extension_prefs",
     DEFAULT_EXTENSION_PREFS,
-  ) as unknown as ExtensionPrefs;
+  )) as unknown as ExtensionPrefs;
+  return normalizeExtensionPrefs(raw);
 }
 
 export async function saveExtensionPrefs(
   patch: Partial<ExtensionPrefs>,
 ): Promise<ExtensionPrefs> {
   const r = await getExtensionPrefs();
-  return (await pb
+  const updated = (await pb
     .collection("extension_prefs")
     .update(r.id!, patch)) as unknown as ExtensionPrefs;
+  return normalizeExtensionPrefs(updated);
 }
 
 export async function resetExtensionPrefs(): Promise<ExtensionPrefs> {
@@ -199,7 +212,8 @@ export async function subscribeExtensionPrefs(
   const r = await getExtensionPrefs();
   const id = (r as unknown as { id: string }).id;
   await pb.collection("extension_prefs").subscribe(id, (e) => {
-    if (e.action === "update") cb(e.record as unknown as ExtensionPrefs);
+    if (e.action === "update")
+      cb(normalizeExtensionPrefs(e.record as unknown as ExtensionPrefs));
   });
   return () => {
     void pb.collection("extension_prefs").unsubscribe(id);

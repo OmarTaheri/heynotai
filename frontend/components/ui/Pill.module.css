@@ -90,3 +90,11 @@
   background: color-mix(in oklch, var(--color-gold) 14%, transparent);
   border-color: color-mix(in oklch, var(--color-gold) 32%, transparent);
 }
+
+/* Certify-tier pill — clean cobalt blue at hue 220, distinct from
+   `info` (purple-leaning blue at 265) and from `gold`/`human`. */
+.certify {
+  color: var(--color-certify);
+  background: color-mix(in oklch, var(--color-certify) 14%, transparent);
+  border-color: color-mix(in oklch, var(--color-certify) 32%, transparent);
+}

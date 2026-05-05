@@ -11,6 +11,7 @@
    ───────────────────────────────────────────── */
 
 import type { ScanType } from "@/components/ui/TypeChip";
+import type { Plan } from "@heynotai/shared";
 
 export type EngineType = Extract<ScanType, "txt" | "img" | "aud" | "vid">;
 
@@ -22,8 +23,6 @@ export type EngineBadge =
   | "local"
   | "team"
   | "enterprise";
-
-export type LockTier = "team" | "enterprise";
 
 export type EngineCostUnit =
   | "/ scan"
@@ -41,7 +40,9 @@ export type Engine = {
   accuracy: number;
   /** Cost is rendered in mono; "high" in warn, otherwise neutral. */
   cost: { value: number; unit: EngineCostUnit; tone: "neutral" | "free" | "high" };
-  locked?: { tier: LockTier; cta: "Upgrade" | "Contact sales" };
+  /** Plan tier required to use this engine. Models above the user's
+   *  plan render with a per-tier border + Upgrade CTA. */
+  tier: Plan;
 };
 
 export type TypeTab = {
@@ -58,7 +59,8 @@ export const TYPE_TABS: TypeTab[] = [
 
 /** Fallback catalog. Mirrors seed-models.sh — keep in sync if you
  *  add/remove models there. /app/models reads the live list from
- *  `/models`; this is what shows up if that fetch hasn't resolved. */
+ *  `/models`; this is what shows up if that fetch hasn't resolved.
+ *  Ordered cheapest-first within each type to match the API sort. */
 export const ENGINES: Record<EngineType, Engine[]> = {
   txt: [
     {
@@ -69,15 +71,7 @@ export const ENGINES: Record<EngineType, Engine[]> = {
         "RoBERTa-based detector trained on a broad mix of human and AI text. Solid general-purpose pick.",
       accuracy: 91,
       cost: { value: 1, unit: "/ scan", tone: "neutral" },
-    },
-    {
-      id: "openai-roberta",
-      name: "OpenAI RoBERTa Detector",
-      badges: [],
-      description:
-        "OpenAI's classic RoBERTa-based GPT-2 detector. Useful as a baseline; weaker on newer LLMs.",
-      accuracy: 84,
-      cost: { value: 1, unit: "/ scan", tone: "neutral" },
+      tier: "check",
     },
     {
       id: "simpleai-chatgpt",
@@ -86,7 +80,18 @@ export const ENGINES: Record<EngineType, Engine[]> = {
       description:
         "Tuned specifically against ChatGPT outputs. High recall on GPT-family text.",
       accuracy: 89,
-      cost: { value: 1, unit: "/ scan", tone: "neutral" },
+      cost: { value: 2, unit: "/ scan", tone: "neutral" },
+      tier: "verify",
+    },
+    {
+      id: "openai-roberta",
+      name: "OpenAI RoBERTa Detector",
+      badges: [],
+      description:
+        "OpenAI's classic RoBERTa-based GPT-2 detector. Useful as a baseline; weaker on newer LLMs.",
+      accuracy: 84,
+      cost: { value: 4, unit: "/ scan", tone: "neutral" },
+      tier: "certify",
     },
   ],
   img: [
@@ -98,24 +103,7 @@ export const ENGINES: Record<EngineType, Engine[]> = {
         "ViT-based deepfake detector. Reports ~92% accuracy on standard benchmarks.",
       accuracy: 92,
       cost: { value: 2, unit: "/ scan", tone: "neutral" },
-    },
-    {
-      id: "deepfake-v2-onnx",
-      name: "Deep-Fake Detector v2 (ONNX)",
-      badges: ["fast"],
-      description:
-        "ONNX-quantized variant of Deep-Fake v2 — same architecture, lower latency.",
-      accuracy: 91,
-      cost: { value: 2, unit: "/ scan", tone: "neutral" },
-    },
-    {
-      id: "vit-deepfake",
-      name: "ViT Deepfake Detection",
-      badges: [],
-      description:
-        "Vision Transformer fine-tuned for deepfake detection. Reports 98.7% on its evaluation set.",
-      accuracy: 98,
-      cost: { value: 2, unit: "/ scan", tone: "neutral" },
+      tier: "check",
     },
     {
       id: "siglip2-deepfake",
@@ -124,29 +112,42 @@ export const ENGINES: Record<EngineType, Engine[]> = {
       description:
         "SigLIP2-backbone deepfake detector. Newer architecture, strong on stylized AI imagery.",
       accuracy: 94,
-      cost: { value: 2, unit: "/ scan", tone: "neutral" },
+      cost: { value: 4, unit: "/ scan", tone: "neutral" },
+      tier: "verify",
+    },
+    {
+      id: "vit-deepfake",
+      name: "ViT Deepfake Detection",
+      badges: [],
+      description:
+        "Vision Transformer fine-tuned for deepfake detection. Reports 98.7% on its evaluation set.",
+      accuracy: 98,
+      cost: { value: 8, unit: "/ scan", tone: "high" },
+      tier: "certify",
     },
   ],
   aud: [
     {
-      id: "melody-deepfake-v2",
-      name: "MelodyMachine Deepfake Audio",
-      badges: ["default", "recommended"],
+      id: "modulate-velma",
+      name: "Modulate Velma Deepfake",
+      badges: ["recommended"],
       description:
-        "wav2vec2-based detector for cloned/synthetic voice. Works on calls and short clips.",
-      accuracy: 90,
-      cost: { value: 3, unit: "/ scan", tone: "neutral" },
+        "Modulate Velma Deepfake Detect — #1 on the HF Speech Deepfake Arena. Per-segment probability scores collapsed to a single verdict.",
+      accuracy: 99,
+      cost: { value: 12, unit: "/ scan", tone: "high" },
+      tier: "verify",
     },
   ],
   vid: [
     {
       id: "frames-deepfake-v2",
       name: "Frame-by-frame Deep-Fake v2",
-      badges: ["default", "recommended"],
+      badges: ["recommended"],
       description:
         "Samples 16 evenly-spaced frames and runs Deep-Fake Detector v2 on each, then aggregates.",
       accuracy: 88,
       cost: { value: 8, unit: "/ minute", tone: "high" },
+      tier: "verify",
     },
     {
       id: "frames-vit-deepfake",
@@ -155,18 +156,21 @@ export const ENGINES: Record<EngineType, Engine[]> = {
       description:
         "Samples 16 frames and runs the ViT_Deepfake_Detection image model on each, then aggregates.",
       accuracy: 92,
-      cost: { value: 8, unit: "/ minute", tone: "high" },
+      cost: { value: 12, unit: "/ minute", tone: "high" },
+      tier: "team",
     },
   ],
 };
 
-/** Default selected engine per type — mirrors `defaultForPlans` in
- *  the seed. Editor clients use this as a fallback when the scan
- *  record has no `engineId` yet. */
+/** Default selected engine per type — used by the editor clients
+ *  (TextEditorClient et al.) when a scan record has no `engineId`
+ *  (legacy rows pre-create-endpoint). Points at the cheapest model
+ *  per modality regardless of tier; the API enforces tier guards on
+ *  the actual scan path. */
 export const DEFAULT_SELECTION: Record<EngineType, string> = {
   txt: "fakespot-roberta",
   img: "deepfake-v2",
-  aud: "melody-deepfake-v2",
+  aud: "modulate-velma",
   vid: "frames-deepfake-v2",
 };
 
@@ -195,4 +199,13 @@ export const BADGE_LABEL: Record<EngineBadge, string> = {
   local: "ON-DEVICE",
   team: "TEAM PLAN",
   enterprise: "ENTERPRISE",
+};
+
+/** Per-tier label shown in the small pill on each engine row. The
+ *  free tier (`check`) is omitted — its rows render plain. */
+export const TIER_LABEL: Record<Plan, string> = {
+  check: "FREE",
+  verify: "VERIFY",
+  certify: "CERTIFY",
+  team: "TEAM",
 };

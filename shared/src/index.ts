@@ -34,6 +34,24 @@ export const PLAN_PRICES: Record<Plan, { monthly: number; yearly: number }> = {
   team: { monthly: 80, yearly: 800 },
 };
 
+/** Ordinal rank of each plan — used to compare a model's `tier`
+ *  against the user's current plan. A model with `tier="verify"` is
+ *  reachable by anyone whose plan rank is ≥ 1 (verify, certify, team).
+ *  Both the API and the picker UIs (extension drawer + frontend
+ *  /app/models) compute lock state with `isModelLocked`. */
+export const PLAN_RANK: Record<Plan, number> = {
+  check: 0,
+  verify: 1,
+  certify: 2,
+  team: 3,
+};
+
+export const isModelLocked = (userPlan: Plan, modelTier: Plan): boolean =>
+  PLAN_RANK[modelTier] > PLAN_RANK[userPlan];
+
+export const canUseModel = (userPlan: Plan, modelTier: Plan): boolean =>
+  !isModelLocked(userPlan, modelTier);
+
 export const LANGUAGES = ["en", "es", "fr", "de", "zh", "ar", "ja"] as const;
 export const languageSchema = z.enum(LANGUAGES);
 export type Language = z.infer<typeof languageSchema>;
@@ -155,6 +173,60 @@ export const PLATFORM_KEYS = ["facebook", "youtube", "instagram"] as const;
 export const platformKeySchema = z.enum(PLATFORM_KEYS);
 export type PlatformKey = z.infer<typeof platformKeySchema>;
 
+/** Per-platform list of surface keys (sub-toggles under the master). */
+export const PLATFORM_SURFACES = {
+  youtube: ["videos", "reels"],
+  instagram: ["posts", "reels"],
+  facebook: ["posts", "reels"],
+} as const;
+
+export type SurfaceKey<P extends PlatformKey> =
+  (typeof PLATFORM_SURFACES)[P][number];
+
+const youtubePlatformSchema = z.object({
+  enabled: z.boolean().default(true),
+  surfaces: z
+    .object({
+      videos: z.boolean().default(true),
+      reels: z.boolean().default(true),
+    })
+    .default({ videos: true, reels: true }),
+});
+const instagramPlatformSchema = z.object({
+  enabled: z.boolean().default(true),
+  surfaces: z
+    .object({
+      posts: z.boolean().default(true),
+      reels: z.boolean().default(true),
+    })
+    .default({ posts: true, reels: true }),
+});
+const facebookPlatformSchema = z.object({
+  enabled: z.boolean().default(true),
+  surfaces: z
+    .object({
+      posts: z.boolean().default(true),
+      reels: z.boolean().default(true),
+    })
+    .default({ posts: true, reels: true }),
+});
+
+export const platformsSchema = z.object({
+  youtube: youtubePlatformSchema.default({
+    enabled: true,
+    surfaces: { videos: true, reels: true },
+  }),
+  instagram: instagramPlatformSchema.default({
+    enabled: true,
+    surfaces: { posts: true, reels: true },
+  }),
+  facebook: facebookPlatformSchema.default({
+    enabled: true,
+    surfaces: { posts: true, reels: true },
+  }),
+});
+export type Platforms = z.infer<typeof platformsSchema>;
+
 export const siteSchema = z.object({
   host: z.string(),
   enabled: z.boolean(),
@@ -192,10 +264,10 @@ export const extensionPrefsSchema = z.object({
   autoModelMode: z.boolean().default(false),
   scanMode: scanModeSchema.default("allowlist"),
   sites: z.array(siteSchema).default([]),
-  platforms: z.record(platformKeySchema, z.boolean()).default({
-    facebook: true,
-    youtube: true,
-    instagram: true,
+  platforms: platformsSchema.default({
+    youtube: { enabled: true, surfaces: { videos: true, reels: true } },
+    instagram: { enabled: true, surfaces: { posts: true, reels: true } },
+    facebook: { enabled: true, surfaces: { posts: true, reels: true } },
   }),
   notifications: extensionNotificationsSchema.default({
     desktop: true,
@@ -222,12 +294,87 @@ export const DEFAULT_EXTENSION_PREFS: Omit<ExtensionPrefs, "userId" | "id"> = {
   autoModelMode: false,
   scanMode: "allowlist",
   sites: [],
-  platforms: { facebook: true, youtube: true, instagram: true },
+  platforms: {
+    youtube: { enabled: true, surfaces: { videos: true, reels: true } },
+    instagram: { enabled: true, surfaces: { posts: true, reels: true } },
+    facebook: { enabled: true, surfaces: { posts: true, reels: true } },
+  },
   notifications: { desktop: true, sound: false, threshold: 70 },
   privacy: { cloud: true, cache: true, shareSignals: false },
   hotkeys: [],
   flags: {},
 };
+
+/** Convert any historical or partial `platforms` payload into the
+ *  current canonical nested shape. Old rows stored a flat
+ *  `Record<PlatformKey, boolean>` — when we see one of those, the bool
+ *  becomes the master `enabled` and propagates to every surface so the
+ *  user's previous mute/unmute intent is preserved. Always produces
+ *  keys in the same literal order so JSON stringification is stable
+ *  across loads (used by the frontend's dirty-check). */
+export function migrateLegacyPlatforms(raw: unknown): Platforms {
+  const fallback = (): Platforms => ({
+    youtube: { enabled: true, surfaces: { videos: true, reels: true } },
+    instagram: { enabled: true, surfaces: { posts: true, reels: true } },
+    facebook: { enabled: true, surfaces: { posts: true, reels: true } },
+  });
+  if (!raw || typeof raw !== "object") return fallback();
+  const r = raw as Record<string, unknown>;
+
+  const expand = <S extends string>(
+    val: unknown,
+    keys: readonly S[],
+    fallbackEnabled: boolean,
+  ): { enabled: boolean; surfaces: Record<S, boolean> } => {
+    if (typeof val === "boolean") {
+      const surfaces = Object.fromEntries(keys.map((k) => [k, val])) as Record<
+        S,
+        boolean
+      >;
+      return { enabled: val, surfaces };
+    }
+    if (val && typeof val === "object") {
+      const v = val as Record<string, unknown>;
+      const enabled =
+        typeof v.enabled === "boolean" ? v.enabled : fallbackEnabled;
+      const sIn =
+        v.surfaces && typeof v.surfaces === "object"
+          ? (v.surfaces as Record<string, unknown>)
+          : {};
+      const surfaces = Object.fromEntries(
+        keys.map((k) => [k, typeof sIn[k] === "boolean" ? sIn[k] : true]),
+      ) as Record<S, boolean>;
+      return { enabled, surfaces };
+    }
+    const surfaces = Object.fromEntries(
+      keys.map((k) => [k, fallbackEnabled]),
+    ) as Record<S, boolean>;
+    return { enabled: fallbackEnabled, surfaces };
+  };
+
+  return {
+    youtube: expand(r.youtube, PLATFORM_SURFACES.youtube, true),
+    instagram: expand(r.instagram, PLATFORM_SURFACES.instagram, true),
+    facebook: expand(r.facebook, PLATFORM_SURFACES.facebook, true),
+  };
+}
+
+/** Returns the surface keys for `platform` that are both master-enabled
+ *  AND surface-enabled. Content scripts call this so they don't
+ *  re-implement the AND logic three times. */
+export function surfacesEnabled<P extends PlatformKey>(
+  platforms: Platforms,
+  platform: P,
+): SurfaceKey<P>[] {
+  const cfg = platforms[platform] as {
+    enabled: boolean;
+    surfaces: Record<string, boolean>;
+  };
+  if (!cfg?.enabled) return [];
+  return PLATFORM_SURFACES[platform].filter(
+    (k) => cfg.surfaces?.[k] === true,
+  ) as SurfaceKey<P>[];
+}
 
 /* ── Billing ────────────────────────────────────────────────── */
 

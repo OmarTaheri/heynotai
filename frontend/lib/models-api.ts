@@ -1,5 +1,6 @@
 "use client";
 
+import type { Plan } from "@heynotai/shared";
 import { pb } from "./pocketbase";
 import type { Engine, EngineType, TokenUsage } from "./models-data";
 
@@ -19,11 +20,13 @@ type ApiCatalogEntry = {
   accuracy: number;
   tokenCost: number;
   costUnit: "per_scan" | "per_minute";
+  tier: Plan;
 };
 
 /** Wire format → frontend `Engine`. The catalog API hides credentials,
  *  per-plan gating, and HF model ids; we only render what's needed for
- *  the picker UI. */
+ *  the picker UI. The row's `tier` flows through so the EngineRow can
+ *  compute lock state against the current user's plan. */
 function adapt(entry: ApiCatalogEntry, isDefault: boolean): Engine {
   return {
     id: entry.slug,
@@ -36,6 +39,7 @@ function adapt(entry: ApiCatalogEntry, isDefault: boolean): Engine {
       unit: entry.costUnit === "per_minute" ? "/ minute" : "/ scan",
       tone: entry.tokenCost >= 8 ? "high" : "neutral",
     },
+    tier: entry.tier ?? "check",
   };
 }
 

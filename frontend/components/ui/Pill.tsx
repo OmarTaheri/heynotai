@@ -10,7 +10,8 @@ export type PillTone =
   | "neutral"
   | "byok"
   | "local"
-  | "gold";
+  | "gold"
+  | "certify";
 
 /**
  * Compact label pill — verdict, status, or category badge.

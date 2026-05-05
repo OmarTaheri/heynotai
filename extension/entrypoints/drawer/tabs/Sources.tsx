@@ -1,7 +1,13 @@
+import { useState } from 'react';
 import { Icon, type IconName } from '@/components/Icon';
 import { MetricCard } from '@/components/MetricCard';
 import { Toggle } from '@/components/Toggle';
-import { useApp, type ScanMode, type PlatformKey } from '@/lib/state';
+import {
+  useApp,
+  type ScanMode,
+  type PlatformKey,
+  type SurfaceKey,
+} from '@/lib/state';
 
 const MODES: { key: ScanMode; label: string; hint: string }[] = [
   { key: 'allowlist',  label: 'Allowed platforms and websites', hint: 'scan only on enabled platforms and sites' },
@@ -9,20 +15,70 @@ const MODES: { key: ScanMode; label: string; hint: string }[] = [
   { key: 'everything', label: 'Everything',                     hint: 'scan every site you visit — no allow-list' },
 ];
 
-const PLATFORMS: { key: PlatformKey; label: string; icon: IconName; hint: string }[] = [
-  { key: 'facebook',  label: 'Facebook',  icon: 'facebook',  hint: 'scan posts, reels, comments' },
-  { key: 'youtube',   label: 'YouTube',   icon: 'youtube',   hint: 'scan videos, titles, comments' },
-  { key: 'instagram', label: 'Instagram', icon: 'instagram', hint: 'scan posts, reels, captions' },
+type PlatformConfig<P extends PlatformKey> = {
+  key: P;
+  label: string;
+  icon: IconName;
+  surfaces: { key: SurfaceKey<P>; label: string }[];
+};
+
+const PLATFORMS: [
+  PlatformConfig<'youtube'>,
+  PlatformConfig<'instagram'>,
+  PlatformConfig<'facebook'>,
+] = [
+  {
+    key: 'youtube',
+    label: 'YouTube',
+    icon: 'youtube',
+    surfaces: [
+      { key: 'videos', label: 'Videos' },
+      { key: 'reels',  label: 'Reels'  },
+    ],
+  },
+  {
+    key: 'instagram',
+    label: 'Instagram',
+    icon: 'instagram',
+    surfaces: [
+      { key: 'posts', label: 'Posts' },
+      { key: 'reels', label: 'Reels' },
+    ],
+  },
+  {
+    key: 'facebook',
+    label: 'Facebook',
+    icon: 'facebook',
+    surfaces: [
+      { key: 'posts', label: 'Posts' },
+      { key: 'reels', label: 'Reels' },
+    ],
+  },
 ];
 
 export function Sources() {
   const {
     scanMode, setScanMode,
-    sites, toggleSiteAt, removeSiteAt,
-    platforms, setPlatformEnabled,
+    sites, addSite, toggleSiteAt, removeSiteAt,
+    platforms, setPlatformEnabled, setPlatformSurface,
   } = useApp();
 
+  const [adding, setAdding] = useState(false);
+  const [draftHost, setDraftHost] = useState('');
+
   const everything = scanMode === 'everything';
+
+  const submitAddSite = () => {
+    const clean = draftHost
+      .trim()
+      .replace(/^https?:\/\//, '')
+      .replace(/^www\./, '')
+      .replace(/\/.*$/, '');
+    if (!clean) return;
+    addSite(clean);
+    setDraftHost('');
+    setAdding(false);
+  };
 
   return (
     <div className="panel">
@@ -61,20 +117,64 @@ export function Sources() {
       <div className={`source-group${everything ? ' section-deactivated' : ''}`} aria-hidden={everything}>
         <MetricCard title="Platforms">
           <div>
-            {PLATFORMS.map(p => (
-              <div key={p.key} className="site-row">
-                <div className="site-globe"><Icon name={p.icon} size={14} /></div>
-                <div className="site-body">
-                  <div className="site-host" style={{ fontFamily: 'inherit' }}>{p.label}</div>
-                  <div className="site-meta">{platforms[p.key] ? p.hint : 'paused'}</div>
+            {PLATFORMS.map(p => {
+              const cfg = platforms[p.key];
+              const masterOn = cfg.enabled;
+              const surfaceCount = p.surfaces.length;
+              const onCount = p.surfaces.filter(
+                s => (cfg.surfaces as Record<string, boolean>)[s.key],
+              ).length;
+              const meta = !masterOn
+                ? 'paused'
+                : onCount === surfaceCount
+                  ? `scanning ${p.surfaces.map(s => s.label.toLowerCase()).join(' & ')}`
+                  : `${onCount}/${surfaceCount} surfaces on`;
+              return (
+                <div key={p.key}>
+                  <div className="site-row">
+                    <div className="site-globe"><Icon name={p.icon} size={14} /></div>
+                    <div className="site-body">
+                      <div className="site-host" style={{ fontFamily: 'inherit' }}>{p.label}</div>
+                      <div className="site-meta">{meta}</div>
+                    </div>
+                    <Toggle
+                      on={masterOn}
+                      onChange={() => setPlatformEnabled(p.key, !masterOn)}
+                      label={p.label}
+                    />
+                  </div>
+                  {p.surfaces.map(s => {
+                    const surfaces = cfg.surfaces as Record<string, boolean>;
+                    const surfaceOn = surfaces[s.key] === true;
+                    return (
+                      <div
+                        key={s.key}
+                        className={`site-row subrow${masterOn ? '' : ' disabled'}`}
+                        title={masterOn ? undefined : `Enable ${p.label} to configure`}
+                      >
+                        <div className="site-body">
+                          <div className="site-host">{s.label}</div>
+                          <div className="site-meta">
+                            {surfaceOn ? 'enabled' : 'paused'}
+                          </div>
+                        </div>
+                        <Toggle
+                          on={surfaceOn}
+                          onChange={() =>
+                            setPlatformSurface(
+                              p.key,
+                              s.key as SurfaceKey<typeof p.key>,
+                              !surfaceOn,
+                            )
+                          }
+                          label={`${p.label} ${s.label}`}
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
-                <Toggle
-                  on={platforms[p.key]}
-                  onChange={() => setPlatformEnabled(p.key, !platforms[p.key])}
-                  label={p.label}
-                />
-              </div>
-            ))}
+              );
+            })}
           </div>
         </MetricCard>
       </div>
@@ -82,8 +182,42 @@ export function Sources() {
       <div className={`source-group${everything ? ' section-deactivated' : ''}`} aria-hidden={everything}>
         <MetricCard
           title={`Sites (${sites.length})`}
-          action={<button className="ghost-btn"><Icon name="plus" size={11} /> Add site</button>}
+          action={
+            <button
+              className="ghost-btn"
+              onClick={() => setAdding(v => !v)}
+              type="button"
+            >
+              <Icon name="plus" size={11} /> Add site
+            </button>
+          }
         >
+          {adding && (
+            <div className="site-row" style={{ gap: 8 }}>
+              <div className="site-globe"><Icon name="globe" size={13} /></div>
+              <input
+                type="text"
+                className="signin-input"
+                placeholder="example.com"
+                value={draftHost}
+                autoFocus
+                onChange={e => setDraftHost(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    submitAddSite();
+                  } else if (e.key === 'Escape') {
+                    setAdding(false);
+                    setDraftHost('');
+                  }
+                }}
+                style={{ flex: 1 }}
+              />
+              <button className="ghost-btn" type="button" onClick={submitAddSite}>
+                Add
+              </button>
+            </div>
+          )}
           <div>
             {sites.map((s, i) => (
               <div key={s.host} className="site-row">

@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
+import { isModelLocked, type Plan } from '@heynotai/shared';
 import { Icon } from '@/components/Icon';
 import { MetricCard } from '@/components/MetricCard';
 import { Row } from '@/components/Row';
 import { Toggle } from '@/components/Toggle';
 import { useApp } from '@/lib/state';
 import { useAuth } from '@/lib/auth-state';
+import { FRONTEND_URL } from '@/lib/scans-api';
 import {
   fetchModelsCatalog,
   type Engine,
@@ -30,27 +32,61 @@ const TYPE_ICON: Record<EngineType, 'text' | 'image' | 'audio' | 'video'> = {
   vid: 'video',
 };
 
+const TIER_LABEL: Record<Plan, string> = {
+  check: 'FREE',
+  verify: 'VERIFY',
+  certify: 'CERTIFY',
+  team: 'TEAM',
+};
+
+/* Mailto for the team-tier "Contact sales" CTA. Mirrors
+ * `TEAM_SALES_MAILTO` in `frontend/lib/plans-data.ts`. */
+const TEAM_SALES_MAILTO = 'mailto:sales@heynotai.io?subject=Team%20plan';
+
+function openUpgrade(tier: Plan) {
+  const url = tier === 'team' ? TEAM_SALES_MAILTO : `${FRONTEND_URL}/app/upgrade`;
+  if (chrome?.tabs?.create) chrome.tabs.create({ url });
+  else window.open(url, '_blank');
+}
+
 function EngineRow({
-  engine, active, autoPicked, disabled, onSelect,
+  engine, active, autoPicked, disabled, locked, onSelect,
 }: {
   engine: Engine;
   active: boolean;
   autoPicked: boolean;
   disabled: boolean;
+  locked: boolean;
   onSelect: () => void;
 }) {
+  const tierClass = engine.tier === 'check' ? '' : ` tier-${engine.tier}`;
+  const upgradeCta = engine.tier === 'team' ? 'Contact sales' : 'Upgrade';
+  const handleClick = () => {
+    if (locked) {
+      openUpgrade(engine.tier);
+      return;
+    }
+    if (!disabled) onSelect();
+  };
   return (
     <button
       type="button"
-      className={`model-opt${active ? ' active' : ''}${disabled ? ' disabled' : ''}`}
-      onClick={disabled ? undefined : onSelect}
-      disabled={disabled}
-      aria-disabled={disabled}
+      className={`model-opt${active ? ' active' : ''}${disabled ? ' disabled' : ''}${locked ? ' locked' : ''}${tierClass}`}
+      onClick={handleClick}
+      disabled={disabled && !locked}
+      aria-disabled={disabled || locked}
     >
-      <span className="bullet" />
+      <span className="bullet" aria-hidden>
+        {locked && <Icon name="lock" size={9} />}
+      </span>
       <div className="mo-body">
         <div className="mo-head">
           <span className="mo-name">{engine.name}</span>
+          {engine.tier !== 'check' && (
+            <span className={`mo-tag mo-tag-tier tier-${engine.tier}`}>
+              {TIER_LABEL[engine.tier]}
+            </span>
+          )}
           {engine.isDefault && <span className="mo-tag mo-tag-default">DEFAULT</span>}
           {autoPicked && <span className="mo-tag mo-tag-auto">auto-pick</span>}
         </div>
@@ -62,6 +98,12 @@ function EngineRow({
             {engine.cost.value} {engine.cost.unit}
           </span>
         </div>
+        {locked && (
+          <span className={`mo-upgrade${tierClass}`} role="presentation">
+            <Icon name={upgradeCta === 'Contact sales' ? 'users' : 'sparkle'} size={10} />
+            {upgradeCta}
+          </span>
+        )}
       </div>
     </button>
   );
@@ -88,6 +130,7 @@ function EmptyRow({ onRetry }: { onRetry: () => void }) {
 export function Models() {
   const { mode, autoModelMode, setAutoModelMode } = useApp();
   const { user } = useAuth();
+  const userPlan: Plan = (user?.plan as Plan | undefined) ?? 'check';
   const powerMode = mode === 'power';
 
   const [catalog, setCatalog] = useState<ModelsCatalog | null>(null);
@@ -170,16 +213,20 @@ export function Models() {
             ) : catalog.engines[type].length === 0 ? (
               <EmptyRow onRetry={() => setLoadTick((n) => n + 1)} />
             ) : (
-              catalog.engines[type].map((eng) => (
-                <EngineRow
-                  key={eng.id}
-                  engine={eng}
-                  active={effective[type] === eng.id}
-                  autoPicked={autoModelMode && catalog.defaults[type] === eng.id}
-                  disabled={autoModelMode}
-                  onSelect={() => setSelected((s) => ({ ...s, [type]: eng.id }))}
-                />
-              ))
+              catalog.engines[type].map((eng) => {
+                const locked = isModelLocked(userPlan, eng.tier);
+                return (
+                  <EngineRow
+                    key={eng.id}
+                    engine={eng}
+                    active={!locked && effective[type] === eng.id}
+                    autoPicked={autoModelMode && catalog.defaults[type] === eng.id}
+                    disabled={autoModelMode}
+                    locked={locked}
+                    onSelect={() => setSelected((s) => ({ ...s, [type]: eng.id }))}
+                  />
+                );
+              })
             )}
           </div>
         </MetricCard>

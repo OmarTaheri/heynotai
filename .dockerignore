@@ -1,0 +1,35 @@
+# Top-level .dockerignore — applies to every Docker build that uses
+# the repo root as its context (api/Dockerfile, frontend/Dockerfile).
+# Per-package .dockerignore files exist too but Docker only reads the
+# one in the build context, so the rules need to live here.
+
+# Dependencies — every workspace's installed tree
+**/node_modules
+
+# Build outputs
+api/dist
+frontend/.next
+frontend/out
+extension/.output
+extension/.wxt
+**/tsconfig.tsbuildinfo
+
+# Local secrets / config
+**/.env
+**/.env.*
+!**/.env.example
+
+# PocketBase data — never ship a database into a build context
+pocketbase/pb_data
+
+# Git + editor / OS clutter
+.git
+.gitignore
+.github
+.vscode
+.idea
+**/.DS_Store
+**/*.log
+
+# Plans + memory directories that shouldn't end up in containers
+.claude

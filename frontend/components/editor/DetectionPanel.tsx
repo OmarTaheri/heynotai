@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { isModelLocked, type Plan } from "@heynotai/shared";
 import { Icon } from "@/components/Icon";
 import { Pill } from "@/components/ui/Pill";
 import type { ScanState } from "@/components/editor-shell";
 import type { ScanResult } from "@/lib/detection-types";
+import { useAuth } from "@/lib/auth";
 import { ENGINES, type Engine, type EngineType } from "@/lib/models-data";
 import { VerdictCard } from "./VerdictCard";
 import { FindingCard } from "./FindingCard";
@@ -654,6 +656,8 @@ function ModelPicker({
   onChange: (id: string) => void;
   engines: Engine[];
 }) {
+  const { user } = useAuth();
+  const userPlan: Plan = user?.plan ?? "check";
   const [open, setOpen] = useState(false);
   const [direction, setDirection] = useState<"down" | "up">("down");
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -719,7 +723,7 @@ function ModelPicker({
         >
           {engines.map((eng) => {
             const selected = eng.id === value;
-            const locked = !!eng.locked;
+            const locked = isModelLocked(userPlan, eng.tier);
             return (
               <li key={eng.id}>
                 <button

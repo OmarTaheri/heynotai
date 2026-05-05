@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Icon } from "@/components/Icon";
-import { useExtensionPrefsContext } from "./ExtensionPrefsContext";
+import { useExtensionPrefsContext } from "../extension-prefs/ExtensionPrefsContext";
 import styles from "./ResetExtension.module.css";
 
 /** Single danger row at the bottom of the extension page — clears

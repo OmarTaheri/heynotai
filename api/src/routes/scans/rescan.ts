@@ -3,6 +3,7 @@ import { requireAuth } from "../../middleware/auth.js";
 import { pbAdmin } from "../../lib/pb-admin.js";
 import { getMonthlyUsage } from "../../lib/usage.js";
 import { runDetectionInBackground } from "../../lib/run-detection.js";
+import { isPlan, PLAN_RANK, tierFromRow, type Plan } from "../../lib/plans.js";
 import type { DetectorInput, DetectorProvider, ScanKind } from "../../detectors/index.js";
 import type { ScanType } from "./validators.js";
 import { serializeScan } from "./shape.js";
@@ -58,11 +59,13 @@ rescan.post("/:id/rescan", async (c) => {
   if (modelRow.enabled === false) {
     return c.json({ error: "model_disabled", slug: modelRow.slug }, 403);
   }
-  if (
-    Array.isArray(modelRow.plansAllowed) &&
-    !modelRow.plansAllowed.includes(String(user.plan ?? "check"))
-  ) {
-    return c.json({ error: "plan_not_allowed", slug: modelRow.slug }, 403);
+  const userPlan: Plan = isPlan(user.plan) ? user.plan : "check";
+  const modelTier = tierFromRow(modelRow);
+  if (PLAN_RANK[modelTier] > PLAN_RANK[userPlan]) {
+    return c.json(
+      { error: "plan_not_allowed", slug: modelRow.slug, upgradeTo: modelTier },
+      403,
+    );
   }
   // PB returns "" for unset select fields — `??` would let it through.
   const rawProvider = String(modelRow.provider ?? "").trim();
@@ -145,6 +148,17 @@ rescan.post("/:id/rescan", async (c) => {
   //    editor's `scanToResult` doesn't render stale data while the new
   //    HF call is in flight. The PB JS SDK accepts JSON for non-file
   //    updates — we have no new file to upload here. ──────────────────
+  // Preserve client-extracted metadata (image width/height) across the
+  // rescan; the underlying file hasn't changed. Provider-derived fields
+  // (`providerRaw`) are dropped — `run-detection` will re-merge them.
+  const preservedAnalysis: Record<string, unknown> = {};
+  if (parent.analysis && typeof parent.analysis === "object") {
+    const a = parent.analysis as Record<string, unknown>;
+    if (typeof a.width === "number") preservedAnalysis.width = a.width;
+    if (typeof a.height === "number") preservedAnalysis.height = a.height;
+  }
+  const nextAnalysis =
+    Object.keys(preservedAnalysis).length > 0 ? preservedAnalysis : null;
   let updated;
   try {
     updated = await pb.collection("scans").update(parent.id, {
@@ -154,7 +168,7 @@ rescan.post("/:id/rescan", async (c) => {
       verdict: "",
       confidence: 0,
       model: "",
-      analysis: null,
+      analysis: nextAnalysis,
       error: null,
       scanStartedAt: null,
       scanCompletedAt: null,
@@ -197,8 +211,8 @@ type DetectionModelRow = {
   videoFrameCount?: number;
   tokenCost?: number;
   costUnit?: string;
+  tier?: string;
   plansAllowed?: string[];
-  defaultForPlans?: string[];
 };
 
 async function resolveModel(
@@ -217,20 +231,17 @@ async function resolveModel(
     }
   }
 
-  const plan = String(user.plan ?? "check");
+  // No slug supplied → cheapest in-tier model. Same downgrade-safe
+  // path as `routes/scans/create.ts`.
+  const plan: Plan = isPlan(user.plan) ? user.plan : "check";
   const records = (await admin
     .collection("detection_models")
     .getFullList({
-      filter: `enabled = true && type = "${kind}" && plansAllowed ~ "${plan}"`,
-      sort: "-accuracy",
+      filter: `enabled = true && type = "${kind}"`,
+      sort: "tokenCost,accuracy",
       requestKey: null,
     })) as unknown as DetectionModelRow[];
-  if (records.length === 0) return null;
-  return (
-    records.find(
-      (r) => Array.isArray(r.defaultForPlans) && r.defaultForPlans.includes(plan),
-    ) ?? records[0]
-  );
+  return records.find((r) => PLAN_RANK[tierFromRow(r)] <= PLAN_RANK[plan]) ?? null;
 }
 
 async function loadHuggingfaceToken(

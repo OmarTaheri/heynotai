@@ -15,7 +15,7 @@ export default defineConfig({
     // this field, so production gets a separate redirect URL registered
     // alongside this one.
     key: 'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA3s8DglU4jh4jDu5uNX2/PiLd79LgvEjBJtjeBRd8nOnR6hWDS891kpltl3qHFAFPcypKeViumpw/p+1bp2/zcZKK21BQ8mD7CF+UJHO15c+G+d0SL6BQx3XAEB7jj2T64LEKv08nRslEP2pP4NOzS91u9r4bpANbJ4s906G6tYB3P4L7TEr4mcHHReH5rD97qVLhcJbM/6TOTJ6ZO9Cgb2z1WlYYOKM9EIOnvlcYtm+SF9EZfBn0ADRD0vWOCegLiRujD+b1yD85pJON3Aqj7uJMKg69QYkHfOiMkB0m/cPE6YzCACO+nqh+Ii4H1C7Qs+YFsENAhXW8tQmsgccC9wIDAQAB',
-    permissions: ['storage', 'activeTab', 'scripting', 'identity'],
+    permissions: ['storage', 'activeTab', 'scripting', 'identity', 'contextMenus'],
     host_permissions: ['<all_urls>'],
     oauth2: {
       client_id: '__set_in_pocketbase_admin__',

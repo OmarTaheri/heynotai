@@ -1,6 +1,6 @@
 /* ============================================
    heynotai – Content Overlay Styles
-   Injected into YouTube pages
+   Injected into YouTube, Instagram, and Facebook pages
    ============================================ */
 
 /* Animated scanning border around the video player */
@@ -624,9 +624,41 @@ html[dark] .hn-detail-value {
   color: #e8e8e8;
 }
 
-/* Ensure video player container is positioned for overlay */
+/* Ensure the host container is positioned for overlay anchoring.
+   Works for any platform's media container — YT player, IG article,
+   FB reel pagelet, etc. */
 .hn-video-container-positioned {
   position: relative !important;
+}
+
+/* Vertical surfaces (YouTube Shorts, IG/FB Reels) — the container is
+   portrait-oriented, so we tighten the overlay border radius and
+   shrink the badge so it doesn't overlap the platform's own UI.
+   z-index is bumped near the int32 ceiling so FB's player chrome
+   (which uses very high stacking values) doesn't sit on top of us. */
+#heynotai-border.hn-vertical {
+  border-radius: 16px;
+  border-width: 2px;
+  z-index: 2147483640;
+}
+#heynotai-badge.hn-vertical {
+  top: 10px;
+  left: 10px;
+  padding: 5px 10px 5px 8px;
+  font-size: 11px;
+  border-radius: 14px;
+  z-index: 2147483641;
+}
+#heynotai-badge.hn-vertical .hn-badge-dot {
+  width: 6px;
+  height: 6px;
+}
+
+/* Force the host container into its own stacking context so our
+   absolute children stack predictably even when an ancestor
+   (FB does this) sets overflow:hidden + transform. */
+.hn-video-container-positioned.hn-vertical {
+  isolation: isolate;
 }
 
 /* ---- Fade-out for authentic videos (auto-hide after 3s) ---- */

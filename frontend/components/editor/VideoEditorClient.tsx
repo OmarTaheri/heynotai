@@ -20,6 +20,10 @@ import {
   type Scan,
 } from "@/lib/scan-types";
 import { DEFAULT_SELECTION } from "@/lib/models-data";
+import {
+  getScanCollection,
+  type ScanCollectionRef,
+} from "@/lib/collection-items";
 import { useScanMembers } from "@/lib/scan-members";
 import { useScanPresence } from "@/lib/use-scan-presence";
 import editorStyles from "@/app/editor/editor.module.css";
@@ -54,6 +58,25 @@ export function VideoEditorClient({ scan, fallbackSrc, onRescanQueued }: Props) 
     scan.status === "failed" ? extractScanError(scan) : null,
   );
   const [engineId, setEngineId] = useState<string>(scan.engineId || DEFAULT_SELECTION.vid);
+  const [linkedCollection, setLinkedCollection] = useState<ScanCollectionRef | null>(null);
+
+  useEffect(() => {
+    if (!persisted) {
+      setLinkedCollection(null);
+      return;
+    }
+    let cancelled = false;
+    getScanCollection(scan.id)
+      .then((c) => {
+        if (!cancelled) setLinkedCollection(c);
+      })
+      .catch(() => {
+        if (!cancelled) setLinkedCollection(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [persisted, scan.id]);
 
   useEffect(() => {
     if (!persisted) return;
@@ -130,10 +153,20 @@ export function VideoEditorClient({ scan, fallbackSrc, onRescanQueued }: Props) 
       mainClassName={editorStyles.canvas}
       topbar={
         <EditorTopBar
-          crumbs={["editor", "video"]}
+          crumbs={[]}
           docName={title}
           members={members}
           activeIds={activeIds}
+          linkedCollection={linkedCollection ?? undefined}
+          onAddCollection={
+            linkedCollection
+              ? undefined
+              : {
+                  scanId: persisted ? scan.id : null,
+                  onLinked: (c) => setLinkedCollection(c),
+                }
+          }
+          onDelete={{ scanId: persisted ? scan.id : null }}
         />
       }
       canvas={

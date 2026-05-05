@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/Card";
 import { createScan, ScanApiError } from "@/lib/scans-api";
 import { typeFromMime } from "@/lib/scan-infer";
 import { formatBytes } from "@/lib/library-data";
+import { readImageDims } from "@/lib/image-dims";
 import { addScansToCollection } from "@/lib/collection-items";
 import { useAuth } from "@/lib/auth";
 
@@ -149,10 +150,15 @@ export function DropCard({
           content: text.trim(),
         });
       } else if (file) {
+        const dims = file.type.startsWith("image/")
+          ? await readImageDims(file)
+          : null;
         scan = await createScan({
           type: typeFromMime(file.type),
           origin: "upload",
           file,
+          width: dims?.width,
+          height: dims?.height,
         });
       } else {
         return;

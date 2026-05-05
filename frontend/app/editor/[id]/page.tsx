@@ -8,6 +8,7 @@ import { TextEditorClient } from "@/components/editor/TextEditorClient";
 import { AudioEditorClient } from "@/components/editor/AudioEditorClient";
 import { ImageEditorClient } from "@/components/editor/ImageEditorClient";
 import { VideoEditorClient } from "@/components/editor/VideoEditorClient";
+import { YouTubeEditorClient } from "@/components/editor/YouTubeEditorClient";
 import editorStyles from "../editor.module.css";
 
 type State =
@@ -16,7 +17,10 @@ type State =
   | { kind: "not-found" };
 
 const POLL_INTERVAL_MS = 1500;
-const POLL_TIMEOUT_MS = 90_000;
+// Bumped from 90s to 180s — YouTube scans run a yt-dlp download +
+// frame-by-frame classification before the verdict lands, which
+// regularly takes 30-90s on top of the HF round-trip.
+const POLL_TIMEOUT_MS = 180_000;
 
 /** Dynamic editor route. Client-component because the PocketBase auth
  *  token only lives in localStorage today (`frontend/lib/pocketbase.ts:8`)
@@ -93,6 +97,14 @@ export default function EditorByIdPage() {
   }
 
   const { scan } = state;
+  // YouTube scans share `type=vid` with file-uploaded videos. The
+  // `subtype` field is the canonical platform tag — we set it at
+  // creation time in the extension/background worker. Routing on it
+  // (rather than substring-sniffing sourceUrl) keeps the dispatch
+  // structured and future-proofs `yt-reel` / `ig-reel` / etc.
+  if (scan.subtype === "yt-vid" || scan.subtype === "yt-reel") {
+    return <YouTubeEditorClient scan={scan} onRescanQueued={revalidate} />;
+  }
   switch (scan.type) {
     case "aud":
       return <AudioEditorClient scan={scan} onRescanQueued={revalidate} />;

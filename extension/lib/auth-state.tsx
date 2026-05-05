@@ -76,6 +76,25 @@ function mapUser(record: AuthRecord | null | undefined): AppUser | null {
   };
 }
 
+// Mirror the bearer token + plan into chrome.storage.local so the
+// background service worker can call /scans without bundling the
+// PocketBase SDK. The drawer iframe is the only context where
+// pb.authStore lives — content scripts and the SW are isolated.
+const AUTH_STORAGE_KEY = 'heynotai_auth';
+
+function syncAuthToStorage(token: string, record: AuthRecord | null | undefined) {
+  if (typeof chrome === 'undefined' || !chrome.storage?.local) return;
+  if (!token || !record) {
+    chrome.storage.local.remove(AUTH_STORAGE_KEY).catch(() => {});
+    return;
+  }
+  const r = record as AuthRecord & { plan?: string };
+  const plan: Plan = isPlan(r.plan) ? r.plan : 'check';
+  chrome.storage.local
+    .set({ [AUTH_STORAGE_KEY]: { token, userId: r.id, plan } })
+    .catch(() => {});
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(() =>
     mapUser(pb.authStore.record),
@@ -85,8 +104,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setUser(mapUser(pb.authStore.record));
     setLoading(false);
-    const unsub = pb.authStore.onChange((_token, record) => {
+    syncAuthToStorage(pb.authStore.token, pb.authStore.record);
+    const unsub = pb.authStore.onChange((token, record) => {
       setUser(mapUser(record));
+      syncAuthToStorage(token, record);
     });
     return () => {
       unsub();

@@ -8,7 +8,8 @@ import { StatusHero } from "./StatusHero";
 import { BrowserSupport } from "./BrowserSupport";
 import { PrivacyCallout } from "./PrivacyCallout";
 import { ScanBehaviorSection } from "./ScanBehaviorSection";
-import { PerSiteRulesSection } from "./PerSiteRulesSection";
+import { PlatformsSection } from "../extension-prefs/PlatformsSection";
+import { PerSiteRulesSection } from "../extension-prefs/PerSiteRulesSection";
 import { AlertsSection } from "./AlertsSection";
 import { HotkeysSection } from "./HotkeysSection";
 import { AdvancedSection } from "./AdvancedSection";
@@ -16,7 +17,7 @@ import { ResetExtension } from "./ResetExtension";
 import {
   ExtensionPrefsProvider,
   useExtensionPrefsContext,
-} from "./ExtensionPrefsContext";
+} from "../extension-prefs/ExtensionPrefsContext";
 
 export function ExtensionClient() {
   return (
@@ -38,6 +39,7 @@ export function ExtensionClient() {
           <BrowserSupport />
           <PrivacyCallout />
           <ScanBehaviorSection />
+          <PlatformsSection />
           <PerSiteRulesSection />
           <AlertsSection />
           <HotkeysSection />

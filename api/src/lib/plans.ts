@@ -41,6 +41,34 @@ export const PLAN_TOKEN_LIMITS: Record<Plan, number | null> = {
   team: null,
 };
 
+/** Ordinal rank used to compare a `detection_models.tier` value
+ *  against the caller's plan. Mirrors `PLAN_RANK` in
+ *  `shared/src/index.ts`. */
+export const PLAN_RANK: Record<Plan, number> = {
+  check: 0,
+  verify: 1,
+  certify: 2,
+  team: 3,
+};
+
 export function isPlan(value: unknown): value is Plan {
   return value === "check" || value === "verify" || value === "certify" || value === "team";
+}
+
+/** Coerce a raw `detection_models` row into a canonical tier. Reads
+ *  `tier` first; falls back to deriving the lowest plan listed in the
+ *  legacy `plansAllowed` array so un-migrated rows stay reachable.
+ *  Defaults to `"check"` (most permissive) when neither is present. */
+export function tierFromRow(row: {
+  tier?: unknown;
+  plansAllowed?: unknown;
+}): Plan {
+  if (isPlan(row.tier)) return row.tier;
+  if (Array.isArray(row.plansAllowed)) {
+    const plans = row.plansAllowed.filter(isPlan) as Plan[];
+    if (plans.length > 0) {
+      return plans.reduce((min, p) => (PLAN_RANK[p] < PLAN_RANK[min] ? p : min));
+    }
+  }
+  return "check";
 }

@@ -32,6 +32,57 @@
   cursor: default;
 }
 
+/* Per-tier accent: a tinted card with a colored full border and a
+   horizontal gradient that "leaks" the tier color in from the left
+   edge. Free (`check`) rows stay neutral so the eye lands on premium
+   options. Tokens defined in app/globals.css. */
+.row.tierVerify {
+  border-color: color-mix(in oklch, var(--color-human) 50%, var(--color-line));
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in oklch, var(--color-human) 20%, var(--color-surface)) 0%,
+      color-mix(in oklch, var(--color-human) 5%, var(--color-surface)) 60%,
+      var(--color-surface) 100%
+    );
+  box-shadow: inset 3px 0 0 0 var(--color-human);
+}
+.row.tierVerify:hover {
+  border-color: color-mix(in oklch, var(--color-human) 70%, var(--color-line));
+}
+
+.row.tierCertify {
+  border-color: color-mix(in oklch, var(--color-certify) 50%, var(--color-line));
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in oklch, var(--color-certify) 22%, var(--color-surface)) 0%,
+      color-mix(in oklch, var(--color-certify) 6%, var(--color-surface)) 60%,
+      var(--color-surface) 100%
+    );
+  box-shadow: inset 3px 0 0 0 var(--color-certify);
+}
+.row.tierCertify:hover {
+  border-color: color-mix(in oklch, var(--color-certify) 70%, var(--color-line));
+}
+
+.row.tierTeam {
+  border-color: color-mix(in oklch, var(--color-gold) 55%, var(--color-line));
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in oklch, var(--color-gold) 22%, var(--color-surface)) 0%,
+      color-mix(in oklch, var(--color-gold) 6%, var(--color-surface)) 60%,
+      var(--color-surface) 100%
+    );
+  box-shadow:
+    inset 3px 0 0 0 var(--color-gold),
+    0 0 0 1px color-mix(in oklch, var(--color-gold) 14%, transparent);
+}
+.row.tierTeam:hover {
+  border-color: color-mix(in oklch, var(--color-gold) 75%, var(--color-line));
+}
+
 /* Click target. Grid columns: radio | info | accuracy | cost [| upgrade]. */
 .body {
   display: grid;
@@ -89,6 +140,23 @@
 .row.locked .radio {
   border-color: color-mix(in oklch, var(--color-gold) 50%, transparent);
   background: color-mix(in oklch, var(--color-gold-soft) 25%, transparent);
+  color: var(--color-gold);
+}
+/* Locked + tier: lock icon picks up the tier hue so the row reads
+   coherently instead of mixing tier color with gold. */
+.row.tierVerify.locked .radio {
+  border-color: color-mix(in oklch, var(--color-human) 55%, transparent);
+  background: color-mix(in oklch, var(--color-human) 18%, var(--color-surface));
+  color: var(--color-human);
+}
+.row.tierCertify.locked .radio {
+  border-color: color-mix(in oklch, var(--color-certify) 55%, transparent);
+  background: color-mix(in oklch, var(--color-certify) 18%, var(--color-surface));
+  color: var(--color-certify);
+}
+.row.tierTeam.locked .radio {
+  border-color: color-mix(in oklch, var(--color-gold) 55%, transparent);
+  background: color-mix(in oklch, var(--color-gold) 18%, var(--color-surface));
   color: var(--color-gold);
 }
 
@@ -207,6 +275,10 @@
   justify-content: center;
 }
 
+/* Default = team-tier pill (gold). Saturated brand color for text +
+   border ensures visibility on the dark surface; the tinted bg uses
+   color-mix with the saturated value (not the soft variant) so it
+   reads in any theme. */
 .upgrade {
   display: inline-flex;
   align-items: center;
@@ -215,11 +287,24 @@
   border-radius: 8px;
   font-family: var(--font-mono);
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.04em;
-  color: var(--color-gold-ink);
-  background: color-mix(in oklch, var(--color-gold-soft) 35%, transparent);
-  border: 1px solid color-mix(in oklch, var(--color-gold) 40%, transparent);
+  color: var(--color-gold);
+  background: color-mix(in oklch, var(--color-gold) 14%, var(--color-surface));
+  border: 1px solid color-mix(in oklch, var(--color-gold) 50%, transparent);
+}
+/* Per-tier upgrade pill — saturated tier color for text, tinted
+   surface for bg. Reads cleanly without the gold/violet clash the
+   prior version had. */
+.upgradeVerify {
+  color: var(--color-human);
+  background: color-mix(in oklch, var(--color-human) 14%, var(--color-surface));
+  border-color: color-mix(in oklch, var(--color-human) 50%, transparent);
+}
+.upgradeCertify {
+  color: var(--color-certify);
+  background: color-mix(in oklch, var(--color-certify) 14%, var(--color-surface));
+  border-color: color-mix(in oklch, var(--color-certify) 50%, transparent);
 }
 
 /* On narrow widths, spec + action collapse out so the row keeps

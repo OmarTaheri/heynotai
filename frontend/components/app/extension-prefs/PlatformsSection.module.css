@@ -1,0 +1,87 @@
+.platform {
+  border-top: 1px solid var(--color-line);
+}
+.platform:first-child {
+  border-top: none;
+}
+
+/* Parent platform row — match the horizontal padding used by sibling
+ * sections on this page (ToggleRows: `padding: 18px 22px`) so the
+ * toggle aligns to the same right edge. */
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 22px 12px;
+}
+
+.iconTile {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-fg-mid);
+  flex-shrink: 0;
+}
+
+.body {
+  flex: 1;
+  min-width: 0;
+}
+
+.label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-fg);
+}
+
+.count {
+  font-size: 11px;
+  color: var(--color-fg-mid);
+  font-variant-numeric: tabular-nums;
+  margin-right: 4px;
+}
+
+/* Children container: indented under the icon column, right-margin
+ * matches the parent row's right padding so sub-toggles line up with
+ * the master toggle above. The vertical border-left is the tree
+ * guide. */
+.subs {
+  margin: 0 22px 12px 38px;
+  padding-bottom: 6px;
+  border-left: 1px solid var(--color-line);
+}
+
+.subrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0 6px 18px;
+  position: relative;
+}
+
+.subrow::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 12px;
+  height: 1px;
+  background: var(--color-line);
+}
+
+.subrow.disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.subLabel {
+  flex: 1;
+  font-size: 13px;
+  color: var(--color-fg-mid);
+  font-weight: 400;
+}

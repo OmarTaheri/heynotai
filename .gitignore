@@ -40,3 +40,6 @@ pocketbase/pb_data/**
 coverage/
 .nyc_output/
 *.tsbuildinfo
+.env.deploy-check
+docker-compose.override.local.yaml
+docker-compose.override.local.yml

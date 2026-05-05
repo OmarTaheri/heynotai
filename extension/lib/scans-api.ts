@@ -35,6 +35,8 @@ export type ScanOrigin =
 
 export type ScanVerdict = 'human' | 'ai' | 'mixed' | 'unknown';
 
+export type ScanStatus = 'queued' | 'scanning' | 'done' | 'failed';
+
 export interface Scan {
   id: string;
   created: string;
@@ -42,6 +44,7 @@ export interface Scan {
   type: ScanType;
   subtype: string;
   origin: ScanOrigin;
+  status: ScanStatus;
   sourceUrl: string;
   mimeType: string;
   sizeBytes: number;
@@ -49,8 +52,13 @@ export interface Scan {
   wordCount: number;
   verdict: ScanVerdict;
   confidence: number;
+  /** Unified 0..100 AI-generated probability across detector shapes. */
+  aiPct: number;
   model: string;
   analysis: Record<string, unknown> | null;
+  /** Per-scan flags (suspect spans, cues, etc). The drawer surfaces
+   *  the count as the "N detections" sub-label. */
+  flags: unknown[];
   file: string;
 }
 

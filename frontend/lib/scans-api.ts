@@ -48,6 +48,8 @@ export interface CreateScanInput {
   content?: string;
   sourceUrl?: string;
   file?: File;
+  width?: number;
+  height?: number;
 }
 
 export async function createScan(input: CreateScanInput): Promise<Scan> {
@@ -58,6 +60,8 @@ export async function createScan(input: CreateScanInput): Promise<Scan> {
   if (input.content) form.append("content", input.content);
   if (input.sourceUrl) form.append("sourceUrl", input.sourceUrl);
   if (input.file) form.append("file", input.file);
+  if (typeof input.width === "number") form.append("width", String(input.width));
+  if (typeof input.height === "number") form.append("height", String(input.height));
   const r = await fetch(`${API_URL}/scans`, {
     method: "POST",
     headers: authHeaders(),

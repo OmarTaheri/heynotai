@@ -84,6 +84,13 @@ export function Stats() {
     if (s) setScope(s);
   }, [platform]);
 
+  // Lock body scroll while the Coming Soon overlay is shown.
+  useEffect(() => {
+    const body = document.querySelector<HTMLDivElement>('.body');
+    body?.classList.add('is-coming-soon');
+    return () => body?.classList.remove('is-coming-soon');
+  }, []);
+
   const stats = useMemo(() => getStats(scope, range), [scope, range]);
 
   const tokensPct = Math.min(100, Math.round((stats.totals.tokensUsed / stats.totals.tokensQuota) * 100));
@@ -117,7 +124,8 @@ export function Stats() {
   }
 
   return (
-    <div className="panel stats-panel">
+    <div className="coming-soon-wrap">
+      <div className="coming-soon-content panel stats-panel" aria-hidden>
       {/* ── Scope + range header ─────────────────────── */}
       <div className="stats-filters">
         <Dropdown
@@ -362,6 +370,23 @@ export function Stats() {
       <button className="load-more" type="button" onClick={handleExport}>
         <Icon name="refresh" size={12} /> Export {stats.trend.length}d as CSV
       </button>
+      </div>
+
+      <div className="coming-soon-scrim" aria-hidden />
+      <div className="coming-soon-center">
+        <div className="coming-soon-card" role="status" aria-live="polite">
+          <span className="coming-soon-eyebrow">
+            <span className="coming-soon-dot" />
+            In development
+          </span>
+          <h2 className="coming-soon-title">
+            Stats <em>coming soon</em>
+          </h2>
+          <p className="coming-soon-sub">
+            Detailed analytics for your scans are landing soon.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

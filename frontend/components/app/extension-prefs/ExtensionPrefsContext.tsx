@@ -10,6 +10,7 @@ type Ctx = {
   saving: boolean;
   dirty: boolean;
   patch: (p: Partial<ExtensionPrefs>) => void;
+  patchAndSave: (p: Partial<ExtensionPrefs>) => Promise<void>;
   setFlag: (id: string, value: boolean) => void;
   save: () => Promise<void>;
   discard: () => void;

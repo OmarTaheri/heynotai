@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/Card";
 import { Toggle } from "@/components/ui/Toggle";
 import { Pill } from "@/components/ui/Pill";
 import type { ToggleSetting } from "@/lib/extension-data";
-import { useExtensionPrefsContext } from "./ExtensionPrefsContext";
+import { useExtensionPrefsContext } from "../extension-prefs/ExtensionPrefsContext";
 import styles from "./ToggleRows.module.css";
 
 /** Renders a `Card` of `name + description ↔ Toggle` rows from a list

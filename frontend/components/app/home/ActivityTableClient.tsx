@@ -44,6 +44,7 @@ export function ActivityTableClient() {
               origin: item.origin,
               meta: item.meta,
               link: item.link,
+              aiPct: item.aiPct,
               confidence: item.confidence,
               when: item.when,
             };

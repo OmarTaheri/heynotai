@@ -19,6 +19,10 @@ import {
   type Scan,
 } from "@/lib/scan-types";
 import { DEFAULT_SELECTION } from "@/lib/models-data";
+import {
+  getScanCollection,
+  type ScanCollectionRef,
+} from "@/lib/collection-items";
 import { useScanMembers } from "@/lib/scan-members";
 import { useScanPresence } from "@/lib/use-scan-presence";
 import editorStyles from "@/app/editor/editor.module.css";
@@ -55,8 +59,27 @@ export function ImageEditorClient({ scan, fallbackSrc, onRescanQueued }: Props) 
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [engineId, setEngineId] = useState<string>(scan.engineId || DEFAULT_SELECTION.img);
+  const [linkedCollection, setLinkedCollection] = useState<ScanCollectionRef | null>(null);
 
   const scanRunRef = useRef<{ cleanup: () => void } | null>(null);
+
+  useEffect(() => {
+    if (!persisted) {
+      setLinkedCollection(null);
+      return;
+    }
+    let cancelled = false;
+    getScanCollection(scan.id)
+      .then((c) => {
+        if (!cancelled) setLinkedCollection(c);
+      })
+      .catch(() => {
+        if (!cancelled) setLinkedCollection(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [persisted, scan.id]);
 
   // Parent polls the scan record while it's queued/scanning; mirror its
   // status into our local scanState so the canvas swaps from the
@@ -131,10 +154,20 @@ export function ImageEditorClient({ scan, fallbackSrc, onRescanQueued }: Props) 
       mainClassName={editorStyles.canvas}
       topbar={
         <EditorTopBar
-          crumbs={["editor", "image"]}
+          crumbs={[]}
           docName={title}
           members={members}
           activeIds={activeIds}
+          linkedCollection={linkedCollection ?? undefined}
+          onAddCollection={
+            linkedCollection
+              ? undefined
+              : {
+                  scanId: persisted ? scan.id : null,
+                  onLinked: (c) => setLinkedCollection(c),
+                }
+          }
+          onDelete={{ scanId: persisted ? scan.id : null }}
         />
       }
       canvas={

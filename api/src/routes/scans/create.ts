@@ -4,6 +4,8 @@ import { requireAuth } from "../../middleware/auth.js";
 import { pbAdmin } from "../../lib/pb-admin.js";
 import { getMonthlyUsage } from "../../lib/usage.js";
 import { runDetectionInBackground } from "../../lib/run-detection.js";
+import { isPlan, PLAN_RANK, tierFromRow, type Plan } from "../../lib/plans.js";
+import { isYoutubeUrl, probeYoutubeDuration } from "../../lib/youtube-download.js";
 import type { DetectorInput, DetectorProvider, ScanKind } from "../../detectors/index.js";
 import {
   createScanFormSchema,
@@ -48,15 +50,29 @@ create.post("/", async (c) => {
     title: typeof body.title === "string" ? body.title : undefined,
     content: typeof body.content === "string" ? body.content : undefined,
     sourceUrl: typeof body.sourceUrl === "string" ? body.sourceUrl : undefined,
+    subtype: typeof body.subtype === "string" ? body.subtype : undefined,
     modelSlug: typeof body.modelSlug === "string" ? body.modelSlug : undefined,
+    width: typeof body.width === "string" ? body.width : undefined,
+    height: typeof body.height === "string" ? body.height : undefined,
   });
   if (!parsed.success) {
     return c.json({ error: "invalid_body", issues: parsed.error.flatten() }, 400);
   }
   const input = parsed.data;
 
+  // YouTube URL flow: `type=vid + sourceUrl + no file` — backend resolves
+  // the URL to bytes during the background run. All other modalities
+  // still require the canonical "exactly one of content/sourceUrl/file"
+  // presence so we don't silently change the contract for upload-based
+  // scans.
+  const isYoutubeVidScan =
+    input.type === "vid" &&
+    !!input.sourceUrl &&
+    !file &&
+    isYoutubeUrl(input.sourceUrl);
+
   const present = [!!input.content, !!input.sourceUrl, !!file].filter(Boolean).length;
-  if (present !== 1) {
+  if (!isYoutubeVidScan && present !== 1) {
     return c.json(
       { error: "invalid_body", issues: { _: ["exactly one of content / sourceUrl / file is required"] } },
       400,
@@ -83,11 +99,13 @@ create.post("/", async (c) => {
   const modelRow = await resolveModel(admin, kind, input.modelSlug, user);
   if (!modelRow) return c.json({ error: "no_model_available", type }, 404);
   if (modelRow.enabled === false) return c.json({ error: "model_disabled", slug: modelRow.slug }, 403);
-  if (
-    Array.isArray(modelRow.plansAllowed) &&
-    !modelRow.plansAllowed.includes(String(user.plan ?? "check"))
-  ) {
-    return c.json({ error: "plan_not_allowed", slug: modelRow.slug }, 403);
+  const userPlan: Plan = isPlan(user.plan) ? user.plan : "check";
+  const modelTier = tierFromRow(modelRow);
+  if (PLAN_RANK[modelTier] > PLAN_RANK[userPlan]) {
+    return c.json(
+      { error: "plan_not_allowed", slug: modelRow.slug, upgradeTo: modelTier },
+      403,
+    );
   }
   // PB returns "" (empty string) for unset select fields, so `??`
   // wouldn't fall through to the default. Treat anything that isn't
@@ -109,10 +127,27 @@ create.post("/", async (c) => {
     plan: user.plan as string | undefined,
   });
   const tokenCost = typeof modelRow.tokenCost === "number" ? modelRow.tokenCost : 1;
+
+  // For per-minute pricing on a YouTube URL we need to know the duration
+  // BEFORE charging — otherwise a 10-minute video scans for the same
+  // cost as a 30-second upload. Probe is a metadata-only yt-dlp call so
+  // it's fast enough to inline. Failures here charge a conservative 1
+  // minute; the full download will fail loudly later if the URL is bad.
+  let estimatedMinutes = 1;
+  if (modelRow.costUnit === "per_minute") {
+    if (file) {
+      estimatedMinutes = Math.max(1, Math.ceil(estimateMinutes(file)));
+    } else if (isYoutubeVidScan) {
+      try {
+        const seconds = await probeYoutubeDuration(input.sourceUrl!);
+        estimatedMinutes = Math.max(1, Math.ceil(seconds / 60));
+      } catch {
+        estimatedMinutes = 1;
+      }
+    }
+  }
   const tokensRequired =
-    modelRow.costUnit === "per_minute"
-      ? tokenCost * Math.max(1, Math.ceil(estimateMinutes(file)))
-      : tokenCost;
+    modelRow.costUnit === "per_minute" ? tokenCost * estimatedMinutes : tokenCost;
   if (usage.total !== null && usage.used + tokensRequired > usage.total) {
     return c.json(
       { error: "insufficient_tokens", required: tokensRequired, remaining: usage.total - usage.used },
@@ -122,11 +157,18 @@ create.post("/", async (c) => {
 
   // ── Build detector input (buffer file bytes for the bg task) ──────
   let detectorInput: DetectorInput;
+  let pendingSourceUrl: string | undefined;
   if (kind === "txt") {
     if (!input.content) {
       return c.json({ error: "invalid_body", issues: { _: ["text scan requires content"] } }, 400);
     }
     detectorInput = { kind: "txt", text: input.content };
+  } else if (isYoutubeVidScan) {
+    // Placeholder bytes — the runner resolves the URL before calling
+    // the detector. Detector contract stays "bytes in", which means
+    // hf-video.ts doesn't need to know anything about YouTube.
+    detectorInput = { kind: "vid", bytes: Buffer.alloc(0), mime: "video/mp4" };
+    pendingSourceUrl = input.sourceUrl!;
   } else {
     if (!file) {
       return c.json(
@@ -196,6 +238,7 @@ create.post("/", async (c) => {
   form.append("title", title);
   form.append("number", String(nextNumber));
   form.append("type", type);
+  if (input.subtype) form.append("subtype", input.subtype);
   form.append("origin", input.origin);
   form.append("status", "queued");
   if (input.content) form.append("content", input.content);
@@ -209,6 +252,16 @@ create.post("/", async (c) => {
     form.append("sizeBytes", String(new TextEncoder().encode(input.content).length));
   }
   if (wordCount > 0) form.append("wordCount", String(wordCount));
+  // Land client-extracted image dimensions on the row at queue time so
+  // the activity table shows `W × H` immediately. The detector merges
+  // this with `providerRaw` when it completes; rescan preserves it.
+  if (kind === "img" && input.width && input.height) {
+    form.append(
+      "analysis",
+      JSON.stringify({ width: input.width, height: input.height }),
+    );
+    form.append("analysisVersion", "1");
+  }
   // Charge the full cost now — refunded by the background runner if it fails.
   form.append("creditsUsed", String(tokensRequired));
   // engineId carries the model slug from the moment of creation so the
@@ -247,6 +300,7 @@ create.post("/", async (c) => {
     videoFrameModelId,
     videoFrameCount,
     tokensCharged: tokensRequired,
+    pendingSourceUrl,
   });
 
   return c.json(serializeScan(record, pb), 201);
@@ -263,8 +317,8 @@ type DetectionModelRow = {
   videoFrameCount?: number;
   tokenCost?: number;
   costUnit?: string;
+  tier?: string;
   plansAllowed?: string[];
-  defaultForPlans?: string[];
 };
 
 async function resolveModel(
@@ -283,19 +337,19 @@ async function resolveModel(
     }
   }
 
-  const plan = String(user.plan ?? "check");
+  // No slug supplied → pick the cheapest in-tier model for this
+  // modality. Acts as the downgrade-fallback path: a user whose
+  // stored model is now above their plan still gets a legal default
+  // (the picker UIs send modelSlug only when the user picks one).
+  const plan: Plan = isPlan(user.plan) ? user.plan : "check";
   const records = (await admin
     .collection("detection_models")
     .getFullList({
-      filter: `enabled = true && type = "${kind}" && plansAllowed ~ "${plan}"`,
-      sort: "-accuracy",
+      filter: `enabled = true && type = "${kind}"`,
+      sort: "tokenCost,accuracy",
       requestKey: null,
     })) as unknown as DetectionModelRow[];
-  if (records.length === 0) return null;
-  const flagged = records.find(
-    (r) => Array.isArray(r.defaultForPlans) && r.defaultForPlans.includes(plan),
-  );
-  return flagged ?? records[0];
+  return records.find((r) => PLAN_RANK[tierFromRow(r)] <= PLAN_RANK[plan]) ?? null;
 }
 
 async function loadHuggingfaceToken(

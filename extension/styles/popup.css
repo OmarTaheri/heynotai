@@ -1006,6 +1006,125 @@ body.theme-dark .tc-vid {
   font-weight: 600;
 }
 
+/* ── Tier-card variants ────────────────────────────────────
+   Two-step ladder: mid-tier (verify) is teal-green via `--human`
+   (the same hue the frontend uses for its verify rows, so the
+   surfaces agree on green=mid), high-tier (certify, team) is gold.
+   Free `check` rows stay neutral. The tier pill text inside still
+   reads VERIFY / CERTIFY / TEAM so the verbal distinction
+   between certify and team is preserved without a third color. */
+.model-opt.tier-verify {
+  border-color: color-mix(in oklab, var(--human) 50%, var(--line));
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in oklab, var(--human) 20%, var(--surface)) 0%,
+      color-mix(in oklab, var(--human) 5%, var(--surface)) 60%,
+      var(--surface) 100%
+    );
+  box-shadow: inset 3px 0 0 0 var(--human);
+}
+.model-opt.tier-verify:hover {
+  border-color: color-mix(in oklab, var(--human) 70%, var(--line));
+}
+
+.model-opt.tier-certify,
+.model-opt.tier-team {
+  border-color: color-mix(in oklab, var(--gold) 55%, var(--line));
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in oklab, var(--gold) 22%, var(--surface)) 0%,
+      color-mix(in oklab, var(--gold) 6%, var(--surface)) 60%,
+      var(--surface) 100%
+    );
+  box-shadow:
+    inset 3px 0 0 0 var(--gold),
+    0 0 0 1px color-mix(in oklab, var(--gold) 14%, transparent);
+}
+.model-opt.tier-certify:hover,
+.model-opt.tier-team:hover {
+  border-color: color-mix(in oklab, var(--gold) 75%, var(--line));
+}
+
+.model-opt.locked {
+  cursor: default;
+  opacity: 0.92;
+}
+/* Locked rows share the tier-tinted bullet so the row reads as one
+   coherent surface (vs. tier color + gold lock = clash). */
+.model-opt.locked .bullet {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.model-opt.locked.tier-verify .bullet {
+  border-color: color-mix(in oklab, var(--human) 55%, transparent);
+  background: color-mix(in oklab, var(--human) 18%, var(--surface));
+  color: var(--human);
+}
+.model-opt.locked.tier-certify .bullet,
+.model-opt.locked.tier-team .bullet {
+  border-color: color-mix(in oklab, var(--gold) 55%, transparent);
+  background: color-mix(in oklab, var(--gold) 18%, var(--surface));
+  color: var(--gold);
+}
+.model-opt.locked .bullet svg { width: 9px; height: 9px; }
+
+/* Tier label pill — green for verify (mid), gold for certify+team
+   (high). Pill text still reads VERIFY / CERTIFY / TEAM so the
+   verbal distinction within the gold tier survives. */
+.mo-tag-tier {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.mo-tag-tier.tier-verify {
+  color: var(--human);
+  background: color-mix(in oklab, var(--human) 16%, var(--surface));
+  border: 1px solid color-mix(in oklab, var(--human) 35%, transparent);
+}
+.mo-tag-tier.tier-certify,
+.mo-tag-tier.tier-team {
+  color: var(--gold);
+  background: color-mix(in oklab, var(--gold) 16%, var(--surface));
+  border: 1px solid color-mix(in oklab, var(--gold) 40%, transparent);
+}
+
+/* Upgrade pill — green for verify (mid), gold for certify+team. */
+.mo-upgrade {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 4px 9px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  color: var(--gold);
+  background: color-mix(in oklab, var(--gold) 14%, var(--surface));
+  border: 1px solid color-mix(in oklab, var(--gold) 50%, transparent);
+}
+.mo-upgrade.tier-verify {
+  color: var(--human);
+  background: color-mix(in oklab, var(--human) 14%, var(--surface));
+  border-color: color-mix(in oklab, var(--human) 50%, transparent);
+}
+.mo-upgrade.tier-certify,
+.mo-upgrade.tier-team {
+  color: var(--gold);
+  background: color-mix(in oklab, var(--gold) 14%, var(--surface));
+  border-color: color-mix(in oklab, var(--gold) 50%, transparent);
+}
+.mo-upgrade:hover { filter: brightness(1.12); }
+.mo-upgrade svg { width: 10px; height: 10px; }
+
 .model-skeleton {
   display: flex; flex-direction: column; gap: 6px;
 }
@@ -2058,6 +2177,23 @@ body.theme-dark .skeleton-block::after {
   color: var(--fg);
 }
 
+/* Three dots inside the ring — replace the previous "0→100%" numeric
+   that lied about progress on real backend scans. */
+.scan-ring-dots {
+  display: inline-flex; gap: 4px; align-items: center;
+}
+.scan-ring-dots span {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: color-mix(in oklab, var(--verdict-col) 80%, var(--fg));
+  animation: scan-dots-pulse 1.2s ease-in-out infinite;
+}
+.scan-ring-dots span:nth-child(2) { animation-delay: 0.2s; }
+.scan-ring-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes scan-dots-pulse {
+  0%, 100% { opacity: 0.3; transform: scale(0.85); }
+  50%      { opacity: 1;   transform: scale(1.1); }
+}
+
 /* Percentage text grows subtly with the progress */
 .scan-score { display: flex; align-items: center; gap: 8px; }
 .scan-pct {
@@ -2121,4 +2257,304 @@ body.theme-dark .skeleton-block::after {
   filter: saturate(0.3);
   pointer-events: none;
   transform: scale(0.995);
+}
+
+/* Platform sub-rows (Videos / Reels / Posts under each parent
+ * platform). Indented and slightly muted so the parent row visually
+ * dominates. When the master toggle is off we mark them `.disabled`
+ * which fully greys them out and blocks interaction. */
+.site-row.subrow {
+  padding-left: 38px;
+  border-top: 1px dashed var(--line);
+}
+.site-row.subrow .site-host {
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--fg-mid);
+}
+.site-row.subrow.disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+/* ── Text-scan result card (right-click "AI check this text" flow) ── */
+.text-result-card {
+  position: relative;
+  padding: 16px 18px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: card-rise 0.32s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+.text-result-card.verdict-human {
+  background: linear-gradient(180deg,
+    color-mix(in oklab, var(--human-soft) 55%, var(--surface)) 0%,
+    var(--surface) 65%);
+  border-color: color-mix(in oklab, var(--human) 22%, var(--line));
+}
+.text-result-card.verdict-ai {
+  background: linear-gradient(180deg,
+    color-mix(in oklab, var(--ai-soft) 55%, var(--surface)) 0%,
+    var(--surface) 65%);
+  border-color: color-mix(in oklab, var(--ai) 22%, var(--line));
+}
+.text-result-card.verdict-mixed {
+  background: linear-gradient(180deg,
+    color-mix(in oklab, var(--mixed-soft) 55%, var(--surface)) 0%,
+    var(--surface) 65%);
+  border-color: color-mix(in oklab, var(--mixed) 22%, var(--line));
+}
+
+.text-result-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  color: var(--fg-dim);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.text-result-close:hover {
+  background: color-mix(in oklab, var(--fg-dim) 14%, transparent);
+  color: var(--fg);
+}
+
+.text-result-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.text-result-copy {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.text-result-headline {
+  font-size: 15.5px;
+  font-weight: 600;
+  font-style: italic;
+  color: var(--fg);
+  letter-spacing: -0.2px;
+}
+.text-result-meta {
+  font-size: 12px;
+  color: var(--fg-dim);
+  letter-spacing: 0.01em;
+}
+.text-result-when {
+  font-size: 11px;
+  color: var(--fg-dim);
+  opacity: 0.8;
+  margin-top: 2px;
+}
+
+.text-result-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+}
+.text-result-bar-label {
+  color: var(--fg-mid);
+  font-weight: 500;
+  flex: 0 0 auto;
+}
+.text-result-bar {
+  flex: 1 1 auto;
+  height: 6px;
+  border-radius: 3px;
+  background: color-mix(in oklab, var(--fg-dim) 18%, transparent);
+  overflow: hidden;
+}
+.text-result-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.text-result-bar-fill.verdict-human { background: var(--human); }
+.text-result-bar-fill.verdict-ai    { background: var(--ai); }
+.text-result-bar-fill.verdict-mixed { background: var(--mixed); }
+.text-result-bar-pct {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+  min-width: 36px;
+  text-align: right;
+}
+
+.text-result-cta {
+  appearance: none;
+  border: 0;
+  background: var(--fg);
+  color: var(--bg);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  padding: 9px 14px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: opacity 0.15s ease, transform 0.12s ease;
+}
+.text-result-cta:hover { opacity: 0.92; }
+.text-result-cta:active { transform: translateY(1px); }
+
+/* ── Coming-soon overlay (Stats tab) ─────────────────
+   Mirrors the website's ComingSoon: blurred preview
+   behind a tinted scrim, with a centered card. The
+   body class disables scroll while mounted. */
+.body.is-coming-soon { overflow: hidden; }
+.body.is-coming-soon > .body-content { height: 100%; }
+
+.coming-soon-wrap {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.coming-soon-wrap > .coming-soon-content {
+  filter: blur(6px) saturate(0.85);
+  pointer-events: none;
+  user-select: none;
+  height: 100%;
+  overflow: hidden;
+}
+.coming-soon-wrap > .coming-soon-content > * {
+  animation: none !important;
+}
+
+.coming-soon-scrim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      90% 65% at 50% 50%,
+      color-mix(in oklch, var(--bg) 75%, transparent) 0%,
+      color-mix(in oklch, var(--bg) 35%, transparent) 55%,
+      transparent 100%
+    );
+  z-index: 1;
+}
+
+.coming-soon-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  z-index: 2;
+  pointer-events: none;
+  animation: gate-fade 220ms ease-out;
+}
+
+.coming-soon-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 22px 18px;
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--fg);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 16px 40px rgba(0, 0, 0, 0.28),
+    0 0 0 1px var(--line);
+  pointer-events: auto;
+  width: 100%;
+  max-width: 280px;
+  text-align: center;
+  overflow: hidden;
+}
+
+.coming-soon-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.25px;
+  pointer-events: none;
+  background: linear-gradient(
+    135deg,
+    oklch(0.74 0.14 165 / 0.7),
+    oklch(0.85 0.13 85 / 0.7) 30%,
+    oklch(0.62 0.22 27 / 0.7) 55%,
+    oklch(0.72 0.13 290 / 0.7) 78%,
+    oklch(0.7 0.12 265 / 0.7)
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+.coming-soon-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface-sunken);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-mid);
+}
+
+.coming-soon-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--gold) 25%, transparent);
+  animation: cs-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes cs-pulse {
+  0%, 100% { opacity: 0.6; transform: scale(0.85); }
+  50%      { opacity: 1;   transform: scale(1.1);  }
+}
+
+.coming-soon-title {
+  font-size: 22px;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+  color: var(--fg);
+  text-wrap: balance;
+}
+.coming-soon-title em {
+  font-style: italic;
+  font-weight: 500;
+  color: var(--fg-mid);
+}
+
+.coming-soon-sub {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--fg-mid);
+  max-width: 240px;
+  text-wrap: pretty;
 }

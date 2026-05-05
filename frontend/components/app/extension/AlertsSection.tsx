@@ -3,7 +3,7 @@
 import { SettingsSection } from "@/components/app/settings/SettingsSection";
 import { ALERT_SETTINGS } from "@/lib/extension-data";
 import { ToggleRows, ExtraRow } from "./ToggleRows";
-import { useExtensionPrefsContext } from "./ExtensionPrefsContext";
+import { useExtensionPrefsContext } from "../extension-prefs/ExtensionPrefsContext";
 
 /** Alerts & notifications. Toggles are stored in extension_prefs.flags;
  *  the threshold slider feeds extension_prefs.notifications.threshold. */

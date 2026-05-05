@@ -14,6 +14,7 @@
  *  emits a line so a tail of the api log tells the full story. */
 
 import { pbAdmin } from "./pb-admin.js";
+import { downloadYoutubeVideo } from "./youtube-download.js";
 import {
   DetectorError,
   getDetector,
@@ -39,6 +40,11 @@ export type RunDetectionInput = {
    *  parallel scans can't double-spend the user's monthly budget. We
    *  zero it here on failure. */
   tokensCharged: number;
+  /** When set, the runner resolves this URL into bytes (via yt-dlp)
+   *  BEFORE calling the detector and persists the bytes onto the scan
+   *  row's `file` field so a future rescan reuses them. Today only
+   *  YouTube /watch URLs flow through this path. */
+  pendingSourceUrl?: string;
 };
 
 /** Fire-and-forget. Catches its own errors so an unhandled rejection
@@ -71,9 +77,69 @@ async function execute(input: RunDetectionInput): Promise<void> {
     return;
   }
 
+  // ── URL pre-fetch — resolve YouTube URL → bytes BEFORE the detector
+  //    runs. Caching the result on the row's `file` field means a later
+  //    rescan (different model, same id) reads bytes from PB instead of
+  //    re-downloading from YouTube. ─────────────────────────────────
+  let detectorInput = input.detectorInput;
+  if (input.pendingSourceUrl && input.kind === "vid") {
+    try {
+      console.log(`${tag} resolving URL ${input.pendingSourceUrl}`);
+      const dl = await downloadYoutubeVideo(input.pendingSourceUrl);
+      detectorInput = {
+        kind: "vid",
+        bytes: dl.bytes,
+        mime: dl.mime,
+        durationSec: dl.durationSec,
+      };
+      // Cache bytes on the row. PB's JS SDK accepts FormData on update
+      // so we can stuff the file alongside the metadata fields.
+      try {
+        const cacheForm = new FormData();
+        cacheForm.append(
+          "file",
+          new File([new Uint8Array(dl.bytes)], `yt-${input.scanId}.mp4`, {
+            type: dl.mime,
+          }),
+        );
+        cacheForm.append("mimeType", dl.mime);
+        cacheForm.append("sizeBytes", String(dl.bytes.byteLength));
+        if (dl.durationSec > 0) {
+          cacheForm.append("durationMs", String(Math.round(dl.durationSec * 1000)));
+        }
+        await admin.collection("scans").update(input.scanId, cacheForm);
+        console.log(
+          `${tag} cached download bytes=${dl.bytes.byteLength} dur=${dl.durationSec}s`,
+        );
+      } catch (cacheErr) {
+        // Caching is best-effort — detection continues on the in-memory
+        // bytes even if the row write hiccups.
+        console.warn(`${tag} could not cache bytes`, cacheErr);
+      }
+    } catch (err) {
+      const detail =
+        err instanceof DetectorError
+          ? { code: "youtube_download_failed", status: err.status, message: err.providerMessage }
+          : { code: "internal_error", message: err instanceof Error ? err.message : String(err) };
+      console.error(`${tag} URL pre-fetch FAILED`, detail);
+      try {
+        await admin.collection("scans").update(input.scanId, {
+          status: "failed",
+          creditsUsed: 0,
+          error: detail,
+          scanCompletedAt: new Date().toISOString(),
+        });
+        console.log(`${tag} status=failed (tokens refunded)`);
+      } catch (writeErr) {
+        console.error(`${tag} could not mark failed`, writeErr);
+      }
+      return;
+    }
+  }
+
   try {
     const detector = getDetector(input.kind, input.provider);
-    const result = await detector(input.detectorInput, {
+    const result = await detector(detectorInput, {
       provider: input.provider,
       hfToken: input.hfToken,
       hfModelId: input.hfModelId,
@@ -91,12 +157,18 @@ async function execute(input: RunDetectionInput): Promise<void> {
 
     // Merge this run into the per-engine cache. Re-fetch the row first
     // so a concurrent rescan (different engine, same scan) doesn't
-    // clobber its sibling entry by writing a stale snapshot.
+    // clobber its sibling entry by writing a stale snapshot. We also
+    // capture the existing `analysis` so client-extracted metadata
+    // (e.g. image width/height set at create time) survives the write.
     let engineResults: Record<string, EngineResultEntry> = {};
+    let prevAnalysis: Record<string, unknown> = {};
     try {
       const fresh = await admin.collection("scans").getOne(input.scanId);
       if (fresh.engineResults && typeof fresh.engineResults === "object") {
         engineResults = fresh.engineResults as Record<string, EngineResultEntry>;
+      }
+      if (fresh.analysis && typeof fresh.analysis === "object") {
+        prevAnalysis = fresh.analysis as Record<string, unknown>;
       }
     } catch (err) {
       console.warn(`${tag} engineResults pre-read failed; starting empty`, err);
@@ -122,7 +194,7 @@ async function execute(input: RunDetectionInput): Promise<void> {
       engineId: input.modelSlug,
       scanCompletedAt: completedAt.toISOString(),
       scanDurationMs: result.durationMs,
-      analysis: { providerRaw: result.rawProviderResponse },
+      analysis: { ...prevAnalysis, providerRaw: result.rawProviderResponse },
       analysisVersion: 1,
       engineResults,
     });

@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { canUseModel, type Plan } from "@heynotai/shared";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/Icon";
+import { useAuth } from "@/lib/auth";
 import {
   DEFAULT_SELECTION,
   ENGINES,
@@ -34,6 +36,8 @@ import { ModelsSkeleton } from "./ModelsSkeleton";
  * keep the per-route title.
  */
 export function ModelsClient() {
+  const { user } = useAuth();
+  const userPlan: Plan = user?.plan ?? "check";
   const [activeType, setActiveType] = useState<EngineType>("txt");
   const [engines, setEngines] = useState<Record<EngineType, Engine[]>>(ENGINES);
   const [defaults, setDefaults] =
@@ -64,9 +68,16 @@ export function ModelsClient() {
           (Object.keys(catalog.defaults) as EngineType[]).forEach((t) => {
             const list = catalog.engines[t];
             const liveIds = new Set(list.map((e) => e.id));
-            // Swap to default when the previous selection isn't in the
-            // live catalog (e.g. a model was disabled in PB).
-            if (!liveIds.has(prev[t]) && catalog.defaults[t]) {
+            const prevEngine = list.find((e) => e.id === prev[t]);
+            const prevReachable =
+              !!prevEngine && canUseModel(userPlan, prevEngine.tier);
+            // Swap to the plan-aware default when the previous
+            // selection is missing from the live catalog OR is now
+            // above the user's tier (downgrade case).
+            if (
+              (!liveIds.has(prev[t]) || !prevReachable) &&
+              catalog.defaults[t]
+            ) {
               next[t] = catalog.defaults[t];
             }
           });
@@ -79,12 +90,23 @@ export function ModelsClient() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [userPlan]);
+
+  // Cheapest-first within each modality. The API already sorts by
+  // tokenCost,accuracy, but we re-sort defensively so the offline
+  // fallback (`ENGINES`) is also ordered.
+  const sortedEngines = useMemo(() => {
+    const out: Record<EngineType, Engine[]> = { txt: [], img: [], aud: [], vid: [] };
+    (Object.keys(engines) as EngineType[]).forEach((t) => {
+      out[t] = [...engines[t]].sort((a, b) => a.cost.value - b.cost.value);
+    });
+    return out;
+  }, [engines]);
 
   const captions: Record<EngineType, string> = TYPE_TABS.reduce(
     (acc, tab) => {
       const id = selectedByType[tab.type];
-      const engine = engines[tab.type].find((e) => e.id === id);
+      const engine = sortedEngines[tab.type].find((e) => e.id === id);
       acc[tab.type] = engine?.name ?? "—";
       return acc;
     },
@@ -123,11 +145,11 @@ export function ModelsClient() {
       />
 
       {loading ? (
-        <ModelsSkeleton rows={engines[activeType].length || 3} />
+        <ModelsSkeleton rows={sortedEngines[activeType].length || 3} />
       ) : (
         <EngineSection
           type={activeType}
-          engines={engines[activeType]}
+          engines={sortedEngines[activeType]}
           selectedId={selectedByType[activeType] || defaults[activeType]}
           onSelect={handleSelect}
         />

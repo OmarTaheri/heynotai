@@ -1,3 +1,4 @@
+import type { Plan } from '@heynotai/shared';
 import { pb } from './pocketbase';
 
 const API_URL =
@@ -14,6 +15,9 @@ export interface Engine {
   accuracy: number;
   cost: { value: number; unit: EngineCostUnit; tone: 'neutral' | 'high' };
   isDefault: boolean;
+  /** Plan tier required to use this engine. Mirrors the API's
+   *  `tier` field on `detection_models`. */
+  tier: Plan;
 }
 
 export interface ModelsCatalog {
@@ -34,6 +38,7 @@ interface ApiCatalogEntry {
   accuracy: number;
   tokenCost: number;
   costUnit: 'per_scan' | 'per_minute';
+  tier: Plan;
 }
 
 function authHeaders(): Record<string, string> {
@@ -53,6 +58,7 @@ function adapt(entry: ApiCatalogEntry, isDefault: boolean): Engine {
       tone: entry.tokenCost >= 8 ? 'high' : 'neutral',
     },
     isDefault,
+    tier: entry.tier ?? 'check',
   };
 }
 
@@ -81,9 +87,12 @@ export async function fetchModelsCatalog(): Promise<ModelsCatalog> {
       const list = mBody.models?.[type] ?? [];
       const defaultSlug = dBody.defaults?.[type] ?? list[0]?.slug ?? '';
       defaults[type] = defaultSlug;
-      engines[type] = list.map((entry) =>
-        adapt(entry, entry.slug === defaultSlug),
-      );
+      // API already sorts cheapest-first within type, but sort here
+      // defensively so the picker order is invariant of network state.
+      engines[type] = list
+        .slice()
+        .sort((a, b) => a.tokenCost - b.tokenCost)
+        .map((entry) => adapt(entry, entry.slug === defaultSlug));
     });
     return { engines, defaults };
   } catch {
