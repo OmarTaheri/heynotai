@@ -1,6 +1,6 @@
 {
   "name": "@heynotai/extension",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Real-time AI-generated media detection for YouTube. Spot deepfakes, cloned voices, and synthetic text at a glance.",
   "private": true,
   "type": "module",

@@ -364,7 +364,7 @@ function ExtensionDemo() {
       <div className={styles.extCard}>
         <div className={styles.extHead}>
           <span className={styles.extName}>heynotai</span>
-          <span className={styles.extVersion}>v3.2 · drawer</span>
+          <span className={styles.extVersion}>v0.1 · drawer</span>
           <span style={{ flex: 1 }} />
           <VerdictPill kind="mixed">Watching tab</VerdictPill>
         </div>

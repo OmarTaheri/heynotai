@@ -7,7 +7,7 @@ export default defineConfig({
     name: 'heynotai — AI Content Detector',
     description:
       'Real-time AI-generated media detection for YouTube. Spot deepfakes, cloned voices, and synthetic text at a glance.',
-    version: '1.0.0',
+    version: '1.0.1',
     // Pins the local extension ID across reloads/paths so OAuth redirect
     // URLs registered in Google Cloud Console keep working. The matching
     // private key (heynotai.pem) is gitignored — only used for dev. The

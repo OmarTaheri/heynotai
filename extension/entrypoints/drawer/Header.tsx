@@ -52,7 +52,7 @@ export function Header() {
                 ai
               </span>
             </span>
-            <span className="version-tag">v3.2</span>
+            <span className="version-tag">v0.1</span>
           </div>
         </div>
 

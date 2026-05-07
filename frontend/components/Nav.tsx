@@ -65,7 +65,7 @@ export function Nav() {
           <Link href="/" className="flex items-center gap-2">
             <Logo size="lg" />
             <span className="rounded border border-[var(--color-line-strong)] bg-[var(--color-surface-alt)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--color-fg-dim)]">
-              v3.2
+              v0.1
             </span>
           </Link>
 

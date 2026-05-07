@@ -23,7 +23,7 @@ export function Settings() {
       <LanguageCard language={language} setLanguage={setLanguage} />
       <NotificationsCard notifications={notifications} setNotifications={setNotifications} />
       <PrivacyCard privacy={privacy} setPrivacy={setPrivacy} />
-      <div className="legal-note">heynotai v3.2 · settings saved to this browser.</div>
+      <div className="legal-note">heynotai v0.1 · settings saved to this browser.</div>
     </div>
   );
 }
