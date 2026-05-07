@@ -52,7 +52,7 @@ list.get("/", async (c) => {
       .collection("scans")
       .getList(page, perPage, { filter, sort: "-created" });
     return c.json({
-      items: result.items.map((r) => serializeScan(r, pb)),
+      items: result.items.map((r) => serializeScan(r)),
       page: result.page,
       perPage: result.perPage,
       totalItems: result.totalItems,

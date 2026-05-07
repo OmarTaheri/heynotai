@@ -108,7 +108,7 @@ create.post("/", async (c) => {
           `sourceUrl = "${dedupUrl.replace(/"/g, '\\"')}" && status != "failed"`,
         { sort: "-created", requestKey: null },
       );
-      return c.json(serializeScan(existing, pb), 200);
+      return c.json(serializeScan(existing), 200);
     } catch {
       // No existing scan — fall through to the normal create path.
     }
@@ -323,7 +323,7 @@ create.post("/", async (c) => {
     pendingSourceUrl,
   });
 
-  return c.json(serializeScan(record, pb), 201);
+  return c.json(serializeScan(record), 201);
 });
 
 type DetectionModelRow = {

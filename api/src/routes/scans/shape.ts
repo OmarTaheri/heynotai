@@ -1,5 +1,5 @@
-import type PocketBase from "pocketbase";
 import type { RecordModel } from "pocketbase";
+import { env } from "../../env.js";
 
 /** Per-engine cached result. The scans collection stores a map keyed by
  *  the engine slug (`engineId`) so that switching the model picker in
@@ -26,11 +26,12 @@ export interface EngineResultEntry {
  *  materializes `fileUrl` so the client doesn't need to know how to
  *  build PB file URLs.
  *
- *  `pb.files.getURL` is a pure URL builder
- *  (POCKETBASE_URL + collection + id + filename) — no admin auth, no
- *  token. So it's safe for both authenticated and public-share callers
- *  to use the same per-request `pb` instance. Don't reach for
- *  pb-admin.ts here. */
+ *  We construct the URL manually against `POCKETBASE_PUBLIC_URL`
+ *  instead of `pb.files.getURL` so deployed environments can keep an
+ *  internal `POCKETBASE_URL` (used by the api server to talk to PB)
+ *  separate from the publicly reachable host the browser needs to
+ *  load `<img>` tags. Falls back to `POCKETBASE_URL` for dev where
+ *  both are the same. */
 export interface SerializedScan {
   id: string;
   created: string;
@@ -96,7 +97,12 @@ export interface SerializedScan {
   version: number;
 }
 
-export function serializeScan(record: RecordModel, pb: PocketBase): SerializedScan {
+function publicFileUrl(record: RecordModel, filename: string): string {
+  const base = env.POCKETBASE_PUBLIC_URL ?? env.POCKETBASE_URL;
+  return `${base.replace(/\/$/, "")}/api/files/${record.collectionId}/${record.id}/${encodeURIComponent(filename)}`;
+}
+
+export function serializeScan(record: RecordModel): SerializedScan {
   const file: string = record.file ?? "";
   return {
     id: record.id,
@@ -115,7 +121,7 @@ export function serializeScan(record: RecordModel, pb: PocketBase): SerializedSc
 
     content: record.content ?? "",
     file,
-    fileUrl: file ? pb.files.getURL(record, file) : null,
+    fileUrl: file ? publicFileUrl(record, file) : null,
     sourceUrl: record.sourceUrl ?? "",
     mimeType: record.mimeType ?? "",
     sizeBytes: Number(record.sizeBytes ?? 0),

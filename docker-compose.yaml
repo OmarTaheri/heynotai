@@ -55,6 +55,11 @@ services:
       # Internal service-name routing — never set this to a public URL,
       # the api hits PocketBase over the docker network.
       POCKETBASE_URL: http://pocketbase:8090
+      # Publicly reachable PB host, embedded in `fileUrl` returned to
+      # the browser. Reuses NEXT_PUBLIC_POCKETBASE_URL so you only set
+      # the public PB origin once in Coolify env vars. Without this,
+      # `<img src>` would point at the internal docker hostname and 404.
+      POCKETBASE_PUBLIC_URL: ${NEXT_PUBLIC_POCKETBASE_URL:-}
       CORS_ORIGINS: ${CORS_ORIGINS:-}
       PB_ADMIN_EMAIL: ${PB_ADMIN_EMAIL:-}
       PB_ADMIN_PASSWORD: ${PB_ADMIN_PASSWORD:-}

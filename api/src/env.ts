@@ -9,6 +9,11 @@ config({ path: new URL("../.env", import.meta.url).pathname });
 const envSchema = z.object({
   PORT: z.coerce.number().default(8787),
   POCKETBASE_URL: z.string().url().default("http://127.0.0.1:8090"),
+  // Public PB URL embedded in client-facing file links. The api server
+  // talks to PB over POCKETBASE_URL (often a loopback / private DNS
+  // name); the browser needs a publicly reachable host. Defaults to
+  // POCKETBASE_URL so single-host dev setups need only one variable.
+  POCKETBASE_PUBLIC_URL: z.string().url().optional(),
   CORS_ORIGINS: z
     .string()
     .default("http://localhost:3000")

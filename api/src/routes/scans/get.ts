@@ -26,7 +26,7 @@ get.get("/:id", async (c) => {
   try {
     const record = await anonPb.collection("scans").getOne(id);
     if (record.visibility === "public") {
-      return c.json(serializeScan(record, anonPb));
+      return c.json(serializeScan(record));
     }
   } catch {
     /* fall through */
@@ -48,7 +48,7 @@ get.get("/:id", async (c) => {
   }
   try {
     const record = await pb.collection("scans").getOne(id);
-    return c.json(serializeScan(record, pb));
+    return c.json(serializeScan(record));
   } catch {
     return c.json({ error: "not_found" }, 404);
   }

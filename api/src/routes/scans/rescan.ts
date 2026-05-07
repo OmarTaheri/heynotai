@@ -198,7 +198,7 @@ rescan.post("/:id/rescan", async (c) => {
     tokensCharged: tokensRequired,
   });
 
-  return c.json(serializeScan(updated, pb), 200);
+  return c.json(serializeScan(updated), 200);
 });
 
 type DetectionModelRow = {

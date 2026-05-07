@@ -21,7 +21,7 @@ patch.patch("/:id", async (c) => {
   // the writable surface so detection-result fields can never leak in.
   try {
     const record = await pb.collection("scans").update(id, parsed.data);
-    return c.json(serializeScan(record, pb));
+    return c.json(serializeScan(record));
   } catch (err) {
     const status =
       err && typeof err === "object" && "status" in err
