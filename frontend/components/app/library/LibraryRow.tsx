@@ -30,6 +30,8 @@ export function LibraryRow({
   const tone = verdictToneFromAiPct(aiPct);
   const label = verdictLabelFromAiPct(aiPct);
   const detector = detectorDisplayName(item.engineId ?? "", item.model);
+  const inFlight = item.status === "queued" || item.status === "scanning";
+  const failed = item.status === "failed";
 
   return (
     <Table.Row
@@ -72,13 +74,28 @@ export function LibraryRow({
       </Table.Cell>
 
       <Table.Cell className="lib-row-verdict">
-        <Pill tone={tone} compact dot>
-          {label}
-        </Pill>
-        <span className="lib-row-verdict-pct">{aiPct}%</span>
+        {inFlight ? (
+          <span className="lib-row-working" aria-label="Scan in progress">
+            <span className="lib-row-working-dot" aria-hidden />
+            Scanning…
+          </span>
+        ) : failed ? (
+          <span className="lib-row-failed" aria-label="Scan failed">
+            Scan failed
+          </span>
+        ) : (
+          <>
+            <Pill tone={tone} compact dot>
+              {label}
+            </Pill>
+            <span className="lib-row-verdict-pct">{aiPct}%</span>
+          </>
+        )}
       </Table.Cell>
 
-      <Table.Cell className="lib-row-detector">{detector}</Table.Cell>
+      <Table.Cell className="lib-row-detector">
+        {inFlight ? "Working…" : detector}
+      </Table.Cell>
 
       <Table.Cell align="right" muted>
         {item.when}

@@ -1,6 +1,6 @@
 import type { ScanType } from "@/components/ui/TypeChip";
 import type { Origin } from "@/components/ui/OriginBadge";
-import type { Scan } from "./scan-types";
+import type { Scan, ScanStatus } from "./scan-types";
 import {
   deriveItemMeta,
   isSocialType,
@@ -37,6 +37,10 @@ export type LibraryItem = {
    *  to re-parse `when` (the formatted relative string). Optional so
    *  legacy mock rows that only carry `when` don't need backfill. */
   whenIso?: string;
+  /** Backend lifecycle status. Drives the in-flight "Scanning…" pill
+   *  on the row. `undefined` on legacy mock data; treated as `done`
+   *  by row renderers. */
+  status?: ScanStatus;
 };
 
 export type OriginTabKey =
@@ -126,6 +130,7 @@ export function scanToLibraryItem(
     engineId: scan.engineId || "",
     when: formatRelative(scan.created),
     whenIso: scan.created || undefined,
+    status: scan.status,
   };
 }
 

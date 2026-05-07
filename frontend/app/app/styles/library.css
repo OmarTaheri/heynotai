@@ -438,6 +438,42 @@
   white-space: nowrap;
 }
 
+/* In-flight scan: replaces the verdict Pill while
+   `status === 'queued' || 'scanning'`. The animated dot reuses the
+   indigo accent from the extension's in-page overlay so the surfaces
+   feel like the same product. */
+.lib-row-working {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: oklch(0.50 0.18 280);
+  letter-spacing: 0.01em;
+}
+.lib-row-working-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: oklch(0.62 0.18 280);
+  box-shadow: 0 0 0 0 oklch(0.62 0.18 280 / 0.5);
+  animation: lib-row-pulse 1.4s ease-in-out infinite;
+}
+@keyframes lib-row-pulse {
+  0%, 100% { opacity: 0.45; box-shadow: 0 0 0 0 oklch(0.62 0.18 280 / 0.5); }
+  50%      { opacity: 1;    box-shadow: 0 0 0 5px oklch(0.62 0.18 280 / 0); }
+}
+.lib-row-failed {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-fg-dim);
+  letter-spacing: 0.01em;
+}
+
 /* Row action + footer chrome live in components/ui/Table.module.css. */
 
 .lib-tbl-meta {

@@ -24,6 +24,7 @@ import {
   type UploadSubTabKey,
 } from "@/lib/library-data";
 import { listScans, deleteScan, ScanApiError } from "@/lib/scans-api";
+import { useScansRealtime } from "@/lib/use-scans-realtime";
 import { getScanCollections } from "@/lib/collection-items";
 import { detectorDisplayName } from "@/lib/detector-display";
 import type { ScanOrigin, ScanType } from "@/lib/scan-types";
@@ -119,6 +120,11 @@ export default function LibraryPage() {
   const [totalItems, setTotalItems] = useState(0);
   const [pageCount, setPageCount] = useState(1);
   const [loadError, setLoadError] = useState<string | null>(null);
+  // Bumps on every PB scans-collection event for the current user
+  // (extension auto-scan, drawer rescan, monitor cron, anything).
+  // Used as a useEffect dep so the table refetches without us having
+  // to mirror PB's record merge logic on the client.
+  const realtimeTick = useScansRealtime();
 
   const apiOrigin = activeTab === "all" ? undefined : ORIGIN_FOR_TAB[activeTab];
   // When the user is in an upload sub-tab, that drives the API type
@@ -176,7 +182,7 @@ export default function LibraryPage() {
     return () => {
       cancelled = true;
     };
-  }, [page, apiOrigin, apiType, query]);
+  }, [page, apiOrigin, apiType, query, realtimeTick]);
 
   const allRows = rows;
 

@@ -92,15 +92,26 @@ export const Editor = forwardRef<EditorHandle, Props>(function Editor(
   return <EditorContent editor={editor} className="editor-content" />;
 });
 
-/** Seed Tiptap with a single paragraph per line of incoming plain text. */
+/** Seed Tiptap with the user's plain text. Every run of newlines is a
+ *  paragraph break — pastes from rich sources (Word, Google Docs, news
+ *  articles, AI chat) commonly use a single `\n` between paragraphs,
+ *  and treating those as hard breaks left them packed together with no
+ *  spacing. One line per paragraph keeps the `.ProseMirror p` margin
+ *  rule kicking in for every visual block.
+ *
+ *  Position math (used by mock-scan / detector flag offsets): each text
+ *  char is 1 ProseMirror position; a paragraph break is 2 (close + open).
+ *  Any run of N consecutive newlines compresses into a single paragraph
+ *  break (2 positions), regardless of N. */
 function textToDoc(text: string) {
-  const trimmed = text ?? "";
-  if (trimmed.trim() === "") {
+  if (!text) {
     return { type: "doc", content: [{ type: "paragraph" }] };
   }
-  const paragraphs = trimmed.split(/\n+/).map((line) => ({
-    type: "paragraph",
-    content: line ? [{ type: "text", text: line }] : [],
-  }));
+  const lines = text.split(/\n+/);
+  const paragraphs = lines.map((line) =>
+    line === ""
+      ? { type: "paragraph" }
+      : { type: "paragraph", content: [{ type: "text", text: line }] },
+  );
   return { type: "doc", content: paragraphs };
 }

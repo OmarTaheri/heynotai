@@ -9,6 +9,12 @@ import type {
   ScansListPage,
 } from "./scan-types";
 
+export type ScanRealtimeAction = "create" | "update" | "delete";
+export interface ScanRealtimeEvent {
+  action: ScanRealtimeAction;
+  record: Scan;
+}
+
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8787";
 
@@ -124,6 +130,25 @@ export async function updateScan(id: string, patch: UpdateScanInput): Promise<Sc
     body: JSON.stringify(patch),
   });
   return unwrap<Scan>(r);
+}
+
+/** Subscribe to PB realtime events on the `scans` collection. Returns
+ *  an unsubscribe function. PB collection rules already restrict to
+ *  records the auth context can read (`userId = @request.auth.id`),
+ *  so the callback only fires for the current user's rows.
+ *
+ *  Drives the `useScansRealtime` hook which keeps the library page in
+ *  sync with extension-initiated scans (the drawer creates a row and
+ *  this fires a `create` event within the same realtime tick). */
+export async function subscribeScans(
+  cb: (event: ScanRealtimeEvent) => void,
+): Promise<() => void> {
+  await pb.collection("scans").subscribe<Scan>("*", (e) => {
+    cb({ action: e.action as ScanRealtimeAction, record: e.record });
+  });
+  return () => {
+    void pb.collection("scans").unsubscribe("*");
+  };
 }
 
 /** Re-runs detection on the same scan record. Optional `modelSlug`
