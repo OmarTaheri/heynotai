@@ -42,6 +42,12 @@ export default defineContentScript({
     // running, we suppress the eventual COMPLETE/FAILED messages for
     // that in-flight scan. Reset on the next STARTED.
     let mutedForActiveScan = false;
+    // Drag state. Once the user has moved the pill we stop snapping it
+    // back to the selection on scroll/resize — they put it where they
+    // wanted it. `suppressNextClick` keeps a drag from also firing the
+    // panel-toggle click that would otherwise follow mouseup.
+    let userMovedPill = false;
+    let suppressNextClick = false;
 
     document.addEventListener(
       'contextmenu',
@@ -125,12 +131,20 @@ export default defineContentScript({
       pill.className = `${stateClass}`;
 
       pill.innerHTML = pillHtml(state, scan, error);
-      positionPill(pill);
+      // Don't snap back on re-render once the user has dragged — keep
+      // the pill where they put it. Position is only set on the very
+      // first render in that case (state transitions reuse the node).
+      if (!userMovedPill) positionPill(pill);
 
       // Defer the visible class one frame so the transition runs.
       requestAnimationFrame(() => pill?.classList.add('hn-visible'));
 
       attachHandlers(pill, state, scan);
+
+      // Reposition on viewport changes so the panel stays glued to the
+      // selection and the side keeps making sense if the user resizes.
+      bindRepositionListeners();
+      bindDragHandler(pill);
 
       // Auto-dismiss only on terminal states; scanning shouldn't time out
       // here (the background worker enforces that).
@@ -207,9 +221,14 @@ export default defineContentScript({
       const conf = clampPct(scan.confidence);
       const wc = Number.isFinite(scan.wordCount) ? scan.wordCount : 0;
       const model = scan.model || '—';
+      const text = (scan.content ?? '').trim();
+      const textBlock = text
+        ? `<div class="hn-tp-text" aria-label="Scanned text">${escapeHtml(text)}</div>`
+        : '';
       return `
         <div class="hn-tp-panel" role="dialog" aria-label="AI check details">
           <div class="hn-tp-panel-title">heynotai · text scan</div>
+          ${textBlock}
           <div class="hn-tp-panel-row">
             <span class="hn-tp-k">Verdict</span>
             <span class="hn-tp-v">${escapeHtml(verdictLabel(scan))}</span>
@@ -238,8 +257,8 @@ export default defineContentScript({
             <div class="hn-tp-bar-fill" style="width: ${aiPct}%"></div>
           </div>
           <a class="hn-tp-link" href="${editorUrl}" target="_blank" rel="noopener noreferrer">
-            Open in editor
-            <svg viewBox="0 0 16 16"><path d="M6 3h7v7M13 3l-9 9"/></svg>
+            <span>Open in editor</span>
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3h7v7M13 3l-9 9"/></svg>
           </a>
         </div>
       `;
@@ -249,6 +268,11 @@ export default defineContentScript({
       // Click on the pill body toggles the inline panel (only when we
       // have something to show).
       pill.onclick = (ev) => {
+        if (suppressNextClick) {
+          suppressNextClick = false;
+          ev.stopPropagation();
+          return;
+        }
         const target = ev.target as HTMLElement;
         if (target.closest('.hn-tp-close')) {
           ev.stopPropagation();
@@ -276,6 +300,9 @@ export default defineContentScript({
           pill.classList.toggle('is-expanded');
           // Once expanded the user is reading — cancel auto-dismiss.
           if (pill.classList.contains('is-expanded')) clearDismiss();
+          // Stack height just changed — re-pick above/below so the
+          // newly-visible panel doesn't fall off the viewport edge.
+          requestAnimationFrame(() => positionPill(pill));
         }
       };
     }
@@ -285,29 +312,147 @@ export default defineContentScript({
       // a fallback when we couldn't capture a selection rect (e.g. the
       // user dismissed the selection before the menu fired).
       const margin = 12;
+      const gap = 8;
+      const isExpanded = pill.classList.contains('is-expanded');
+      const panel = pill.querySelector<HTMLElement>('.hn-tp-panel');
+
+      // Measure live where possible — the rendered panel can be much
+      // taller than the pill once the text excerpt lands, so picking
+      // the side based on a 40px guess clipped the panel below the fold.
+      const pillRect = pill.getBoundingClientRect();
+      const pillH = pillRect.height || 40;
+      const pillW = pillRect.width || 200;
+      const panelH = isExpanded && panel ? panel.getBoundingClientRect().height : 0;
+
       let top = margin + 16;
-      let left = (window.innerWidth - 200) / 2;
+      let left = (window.innerWidth - pillW) / 2;
       let side: 'above' | 'below' = 'below';
 
       if (anchorRect) {
-        const pillHeightEstimate = 40;
-        const wantBelow = anchorRect.bottom + 8 + pillHeightEstimate < window.innerHeight - margin;
-        side = wantBelow ? 'below' : 'above';
-        top = wantBelow
-          ? anchorRect.bottom + 8
-          : Math.max(margin, anchorRect.top - pillHeightEstimate - 8);
+        // Stack height is the pill itself plus the inline panel when
+        // expanded. The panel sits on the side opposite the selection,
+        // so room-below = anchor.bottom..viewportBottom and similarly
+        // for above. When collapsed, panelH is 0 and the math reduces
+        // to the original "does the pill fit below" check.
+        const stack = pillH + (isExpanded ? panelH + gap : 0);
+        const roomBelow = window.innerHeight - margin - anchorRect.bottom - gap;
+        const roomAbove = anchorRect.top - margin - gap;
+        const fitsBelow = stack <= roomBelow;
+        const fitsAbove = stack <= roomAbove;
+        // Prefer below; flip up only when below can't fit but above can,
+        // or when above simply has more room. Avoids a jittery flip when
+        // both sides are tight (we'd rather clip the bottom than yo-yo).
+        if (fitsBelow) side = 'below';
+        else if (fitsAbove) side = 'above';
+        else side = roomBelow >= roomAbove ? 'below' : 'above';
+
+        top = side === 'below'
+          ? anchorRect.bottom + gap
+          : Math.max(margin, anchorRect.top - pillH - gap);
+        // Keep the pill (and the panel that hangs off it) inside the
+        // viewport horizontally. Panel max-width is 360 — clamp using
+        // the larger of pill / panel widths so neither overflows.
+        const widthForClamp = Math.max(pillW, 360);
         left = Math.max(
           margin,
-          Math.min(
-            anchorRect.left,
-            window.innerWidth - 320 - margin,
-          ),
+          Math.min(anchorRect.left, window.innerWidth - widthForClamp - margin),
         );
       }
 
       pill.dataset.side = side;
       pill.style.top = `${Math.round(top)}px`;
       pill.style.left = `${Math.round(left)}px`;
+    }
+
+    let scrollListenerBound = false;
+    function bindRepositionListeners() {
+      if (scrollListenerBound) return;
+      scrollListenerBound = true;
+      const reflow = () => {
+        if (userMovedPill) return;
+        const live = document.getElementById(PILL_ID) as HTMLDivElement | null;
+        if (!live) return;
+        // Anchor rect is captured in viewport coords at scan time and
+        // doesn't migrate with the page. Re-query the selection if it
+        // is still alive so the pill follows the text on scroll/resize.
+        const sel = window.getSelection();
+        if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
+          const r = sel.getRangeAt(0).getBoundingClientRect();
+          if (r.width !== 0 || r.height !== 0) anchorRect = r;
+        }
+        positionPill(live);
+      };
+      window.addEventListener('resize', reflow);
+      window.addEventListener('scroll', reflow, { passive: true, capture: true });
+    }
+
+    let dragHandlerBound = false;
+    function bindDragHandler(pill: HTMLDivElement) {
+      if (dragHandlerBound) return;
+      dragHandlerBound = true;
+      // Mouse-only for now — touch dragging would need pointer events
+      // and isn't worth wiring until a user actually asks for it.
+      pill.addEventListener('mousedown', (ev) => {
+        // Don't grab drags that started on a real interactive element.
+        // The close/sign-in buttons and Open-in-editor link should keep
+        // their normal click behavior; the panel body itself is non-
+        // interactive but should also not be a drag handle (the user
+        // is reading, not relocating).
+        const target = ev.target as HTMLElement;
+        if (
+          target.closest('.hn-tp-action, .hn-tp-link') ||
+          target.closest('.hn-tp-panel')
+        ) {
+          return;
+        }
+        if (ev.button !== 0) return;
+
+        const startX = ev.clientX;
+        const startY = ev.clientY;
+        const rect = pill.getBoundingClientRect();
+        const startLeft = rect.left;
+        const startTop = rect.top;
+        let dragging = false;
+        const THRESHOLD = 4;
+
+        const onMove = (e: MouseEvent) => {
+          const dx = e.clientX - startX;
+          const dy = e.clientY - startY;
+          if (!dragging && Math.hypot(dx, dy) < THRESHOLD) return;
+          if (!dragging) {
+            dragging = true;
+            pill.classList.add('is-dragging');
+          }
+          const margin = 6;
+          const w = rect.width;
+          const h = pill.getBoundingClientRect().height;
+          const newLeft = clamp(startLeft + dx, margin, window.innerWidth - w - margin);
+          const newTop = clamp(startTop + dy, margin, window.innerHeight - h - margin);
+          pill.style.left = `${Math.round(newLeft)}px`;
+          pill.style.top = `${Math.round(newTop)}px`;
+          e.preventDefault();
+        };
+
+        const onUp = () => {
+          document.removeEventListener('mousemove', onMove, true);
+          document.removeEventListener('mouseup', onUp, true);
+          if (dragging) {
+            pill.classList.remove('is-dragging');
+            userMovedPill = true;
+            // The mouseup will be followed by a synthetic click on the
+            // pill — eat it once so dragging doesn't also expand/collapse
+            // the panel.
+            suppressNextClick = true;
+          }
+        };
+
+        document.addEventListener('mousemove', onMove, true);
+        document.addEventListener('mouseup', onUp, true);
+      });
+    }
+
+    function clamp(v: number, lo: number, hi: number): number {
+      return Math.max(lo, Math.min(hi, v));
     }
 
     function removePill() {
@@ -317,6 +462,9 @@ export default defineContentScript({
       pill.classList.remove('hn-visible');
       // Match the CSS transition duration so the fade-out plays.
       window.setTimeout(() => pill.remove(), 200);
+      // The next scan should re-anchor to the new selection, even if
+      // the user dragged the previous pill across the screen.
+      userMovedPill = false;
     }
 
     function clearDismiss() {

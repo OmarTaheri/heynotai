@@ -60,6 +60,11 @@ export interface Scan {
    *  the count as the "N detections" sub-label. */
   flags: unknown[];
   file: string;
+  /** The raw text submitted for a `txt` scan. Only populated for text
+   *  modality — file-based scans store bytes in `file` and leave this
+   *  empty. The overlay pill renders an excerpt so the user can confirm
+   *  *what* was scanned, not just the verdict. */
+  content: string;
 }
 
 export interface ScansListPage {
