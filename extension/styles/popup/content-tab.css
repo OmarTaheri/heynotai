@@ -1,0 +1,311 @@
+/* ── Library list (Content tab) ───────────────
+   Mirrors the frontend library/activity table — a single Card-shaped
+   surface containing rows separated by a 1px line. Each row pairs a
+   TypeChip + title + (origin + meta) on the left with confidence /
+   model / when stacked on the right. */
+.lib-list {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.lib-row {
+  background: transparent;
+  border: none;
+  border-top: 1px solid var(--line);
+  padding: 12px 14px;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  column-gap: 12px;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+.lib-row:first-child { border-top: none; }
+.lib-row:hover {
+  background: var(--surface-alt);
+}
+.lib-row:focus-visible {
+  outline: 2px solid var(--info);
+  outline-offset: -2px;
+}
+
+.lib-row-main { min-width: 0; }
+.lib-row-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--fg);
+  line-height: 1.3;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.1px;
+}
+.lib-row-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+}
+.lib-row-meta-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--fg-dim);
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.lib-row-meta-text .lr-fmt {
+  color: var(--fg-dim);
+  text-transform: lowercase;
+}
+
+/* Right-side stack: confidence (top), model (mid), when (bottom). Each
+   is small, mono, right-aligned — matches the frontend's column trio
+   (Confidence · Model · When) but stacked for the popup. */
+.lib-row-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.lib-row-conf {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.lib-conf-bar {
+  display: inline-block;
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--line);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.lib-conf-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--fg);
+}
+.lib-conf-num { letter-spacing: -0.1px; }
+
+/* In-flight scan: animated pill that replaces the confidence bar while
+   `status === 'queued' || 'scanning'`. The dot reuses the indigo from
+   the in-page overlay so the drawer + page feel like the same surface. */
+.lib-row-working {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: oklch(0.50 0.18 280);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.lib-row-working-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: oklch(0.62 0.18 280);
+  box-shadow: 0 0 0 0 oklch(0.62 0.18 280 / 0.5);
+  animation: lib-row-pulse 1.4s ease-in-out infinite;
+}
+@keyframes lib-row-pulse {
+  0%, 100% { opacity: 0.45; box-shadow: 0 0 0 0 oklch(0.62 0.18 280 / 0.5); }
+  50%      { opacity: 1;    box-shadow: 0 0 0 4px oklch(0.62 0.18 280 / 0); }
+}
+.lib-row-failed {
+  display: inline-flex;
+  align-items: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--fg-dim);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.lib-row-model {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  color: var(--fg-mid);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lib-row-when {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  color: var(--fg-dim);
+  letter-spacing: 0.01em;
+}
+/* ── Type chip (square, content kind) ────────── */
+.type-chip {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+}
+.type-chip svg { width: 14px; height: 14px; }
+.tc-txt,
+.tc-soc {
+  background: var(--mixed-soft);
+  color: var(--mixed-ink);
+  border-color: color-mix(in oklab, var(--mixed) 22%, transparent);
+}
+.tc-img {
+  background: var(--human-soft);
+  color: var(--human-ink);
+  border-color: color-mix(in oklab, var(--human) 22%, transparent);
+}
+.tc-aud {
+  background: var(--ai-soft);
+  color: var(--ai-ink);
+  border-color: color-mix(in oklab, var(--ai) 22%, transparent);
+}
+.tc-vid {
+  background: color-mix(in oklab, oklch(0.70 0.18 27) 18%, var(--surface-alt));
+  color: oklch(0.50 0.18 27);
+  border-color: color-mix(in oklab, oklch(0.70 0.18 27) 22%, transparent);
+}
+.tc-web {
+  background: var(--info-soft);
+  color: var(--info);
+  border-color: color-mix(in oklab, var(--info) 22%, transparent);
+}
+/* Platform variants — solid brand fill, white glyph. */
+.tc-fb-vid, .tc-fb-reel, .tc-fb-post {
+  background: #1877f2;
+  color: #fff;
+  border-color: color-mix(in oklab, #1877f2 80%, #000);
+}
+.tc-ig-reel, .tc-ig-post-img, .tc-ig-post-vid {
+  background: #e1306c;
+  color: #fff;
+  border-color: color-mix(in oklab, #e1306c 80%, #000);
+}
+.tc-yt-vid, .tc-yt-reel {
+  background: #ff0000;
+  color: #fff;
+  border-color: color-mix(in oklab, #ff0000 80%, #000);
+}
+body.theme-dark .tc-vid {
+  background: color-mix(in oklab, oklch(0.70 0.18 27) 28%, var(--surface-alt));
+  color: oklch(0.86 0.14 27);
+}
+
+/* ── Origin badge ─────────────────────────── */
+.origin-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: var(--surface-alt);
+  color: var(--fg-mid);
+  border: 1px solid var(--line);
+  flex-shrink: 0;
+}
+.origin-badge svg { width: 11px; height: 11px; }
+.ob-ext {
+  background: var(--info-soft);
+  color: var(--info);
+  border-color: color-mix(in oklab, var(--info) 25%, transparent);
+}
+.ob-up {
+  background: var(--ai-soft);
+  color: var(--ai-ink);
+  border-color: color-mix(in oklab, var(--ai) 25%, transparent);
+}
+.ob-url {
+  background: var(--mixed-soft);
+  color: var(--mixed-ink);
+  border-color: color-mix(in oklab, var(--mixed) 25%, transparent);
+}
+.ob-mon {
+  background: var(--human-soft);
+  color: var(--human-ink);
+  border-color: color-mix(in oklab, var(--human) 25%, transparent);
+}
+.ob-paste {
+  background: var(--surface-alt);
+  color: var(--fg);
+  border-color: var(--line-strong);
+}
+
+/* ── Empty / loading state for the row list ─── */
+.lib-empty-state {
+  padding: 28px 12px;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--fg-dim);
+  border: 1px dashed var(--line-strong);
+  border-radius: 12px;
+}
+
+/* ── Open-library deep link (replaces "Load earlier items") ── */
+.lib-open-btn {
+  margin-top: 4px;
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  color: var(--fg-mid);
+  padding: 10px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  font-family: inherit;
+  transition: background 0.15s ease, color 0.15s ease,
+    border-color 0.15s ease;
+}
+.lib-open-btn:hover {
+  background: var(--surface-alt);
+  color: var(--fg);
+  border-color: var(--fg-mid);
+}
+.lib-open-btn svg { width: 12px; height: 12px; }
+
+/* ── Load-more ──────────────────────────────── */
+.load-more {
+  margin-top: 4px;
+  background: transparent;
+  border: 1px dashed var(--line-strong);
+  color: var(--fg-mid);
+  padding: 10px; border-radius: 10px;
+  font-size: 13px; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%;
+  font-family: inherit;
+}
+.load-more svg { width: 12px; height: 12px; }
+

@@ -1,0 +1,158 @@
+/* ── Settings tab ─────────────────────────────── */
+.mode-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.mode-card {
+  display: flex; flex-direction: column;
+  align-items: flex-start; gap: 6px;
+  padding: 14px 12px;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+.mode-card:hover { background: var(--surface-alt); }
+.mode-card.active {
+  border-color: var(--info);
+  background: var(--surface-alt);
+  box-shadow: 0 0 0 3px var(--info-soft);
+}
+.mode-icon {
+  width: 30px; height: 30px; border-radius: 8px;
+  background: var(--surface-sunken);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--fg);
+}
+.mode-card.active .mode-icon {
+  background: var(--info-soft);
+  color: var(--info);
+}
+.mode-title { font-size: 14px; font-weight: 600; color: var(--fg); }
+.mode-desc { font-size: 11.5px; color: var(--fg-mid); line-height: 1.4; }
+
+.segment {
+  display: inline-flex;
+  padding: 3px;
+  background: var(--surface-sunken);
+  border-radius: 9px;
+  gap: 2px;
+  width: 100%;
+}
+.segment-btn {
+  flex: 1;
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 5px;
+  padding: 6px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 7px;
+  font-size: 12.5px;
+  color: var(--fg-mid);
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.segment-btn:hover { color: var(--fg); }
+.segment-btn.active {
+  background: var(--surface);
+  color: var(--fg);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+}
+
+.threshold {
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.threshold input[type="range"] {
+  width: 110px;
+  accent-color: var(--info);
+  cursor: pointer;
+}
+.threshold-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--fg);
+  min-width: 55px;
+  text-align: right;
+}
+
+.danger-btn {
+  margin-top: 6px;
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid color-mix(in oklab, var(--ai) 30%, transparent);
+  color: var(--ai-ink);
+  padding: 8px 10px;
+  border-radius: 9px;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  width: 100%;
+  transition: background 0.15s ease;
+}
+.danger-btn:hover { background: var(--ai-soft); }
+
+/* ── Detection-mode badge (header) ────────────── */
+.mode-badge {
+  display: inline-flex; align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 11px; font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+  flex-shrink: 0;
+  letter-spacing: 0.2px;
+}
+.mode-badge:active { transform: scale(0.96); }
+.mode-badge svg { width: 11px; height: 11px; }
+
+.mode-badge.mode-check {
+  background: var(--surface-sunken);
+  border-color: var(--line-strong);
+  color: var(--fg-mid);
+}
+.mode-badge.mode-check:hover {
+  background: var(--surface-alt);
+  color: var(--fg);
+}
+
+.mode-badge.mode-verify {
+  background: var(--human-soft);
+  border-color: color-mix(in oklab, var(--human) 25%, transparent);
+  color: var(--human-ink);
+}
+.mode-badge.mode-verify:hover {
+  background: color-mix(in oklab, var(--human-soft) 70%, var(--human) 15%);
+}
+
+/* Gold for certify — premium feel */
+.mode-badge.mode-certify {
+  background: oklch(0.94 0.08 85);
+  border-color: oklch(0.76 0.14 85);
+  color: oklch(0.42 0.11 75);
+  box-shadow: 0 0 0 2px oklch(0.85 0.12 85 / 0.20);
+}
+.mode-badge.mode-certify:hover {
+  background: oklch(0.90 0.12 85);
+}
+body.theme-dark .mode-badge.mode-certify {
+  background: oklch(0.32 0.08 85);
+  border-color: oklch(0.55 0.14 85);
+  color: oklch(0.90 0.15 88);
+  box-shadow: 0 0 0 2px oklch(0.55 0.14 85 / 0.20);
+}
+body.theme-dark .mode-badge.mode-certify:hover {
+  background: oklch(0.38 0.10 85);
+}
+

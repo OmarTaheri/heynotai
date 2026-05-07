@@ -1,0 +1,335 @@
+/* ── Header ──────────────────────────────────── */
+.pop-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px 10px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+
+.brand-tile {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  background: var(--fg);
+  color: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.brand-meta { flex: 1; min-width: 0; }
+
+.brand-row {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 14.5px; font-weight: 700;
+  color: var(--fg); letter-spacing: -0.2px;
+}
+
+/* ── Animated brand logo (hey[not]ai → hey~~ai~~)
+   State-driven: Header.tsx adds `.is-closed` after a 1s hold. The closed
+   state shrinks `[not]` and draws a hand-stroke through `ai`. Hover on
+   the closed wordmark reopens it (max-width restores, strike undraws),
+   matching the marketing site's Logo component. */
+.logo-word {
+  display: inline-flex;
+  align-items: baseline;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+  color: var(--fg);
+}
+.logo-hey, .logo-not, .logo-ai {
+  display: inline-block;
+  white-space: pre;
+}
+
+.logo-not {
+  overflow: hidden;
+  max-width: 3em;
+  transition: max-width 0.55s cubic-bezier(0.6, 0, 0.3, 1);
+}
+.logo-not-inner {
+  display: inline-block;
+  transform-origin: center;
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  transition:
+    opacity 0.35s ease-out,
+    transform 0.35s ease-out;
+}
+.logo-word.is-closed .logo-not {
+  max-width: 0;
+}
+.logo-word.is-closed .logo-not-inner {
+  opacity: 0;
+  transform: scale(0.3) translateY(-3px);
+}
+.logo-word.is-closed:hover .logo-not {
+  max-width: 3em;
+}
+.logo-word.is-closed:hover .logo-not-inner {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+
+.logo-ai { position: relative; }
+.logo-strike {
+  position: absolute;
+  left: -3px;
+  right: -3px;
+  top: 50%;
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklch, oklch(0.58 0.22 27) 45%, transparent) 0%,
+    oklch(0.58 0.22 27) 10%,
+    oklch(0.58 0.22 27) 88%,
+    color-mix(in oklch, oklch(0.58 0.22 27) 55%, transparent) 100%
+  );
+  filter: drop-shadow(
+    0 0.5px 0 color-mix(in oklch, oklch(0.58 0.22 27) 35%, transparent)
+  );
+  transform-origin: right center;
+  transform: translateY(-50%) scaleX(0) rotate(-1.4deg);
+  opacity: 0;
+}
+
+.logo-word.is-closed .logo-strike {
+  animation: logo-strike-draw 0.45s cubic-bezier(0.45, 0.05, 0.25, 1) forwards;
+}
+
+@keyframes logo-strike-draw {
+  0% {
+    transform: translateY(-54%) scaleX(0) rotate(-3.4deg);
+    opacity: 0;
+  }
+  6% {
+    transform: translateY(-50%) scaleX(0.04) rotate(-2.8deg);
+    opacity: 0.55;
+  }
+  18% {
+    transform: translateY(-47%) scaleX(0.18) rotate(-2.1deg);
+    opacity: 0.88;
+  }
+  34% {
+    transform: translateY(-52%) scaleX(0.38) rotate(-1.2deg);
+    opacity: 1;
+  }
+  52% {
+    transform: translateY(-48%) scaleX(0.6) rotate(-0.4deg);
+    opacity: 1;
+  }
+  68% {
+    transform: translateY(-52%) scaleX(0.78) rotate(-1.1deg);
+    opacity: 1;
+  }
+  82% {
+    transform: translateY(-49%) scaleX(0.94) rotate(-1.7deg);
+    opacity: 1;
+  }
+  92% {
+    transform: translateY(-50.5%) scaleX(1.07) rotate(-0.8deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-50%) scaleX(1) rotate(-1.2deg);
+    opacity: 1;
+  }
+}
+
+.logo-word.is-closed:hover .logo-strike {
+  animation: logo-strike-undraw 0.22s cubic-bezier(0.55, 0, 0.5, 1) forwards;
+}
+
+@keyframes logo-strike-undraw {
+  0% {
+    transform: translateY(-50%) scaleX(1) rotate(-1.2deg);
+    opacity: 1;
+  }
+  35% {
+    transform: translateY(-49%) scaleX(0.72) rotate(-1.6deg);
+    opacity: 1;
+  }
+  70% {
+    transform: translateY(-51%) scaleX(0.32) rotate(-2.3deg);
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateY(-52%) scaleX(0) rotate(-2.8deg);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logo-not,
+  .logo-not-inner,
+  .logo-strike {
+    transition: none;
+    animation: none;
+  }
+  .logo-word.is-closed .logo-not {
+    max-width: 0;
+  }
+  .logo-word.is-closed .logo-not-inner {
+    opacity: 0;
+  }
+  .logo-word.is-closed .logo-strike {
+    transform: translateY(-50%) scaleX(1) rotate(-1.2deg);
+    opacity: 1;
+  }
+}
+
+.version-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; font-weight: 500;
+  color: var(--fg-dim);
+  background: var(--surface-sunken);
+  padding: 1px 5px; border-radius: 4px;
+  letter-spacing: 0.4px;
+}
+
+.status {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; color: var(--fg-mid);
+  margin-top: 1px;
+}
+
+.status-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--human);
+}
+.status-dot.scanning {
+  background: var(--info);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.icon-btn {
+  width: 28px; height: 28px; border-radius: 7px;
+  background: transparent; border: none; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--fg-mid);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.icon-btn:hover:not(:disabled) { background: var(--surface-sunken); color: var(--fg); }
+.icon-btn.active { background: var(--surface-sunken); color: var(--fg); }
+.icon-btn:disabled { opacity: 0.5; cursor: default; }
+.icon-btn svg { width: 14px; height: 14px; }
+
+/* Account button when signed-in: render the user's avatar in place of
+   the user icon. The button keeps its 28×28 hit-target. */
+.icon-btn.avatar-btn {
+  padding: 0;
+  overflow: hidden;
+}
+.icon-btn.avatar-btn:hover { background: transparent; }
+.icon-btn.avatar-btn .header-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  object-fit: cover;
+  background: var(--surface-sunken);
+  border: 1px solid var(--line-strong);
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.icon-btn.avatar-btn:hover .header-avatar {
+  border-color: var(--fg-mid);
+  transform: scale(1.06);
+}
+.header-avatar-fallback {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--fg);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+/* ── Header action slots (collapsible) ────────── */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.action-slot {
+  display: flex;
+  align-items: center;
+  max-width: 180px;
+  opacity: 1;
+  transform: translateX(0) scale(1);
+  margin-right: 0;
+  transition:
+    max-width 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.18s ease,
+    transform 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+    margin 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.action-slot.collapsed {
+  max-width: 0;
+  opacity: 0;
+  transform: translateX(10px) scale(0.82);
+  margin-right: -4px;
+  pointer-events: none;
+}
+
+/* Small pop-in when a button becomes the back arrow */
+.icon-btn.back-btn {
+  animation: back-pop 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+@keyframes back-pop {
+  0%   { transform: scale(0.7) rotate(-6deg); }
+  60%  { transform: scale(1.08) rotate(2deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+
+/* ── Progress bar ───────────────────────────── */
+.progress-track { height: 2px; background: var(--surface-sunken); display: none; }
+.progress-track.active { display: block; }
+.progress-bar {
+  height: 100%; width: 0%;
+  background: var(--info);
+  transition: width 0.2s;
+}
+
+/* ── Tabs ───────────────────────────────────── */
+.tabs {
+  display: flex; gap: 2px;
+  padding: 8px 8px 0;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto; scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar { display: none; }
+
+.tab {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 10px 9px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  color: var(--fg-mid);
+  font-size: 13.5px; font-weight: 500;
+  cursor: pointer;
+  border-radius: 7px 7px 0 0;
+  flex-shrink: 0;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.tab svg { width: 12px; height: 12px; }
+.tab[aria-selected="true"] {
+  background: var(--surface-alt);
+  color: var(--fg);
+  font-weight: 600;
+  border-bottom-color: var(--fg);
+}
+

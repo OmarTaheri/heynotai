@@ -1,0 +1,97 @@
+/* ── Reset ──────────────────────────────────── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  letter-spacing: -0.1px;
+  -webkit-font-smoothing: antialiased;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+button { font-family: inherit; }
+.mono { font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; }
+
+:focus-visible { outline: 2px solid var(--info); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+#root { height: 100%; }
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg);
+}
+
+/* ── Body ───────────────────────────────────── */
+.body {
+  flex: 1; overflow-y: auto; min-height: 0;
+  background: var(--bg); padding: 8px 0 0;
+}
+.body::-webkit-scrollbar { width: 8px; }
+.body::-webkit-scrollbar-track { background: transparent; }
+.body::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 4px; }
+
+/* ── Login gate (overlay shown when unauthenticated) ── */
+.body.is-locked {
+  position: relative;
+  overflow: hidden;
+}
+.body.is-locked > .body-content {
+  filter: blur(6px);
+  pointer-events: none;
+  user-select: none;
+  height: 100%;
+  overflow: hidden;
+}
+.login-gate {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: color-mix(in oklch, var(--bg) 55%, transparent);
+  z-index: 10;
+  animation: gate-fade 180ms ease-out;
+}
+.login-gate-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 22px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  width: 100%;
+  max-width: 280px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+}
+.login-gate-btn {
+  margin-top: 6px;
+  width: 100%;
+}
+@keyframes gate-fade {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.panel {
+  display: flex; flex-direction: column; gap: 12px;
+  padding: 4px 16px 16px;
+}
+

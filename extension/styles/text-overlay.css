@@ -179,33 +179,6 @@
   margin-bottom: 10px;
 }
 
-/* Scanned-text excerpt. Sits between the title and the metric rows so
-   the user can verify what was actually checked. Caps at ~7 lines with
-   a subtle scrollbar on overflow — long selections (the pill allows up
-   to ~20k chars) shouldn't blow the panel off the page. */
-#heynotai-text-pill .hn-tp-text {
-  margin: 0 0 10px;
-  padding: 10px 12px;
-  background: #faf7f0;
-  border: 1px solid rgba(26, 25, 22, 0.06);
-  border-radius: 8px;
-  color: #2c2925;
-  font-size: 12.5px;
-  line-height: 1.5;
-  white-space: pre-wrap;
-  word-break: break-word;
-  max-height: 9em;
-  overflow-y: auto;
-  font-weight: 400;
-  letter-spacing: 0;
-}
-#heynotai-text-pill .hn-tp-text::-webkit-scrollbar {
-  width: 6px;
-}
-#heynotai-text-pill .hn-tp-text::-webkit-scrollbar-thumb {
-  background: rgba(26, 25, 22, 0.18);
-  border-radius: 999px;
-}
 #heynotai-text-pill .hn-tp-panel-row {
   display: flex;
   justify-content: space-between;

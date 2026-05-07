@@ -1,0 +1,283 @@
+/* ── Model option ───────────────────────────── */
+.model-opt {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  text-align: left; cursor: pointer;
+  display: flex; align-items: center; gap: 10px;
+  width: 100%;
+  font-family: inherit;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.model-opt:hover { background: var(--surface-alt); }
+.model-opt.active {
+  background: var(--surface-alt);
+  border-color: var(--info);
+  box-shadow: 0 0 0 3px var(--info-soft);
+}
+.model-opt .bullet {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 1.5px solid var(--line-strong);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.model-opt.active .bullet { border-color: var(--info); }
+.model-opt.active .bullet::after {
+  content: ''; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--info);
+}
+.model-opt .mo-body { flex: 1; min-width: 0; }
+.model-opt .mo-head { display: flex; align-items: center; gap: 6px; }
+.model-opt .mo-name { font-size: 13.5px; font-weight: 600; color: var(--fg); }
+.model-opt .mo-tag {
+  font-size: 10px; color: var(--fg-dim);
+  background: var(--surface-sunken);
+  padding: 1px 6px; border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.model-opt .mo-spec { font-size: 12px; color: var(--fg-mid); margin-top: 2px; }
+.model-opt .mo-speed {
+  font-size: 11.5px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 500;
+}
+.mo-speed.fast { color: var(--human); }
+.mo-speed.medium { color: var(--mixed); }
+.mo-speed.slow { color: var(--ai); }
+
+.model-opt .mo-meta {
+  display: flex; gap: 6px; align-items: center;
+  font-size: 11px; color: var(--fg-mid); margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.mo-cost-high { color: var(--ai, #dc2626); font-weight: 500; }
+.mo-tag-default {
+  background: var(--surface-sunken);
+  color: var(--fg);
+  border: 1px solid var(--line-strong);
+  letter-spacing: 0.5px;
+  font-size: 9.5px;
+  font-weight: 600;
+}
+
+/* ── Tier-card variants ────────────────────────────────────
+   Two-step ladder: mid-tier (verify) is teal-green via `--human`
+   (the same hue the frontend uses for its verify rows, so the
+   surfaces agree on green=mid), high-tier (certify, team) is gold.
+   Free `check` rows stay neutral. The tier pill text inside still
+   reads VERIFY / CERTIFY / TEAM so the verbal distinction
+   between certify and team is preserved without a third color. */
+.model-opt.tier-verify {
+  border-color: color-mix(in oklab, var(--human) 50%, var(--line));
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in oklab, var(--human) 20%, var(--surface)) 0%,
+      color-mix(in oklab, var(--human) 5%, var(--surface)) 60%,
+      var(--surface) 100%
+    );
+  box-shadow: inset 3px 0 0 0 var(--human);
+}
+.model-opt.tier-verify:hover {
+  border-color: color-mix(in oklab, var(--human) 70%, var(--line));
+}
+
+.model-opt.tier-certify,
+.model-opt.tier-team {
+  border-color: color-mix(in oklab, var(--gold) 55%, var(--line));
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in oklab, var(--gold) 22%, var(--surface)) 0%,
+      color-mix(in oklab, var(--gold) 6%, var(--surface)) 60%,
+      var(--surface) 100%
+    );
+  box-shadow:
+    inset 3px 0 0 0 var(--gold),
+    0 0 0 1px color-mix(in oklab, var(--gold) 14%, transparent);
+}
+.model-opt.tier-certify:hover,
+.model-opt.tier-team:hover {
+  border-color: color-mix(in oklab, var(--gold) 75%, var(--line));
+}
+
+.model-opt.locked {
+  cursor: default;
+  opacity: 0.92;
+}
+/* Locked rows share the tier-tinted bullet so the row reads as one
+   coherent surface (vs. tier color + gold lock = clash). */
+.model-opt.locked .bullet {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.model-opt.locked.tier-verify .bullet {
+  border-color: color-mix(in oklab, var(--human) 55%, transparent);
+  background: color-mix(in oklab, var(--human) 18%, var(--surface));
+  color: var(--human);
+}
+.model-opt.locked.tier-certify .bullet,
+.model-opt.locked.tier-team .bullet {
+  border-color: color-mix(in oklab, var(--gold) 55%, transparent);
+  background: color-mix(in oklab, var(--gold) 18%, var(--surface));
+  color: var(--gold);
+}
+.model-opt.locked .bullet svg { width: 9px; height: 9px; }
+
+/* Tier label pill — green for verify (mid), gold for certify+team
+   (high). Pill text still reads VERIFY / CERTIFY / TEAM so the
+   verbal distinction within the gold tier survives. */
+.mo-tag-tier {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.mo-tag-tier.tier-verify {
+  color: var(--human);
+  background: color-mix(in oklab, var(--human) 16%, var(--surface));
+  border: 1px solid color-mix(in oklab, var(--human) 35%, transparent);
+}
+.mo-tag-tier.tier-certify,
+.mo-tag-tier.tier-team {
+  color: var(--gold);
+  background: color-mix(in oklab, var(--gold) 16%, var(--surface));
+  border: 1px solid color-mix(in oklab, var(--gold) 40%, transparent);
+}
+
+/* Upgrade pill — green for verify (mid), gold for certify+team. */
+.mo-upgrade {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 4px 9px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  color: var(--gold);
+  background: color-mix(in oklab, var(--gold) 14%, var(--surface));
+  border: 1px solid color-mix(in oklab, var(--gold) 50%, transparent);
+}
+.mo-upgrade.tier-verify {
+  color: var(--human);
+  background: color-mix(in oklab, var(--human) 14%, var(--surface));
+  border-color: color-mix(in oklab, var(--human) 50%, transparent);
+}
+.mo-upgrade.tier-certify,
+.mo-upgrade.tier-team {
+  color: var(--gold);
+  background: color-mix(in oklab, var(--gold) 14%, var(--surface));
+  border-color: color-mix(in oklab, var(--gold) 50%, transparent);
+}
+.mo-upgrade:hover { filter: brightness(1.12); }
+.mo-upgrade svg { width: 10px; height: 10px; }
+
+.model-skeleton {
+  display: flex; flex-direction: column; gap: 6px;
+}
+.model-skeleton-row {
+  height: 56px; border-radius: 10px;
+  background: linear-gradient(90deg,
+    var(--surface-sunken) 0%,
+    var(--surface-alt) 50%,
+    var(--surface-sunken) 100%);
+  background-size: 200% 100%;
+  animation: model-skel 1.4s ease-in-out infinite;
+  border: 1px solid var(--line);
+}
+@keyframes model-skel {
+  0%   { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+.model-empty {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 4px; padding: 14px 8px;
+  font-size: 12.5px; color: var(--fg-mid);
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+}
+
+/* ── Auto mode card + disabled model options ────── */
+.auto-card {
+  border-radius: 14px;
+  padding: 12px 14px;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.auto-card.active {
+  background: var(--info-soft);
+  border-color: color-mix(in oklab, var(--info) 22%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--info) 8%, transparent);
+}
+.auto-row {
+  display: flex; align-items: center; gap: 12px;
+}
+.auto-icon {
+  width: 30px; height: 30px; border-radius: 8px;
+  background: var(--surface-sunken);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--fg-mid);
+  flex-shrink: 0;
+}
+.auto-card.active .auto-icon {
+  background: var(--info);
+  color: #fff;
+}
+.auto-copy { flex: 1; min-width: 0; }
+.auto-title {
+  font-size: 14px; font-weight: 600; color: var(--fg);
+}
+.auto-desc {
+  font-size: 12px; color: var(--fg-mid); line-height: 1.4;
+  margin-top: 2px;
+}
+
+.model-opt:disabled,
+.model-opt.disabled {
+  opacity: 0.55;
+  cursor: default;
+  pointer-events: auto; /* keep hover:none but still allow cursor feedback */
+}
+.model-opt.disabled:hover { background: transparent; border-color: var(--line); box-shadow: none; }
+.model-opt.disabled.active {
+  opacity: 1;
+  border-color: var(--info);
+  background: var(--surface-alt);
+  box-shadow: 0 0 0 3px var(--info-soft);
+}
+
+.mo-tag-auto {
+  background: var(--info-soft) !important;
+  color: var(--info) !important;
+}
+
+/* ── Muted look for everything under Auto-mode Models ── */
+/* (darker, neutral tones for info banner + selected cards) */
+.panel.auto-active .info-banner {
+  background: var(--surface-sunken);
+  border-color: var(--line-strong);
+}
+.panel.auto-active .info-banner svg { color: var(--fg-mid); }
+.panel.auto-active .info-banner .b-title { color: var(--fg); }
+.panel.auto-active .info-banner .b-desc  { color: var(--fg-mid); }
+
+.panel.auto-active .model-opt.active {
+  border-color: var(--line-strong);
+  background: var(--surface-alt);
+  box-shadow: 0 0 0 3px var(--surface-sunken);
+}
+.panel.auto-active .model-opt.active .bullet {
+  border-color: var(--fg-mid);
+}
+.panel.auto-active .model-opt.active .bullet::after {
+  background: var(--fg-mid);
+}
+

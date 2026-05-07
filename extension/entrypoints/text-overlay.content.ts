@@ -221,14 +221,9 @@ export default defineContentScript({
       const conf = clampPct(scan.confidence);
       const wc = Number.isFinite(scan.wordCount) ? scan.wordCount : 0;
       const model = scan.model || '—';
-      const text = (scan.content ?? '').trim();
-      const textBlock = text
-        ? `<div class="hn-tp-text" aria-label="Scanned text">${escapeHtml(text)}</div>`
-        : '';
       return `
         <div class="hn-tp-panel" role="dialog" aria-label="AI check details">
           <div class="hn-tp-panel-title">heynotai · text scan</div>
-          ${textBlock}
           <div class="hn-tp-panel-row">
             <span class="hn-tp-k">Verdict</span>
             <span class="hn-tp-v">${escapeHtml(verdictLabel(scan))}</span>

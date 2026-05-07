@@ -1,0 +1,658 @@
+/* ── Home: hotspots timeline + rows ───────────── */
+.timeline { margin-bottom: 4px; }
+.timeline-track {
+  position: relative;
+  height: 6px;
+  background: var(--surface-sunken);
+  border-radius: 3px;
+  overflow: visible;
+}
+.timeline-marker {
+  position: absolute;
+  top: -3px;
+  width: 3px; height: 12px;
+  border-radius: 2px;
+  transform: translateX(-50%);
+  box-shadow: 0 0 6px currentColor;
+}
+.timeline-marker.v-ai    { background: var(--ai);    color: var(--ai); }
+.timeline-marker.v-mixed { background: var(--mixed); color: var(--mixed); }
+.timeline-marker.v-human { background: var(--human); color: var(--human); }
+.timeline-axis {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10.5px;
+  color: var(--fg-dim);
+  margin-top: 6px;
+}
+
+.hotspot-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 0;
+  border-top: 1px solid var(--line);
+}
+.hotspot-row:first-child { border-top: none; }
+.hotspot-at {
+  font-size: 11px;
+  min-width: 60px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: var(--surface-sunken);
+  color: var(--fg-mid);
+  text-align: center;
+  flex-shrink: 0;
+  font-weight: 600;
+}
+.hotspot-at.v-ai    { color: var(--ai-ink);    background: var(--ai-soft); }
+.hotspot-at.v-mixed { color: var(--mixed-ink); background: var(--mixed-soft); }
+.hotspot-at.v-human { color: var(--human-ink); background: var(--human-soft); }
+.hotspot-body { flex: 1; min-width: 0; }
+.hotspot-head {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 12.5px; color: var(--fg);
+  line-height: 1.3;
+}
+.hotspot-head svg { color: var(--fg-mid); flex-shrink: 0; }
+.hotspot-label {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.hotspot-track {
+  height: 3px;
+  background: var(--surface-sunken);
+  border-radius: 2px;
+  margin-top: 5px;
+  overflow: hidden;
+}
+.hotspot-fill { height: 100%; border-radius: 2px; }
+.hotspot-conf {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--fg-mid);
+  min-width: 36px;
+  text-align: right;
+  flex-shrink: 0;
+}
+.hotspot-conf.v-ai    { color: var(--ai-ink); }
+.hotspot-conf.v-mixed { color: var(--mixed-ink); }
+.hotspot-conf.v-human { color: var(--human-ink); }
+
+/* ── Home: creator / author / channel card ───── */
+.creator-head {
+  display: flex; align-items: center; gap: 10px;
+  padding-bottom: 2px;
+}
+.creator-avatar {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: var(--surface-sunken);
+  border: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--fg-mid);
+  flex-shrink: 0;
+}
+.creator-avatar.plat-youtube   { color: oklch(0.55 0.21 25);  background: color-mix(in oklab, oklch(0.55 0.21 25)  14%, var(--surface-sunken)); }
+.creator-avatar.plat-facebook  { color: oklch(0.55 0.18 260); background: color-mix(in oklab, oklch(0.55 0.18 260) 14%, var(--surface-sunken)); }
+.creator-avatar.plat-instagram { color: oklch(0.58 0.20 340); background: color-mix(in oklab, oklch(0.58 0.20 340) 14%, var(--surface-sunken)); }
+
+.creator-copy { flex: 1; min-width: 0; }
+.creator-name {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 13.5px; font-weight: 600; color: var(--fg);
+  letter-spacing: -0.1px;
+}
+.creator-verified {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--info); color: #fff;
+  font-size: 9px; font-weight: 700;
+  flex-shrink: 0;
+}
+.creator-meta {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11.5px; color: var(--fg-dim);
+  margin-top: 2px;
+  overflow: hidden; white-space: nowrap;
+}
+
+/* ── Home: platform content header ──────────── */
+.content-header {
+  padding: 10px 12px;
+  gap: 0;
+}
+.ch-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ch-thumb {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--fg-mid);
+  flex-shrink: 0;
+}
+.content-header.plat-youtube   .ch-thumb { color: oklch(0.55 0.21 25);  background: color-mix(in oklab, oklch(0.55 0.21 25)  14%, var(--surface-sunken)); }
+.content-header.plat-facebook  .ch-thumb { color: oklch(0.55 0.18 260); background: color-mix(in oklab, oklch(0.55 0.18 260) 14%, var(--surface-sunken)); }
+.content-header.plat-instagram .ch-thumb { color: oklch(0.58 0.20 340); background: color-mix(in oklab, oklch(0.58 0.20 340) 14%, var(--surface-sunken)); }
+
+.ch-body { flex: 1; min-width: 0; }
+.ch-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--fg);
+  letter-spacing: -0.1px;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.ch-meta {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11.5px;
+  color: var(--fg-dim);
+  margin-top: 3px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.ch-author { color: var(--fg-mid); font-weight: 500; }
+.ch-dot { opacity: 0.6; }
+
+.page-title-line {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--fg);
+  letter-spacing: -0.1px;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.ch-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10.5px;
+  font-family: 'JetBrains Mono', monospace;
+  padding: 3px 7px;
+  border-radius: 5px;
+  flex-shrink: 0;
+  text-transform: capitalize;
+}
+.ch-badge svg { width: 10px; height: 10px; }
+
+/* ── Home: centered single-card panel ──────────── */
+.panel-centered {
+  min-height: 100%;
+  justify-content: center;
+  padding-top: 16px;
+  padding-bottom: 16px;
+}
+
+/* ── Home: paused action card ─────────────────── */
+.action-card.action-paused {
+  border-color: color-mix(in oklab, var(--mixed) 28%, var(--line));
+  background: linear-gradient(180deg, color-mix(in oklab, var(--mixed-soft) 60%, var(--surface)) 0%, var(--surface) 60%);
+}
+.action-card.action-paused .action-icon {
+  color: var(--mixed-ink);
+  background: var(--mixed-soft);
+  border-color: color-mix(in oklab, var(--mixed) 22%, transparent);
+}
+
+/* ── Home: idle action card ───────────────────── */
+.action-card {
+  padding: 16px;
+  gap: 14px;
+  animation: card-rise 0.32s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+.action-head {
+  display: flex; align-items: center; gap: 12px;
+}
+.action-icon {
+  width: 40px; height: 40px; border-radius: 10px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--fg);
+  flex-shrink: 0;
+}
+.action-copy { flex: 1; min-width: 0; }
+.action-title {
+  font-size: 14.5px; font-weight: 600; color: var(--fg);
+  letter-spacing: -0.1px;
+}
+.action-host {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; color: var(--fg-dim);
+  margin-top: 2px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.action-desc {
+  font-size: 13px; color: var(--fg-mid);
+  line-height: 1.5;
+}
+.action-btns {
+  display: flex; flex-direction: column; gap: 8px;
+}
+.action-btns .btn-primary,
+.action-btns .btn-outline {
+  height: 40px;
+}
+
+@keyframes card-rise {
+  0%   { opacity: 0; transform: translateY(6px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Home: skeleton (scanning) ────────────────── */
+.skeleton-block {
+  display: inline-block;
+  position: relative;
+  overflow: hidden;
+  background: var(--surface-sunken);
+  border-radius: 5px;
+  min-height: 12px;
+  isolation: isolate;
+}
+.skeleton-block::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in oklab, var(--fg) 8%, transparent) 45%,
+    color-mix(in oklab, var(--fg) 14%, transparent) 50%,
+    color-mix(in oklab, var(--fg) 8%, transparent) 55%,
+    transparent 100%
+  );
+  transform: translateX(-100%);
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+body.theme-dark .skeleton-block::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in oklab, #fff 6%, transparent) 45%,
+    color-mix(in oklab, #fff 12%, transparent) 50%,
+    color-mix(in oklab, #fff 6%, transparent) 55%,
+    transparent 100%
+  );
+}
+
+@keyframes shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.is-skeleton .row { justify-content: space-between; }
+
+/* Skeleton shape variants */
+.s-val   { width: 54px; height: 14px; border-radius: 4px; }
+.s-score { width: 140px; height: 22px; border-radius: 6px; margin-top: 6px; }
+.s-sub   { width: 100px; height: 12px; border-radius: 4px; margin-top: 6px; }
+.s-chip  { width: 56px; height: 20px; border-radius: 6px; }
+.s-count { width: 44px; height: 13px; border-radius: 4px; }
+.s-spark { width: 44px; height: 18px; border-radius: 4px; flex-shrink: 0; }
+
+/* Skeleton bar inside breakdown track */
+.br-fill.skeleton-bar {
+  width: 100%;
+  background: var(--surface-sunken);
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.br-fill.skeleton-bar::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklab, var(--info) 45%, transparent),
+    transparent
+  );
+  transform: translateX(-100%);
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+/* Scanning summary — keeps the real verdict gradient + glow + spinning arc */
+.scanning-summary {
+  position: relative;
+  overflow: hidden;
+  animation: summary-breath 2.4s ease-in-out infinite;
+}
+@keyframes summary-breath {
+  0%, 100% { box-shadow: inset 0 0 0 0 transparent; }
+  50%      { box-shadow: inset 0 0 28px -8px color-mix(in oklab, currentColor 25%, transparent); }
+}
+
+.scanning-summary.verdict-ai    { --verdict-col: var(--ai); }
+.scanning-summary.verdict-human { --verdict-col: var(--human); }
+.scanning-summary.verdict-mixed { --verdict-col: var(--mixed); }
+
+/* Ring — layered: glow + dashed base + spinning arc + label */
+.scan-ring {
+  position: relative;
+  width: 80px; height: 80px; flex-shrink: 0;
+}
+.scan-ring .scan-ring-base,
+.scan-ring .scan-ring-arc {
+  position: absolute; inset: 0;
+}
+.scan-ring .scan-ring-base { transform: rotate(-90deg); }
+.scan-ring .scan-ring-arc  {
+  animation: ring-spin 1.1s linear infinite;
+  filter: drop-shadow(0 0 4px color-mix(in oklab, var(--verdict-col) 55%, transparent));
+}
+@keyframes ring-spin {
+  to { transform: rotate(360deg); }
+}
+
+.scan-ring-glow {
+  position: absolute;
+  inset: -14px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in oklab, var(--verdict-col) 38%, transparent) 0%,
+    color-mix(in oklab, var(--verdict-col) 18%, transparent) 40%,
+    transparent 70%
+  );
+  filter: blur(4px);
+  animation: glow-pulse 1.8s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.55; transform: scale(0.95); }
+  50%      { opacity: 1;    transform: scale(1.05); }
+}
+
+.scan-ring .ring-label {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1;
+  color: var(--fg);
+}
+
+/* Three dots inside the ring — replace the previous "0→100%" numeric
+   that lied about progress on real backend scans. */
+.scan-ring-dots {
+  display: inline-flex; gap: 4px; align-items: center;
+}
+.scan-ring-dots span {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: color-mix(in oklab, var(--verdict-col) 80%, var(--fg));
+  animation: scan-dots-pulse 1.2s ease-in-out infinite;
+}
+.scan-ring-dots span:nth-child(2) { animation-delay: 0.2s; }
+.scan-ring-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes scan-dots-pulse {
+  0%, 100% { opacity: 0.3; transform: scale(0.85); }
+  50%      { opacity: 1;   transform: scale(1.1); }
+}
+
+/* Percentage text grows subtly with the progress */
+.scan-score { display: flex; align-items: center; gap: 8px; }
+.scan-pct {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Pulsing verdict tag during scan */
+.verdict-tag.pulse-tag {
+  animation: tag-pulse 1.4s ease-in-out infinite;
+  text-transform: lowercase;
+}
+@keyframes tag-pulse {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 1; }
+}
+
+/* ── Panel reveal (applies to every tab) ───────── */
+.panel > * {
+  animation: reveal-stagger 0.42s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.panel > *:nth-child(1) { animation-delay: 0ms;   }
+.panel > *:nth-child(2) { animation-delay: 60ms;  }
+.panel > *:nth-child(3) { animation-delay: 120ms; }
+.panel > *:nth-child(4) { animation-delay: 180ms; }
+.panel > *:nth-child(5) { animation-delay: 240ms; }
+.panel > *:nth-child(6) { animation-delay: 300ms; }
+.panel > *:nth-child(n+7) { animation-delay: 360ms; }
+
+/* Single-card centered state shouldn't stagger — just rise */
+.panel-centered > * { animation-delay: 0ms !important; }
+
+/* Scan → result: the skeleton already drew the cards, so don't re-stagger.
+   Instead, gently fade the data-bearing content into the existing shapes. */
+.panel-no-stagger > * {
+  animation: none !important;
+}
+.result-fade {
+  display: flex; flex-direction: column; gap: 12px;
+  animation: result-values-in 0.38s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes result-values-in {
+  0%   { opacity: 0.35; filter: blur(2px); }
+  60%  { opacity: 1;    filter: blur(0); }
+  100% { opacity: 1;    filter: blur(0); }
+}
+
+/* Skeleton panel: skip the global stagger so it renders instantly */
+.panel.is-skeleton > * { animation: none !important; }
+
+@keyframes reveal-stagger {
+  0%   { opacity: 0; transform: translateY(8px) scale(0.985); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Deactivated section (Platforms / Sites when Everything is on) */
+.source-group {
+  transition: opacity 0.25s ease, filter 0.25s ease, transform 0.25s ease;
+}
+.source-group.section-deactivated {
+  opacity: 0.4;
+  filter: saturate(0.3);
+  pointer-events: none;
+  transform: scale(0.995);
+}
+
+/* Platform sub-rows (Videos / Reels / Posts under each parent
+ * platform). Indented and slightly muted so the parent row visually
+ * dominates. When the master toggle is off we mark them `.disabled`
+ * which fully greys them out and blocks interaction. */
+.site-row.subrow {
+  padding-left: 38px;
+  border-top: 1px dashed var(--line);
+}
+.site-row.subrow .site-host {
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--fg-mid);
+}
+.site-row.subrow.disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+/* ── Text-scan result card (right-click "AI check this text" flow) ── */
+.text-result-card {
+  position: relative;
+  padding: 16px 18px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: card-rise 0.32s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+.text-result-card.verdict-human {
+  background: linear-gradient(180deg,
+    color-mix(in oklab, var(--human-soft) 55%, var(--surface)) 0%,
+    var(--surface) 65%);
+  border-color: color-mix(in oklab, var(--human) 22%, var(--line));
+}
+.text-result-card.verdict-ai {
+  background: linear-gradient(180deg,
+    color-mix(in oklab, var(--ai-soft) 55%, var(--surface)) 0%,
+    var(--surface) 65%);
+  border-color: color-mix(in oklab, var(--ai) 22%, var(--line));
+}
+.text-result-card.verdict-mixed {
+  background: linear-gradient(180deg,
+    color-mix(in oklab, var(--mixed-soft) 55%, var(--surface)) 0%,
+    var(--surface) 65%);
+  border-color: color-mix(in oklab, var(--mixed) 22%, var(--line));
+}
+
+.text-result-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  color: var(--fg-dim);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.text-result-close:hover {
+  background: color-mix(in oklab, var(--fg-dim) 14%, transparent);
+  color: var(--fg);
+}
+
+.text-result-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.text-result-copy {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.text-result-headline {
+  font-size: 15.5px;
+  font-weight: 600;
+  font-style: italic;
+  color: var(--fg);
+  letter-spacing: -0.2px;
+}
+.text-result-meta {
+  font-size: 12px;
+  color: var(--fg-dim);
+  letter-spacing: 0.01em;
+}
+.text-result-when {
+  font-size: 11px;
+  color: var(--fg-dim);
+  opacity: 0.8;
+  margin-top: 2px;
+}
+
+.text-result-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+}
+.text-result-bar-label {
+  color: var(--fg-mid);
+  font-weight: 500;
+  flex: 0 0 auto;
+}
+.text-result-bar {
+  flex: 1 1 auto;
+  height: 6px;
+  border-radius: 3px;
+  background: color-mix(in oklab, var(--fg-dim) 18%, transparent);
+  overflow: hidden;
+}
+.text-result-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.text-result-bar-fill.verdict-human { background: var(--human); }
+.text-result-bar-fill.verdict-ai    { background: var(--ai); }
+.text-result-bar-fill.verdict-mixed { background: var(--mixed); }
+.text-result-bar-pct {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+  min-width: 36px;
+  text-align: right;
+}
+
+.text-result-cta {
+  appearance: none;
+  border: 0;
+  background: var(--fg);
+  color: var(--bg);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  padding: 9px 14px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: opacity 0.15s ease, transform 0.12s ease;
+}
+.text-result-cta:hover { opacity: 0.92; }
+.text-result-cta:active { transform: translateY(1px); }
+
+/* Scanned-text excerpt — verbatim copy of what the right-click flow sent
+   to the detector. Capped vertically with a subtle scrollbar so a long
+   selection (the SW allows up to ~20k chars) doesn't blow the card. */
+.text-result-excerpt-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.text-result-excerpt-label {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg-mid);
+  font-weight: 600;
+}
+.text-result-excerpt {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: color-mix(in oklab, var(--surface) 60%, var(--bg));
+  color: var(--fg);
+  font-size: 12.5px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 9.5em;
+  overflow-y: auto;
+}
+.text-result-excerpt::-webkit-scrollbar {
+  width: 6px;
+}
+.text-result-excerpt::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--fg-dim) 40%, transparent);
+  border-radius: 999px;
+}
