@@ -7,6 +7,15 @@ const API_URL =
   (import.meta.env.VITE_API_URL as string | undefined) ??
   'http://localhost:8787';
 
+// PB REST is hit directly (not via SDK) so the SW stays small —
+// `auth-state.tsx` mirrors the bearer token into chrome.storage.local
+// for exactly this purpose. Used to look up an existing successful
+// scan for a YouTube URL before creating a new one, so revisiting a
+// video reuses the prior verdict instead of re-billing.
+const PB_URL =
+  (import.meta.env.VITE_POCKETBASE_URL as string | undefined) ??
+  'http://127.0.0.1:8090';
+
 // Keep this aligned with MAX_CONTENT_BYTES in api/src/routes/scans/validators.ts
 // — the server rejects above 1_000_000, so trimming here gives the user a
 // graceful capped scan instead of a 400.
@@ -36,6 +45,14 @@ export default defineBackground(() => {
   // Track in-flight text scans by tabId so a second right-click during
   // a slow scan can cancel and replace the first.
   const inFlightTextScans = new Map<number, AbortController>();
+
+  // Latest selection text primed by the text-overlay content script on
+  // its `contextmenu` listener. We prefer this over `info.selectionText`
+  // from chrome.contextMenus.onClicked, which collapses newlines in
+  // some Chrome builds — the editor then renders bullet lists and
+  // paragraph breaks as a single mashed paragraph. Cleared per-tab on
+  // navigation / close.
+  const primedTextSelections = new Map<number, string>();
 
   // Same pattern for YouTube scans — when the user navigates from one
   // /watch URL to another the previous scan must be cancelled so its
@@ -181,7 +198,14 @@ export default defineBackground(() => {
   chrome.contextMenus.onClicked.addListener((info, tab) => {
     if (tab?.id == null) return;
     if (info.menuItemId === 'hn-text-selection') {
-      runTextScan(tab.id, info.selectionText ?? '').catch(() => {
+      // Prefer the content-script-primed selection (newlines intact);
+      // fall back to info.selectionText for the rare case where the
+      // contextmenu listener never ran (e.g. extension just installed
+      // and content script hasn't loaded into this tab yet).
+      const primed = primedTextSelections.get(tab.id);
+      primedTextSelections.delete(tab.id);
+      const selection = primed ?? info.selectionText ?? '';
+      runTextScan(tab.id, selection).catch(() => {
         // Errors surface to the user via TEXT_SCAN_FAILED inside
         // runTextScan; nothing else to do here.
       });
@@ -317,6 +341,7 @@ export default defineBackground(() => {
     mediaId: string,
     title?: string,
   ) {
+    console.info('[heynotai/sw] runYouTubeScan starting', { tabId, url, mediaId });
     // Cancel any previous in-flight scan for this tab — the user has
     // either rescanned or navigated to a different video, and we don't
     // want two polling loops eating the auth token's budget.
@@ -326,19 +351,58 @@ export default defineBackground(() => {
 
     const auth = await loadAuth();
     if (!auth) {
+      console.warn('[heynotai/sw] no auth — telling content script', { tabId, mediaId });
       sendTabMessage(tabId, { type: 'YT_SCAN_AUTH_REQUIRED', mediaId });
       inFlightYouTubeScans.delete(tabId);
       return;
     }
 
     try {
-      const created = await createYouTubeScan(url, title, auth.token, controller.signal);
+      // Cache hit short-circuits the create+poll loop. Reuses any prior
+      // scan for this canonical YouTube URL that hasn't failed —
+      // includes in-flight rows so concurrent tabs (or a re-mount during
+      // a still-spinning scan) join the existing run instead of
+      // creating duplicate `scans` rows. `failed` is excluded so the
+      // user can retry after a detector failure.
+      const cached = await findExistingYouTubeScan(
+        url,
+        auth.token,
+        controller.signal,
+      );
+      let scanId: string;
+      if (cached) {
+        console.info('[heynotai/sw] cache hit', {
+          scanId: cached.id,
+          status: cached.status,
+        });
+        if (cached.status === 'done') {
+          sendTabMessage(tabId, {
+            type: 'YT_SCAN_COMPLETE',
+            scan: cached,
+            mediaId,
+          });
+          return;
+        }
+        // queued / scanning → poll the existing record.
+        scanId = cached.id;
+      } else {
+        console.info('[heynotai/sw] no cache — POST /scans', { url, mediaId });
+        const created = await createYouTubeScan(url, title, auth.token, controller.signal);
+        console.info('[heynotai/sw] /scans created', { scanId: created.id });
+        scanId = created.id;
+      }
       const finalScan = await pollScan(
-        created.id,
+        scanId,
         auth.token,
         controller.signal,
         YT_SCAN_POLL_MAX_ATTEMPTS,
       );
+      console.info('[heynotai/sw] poll finished', {
+        tabId,
+        scanId: finalScan.id,
+        status: finalScan.status,
+        verdict: finalScan.verdict,
+      });
       if (finalScan.status === 'failed') {
         sendTabMessage(tabId, {
           type: 'YT_SCAN_FAILED',
@@ -359,6 +423,42 @@ export default defineBackground(() => {
       if (inFlightYouTubeScans.get(tabId) === controller) {
         inFlightYouTubeScans.delete(tabId);
       }
+    }
+  }
+
+  /** PB REST lookup for the most recent non-failed scan with the given
+   *  YouTube source URL. Picks up both completed (`done`) and in-flight
+   *  (`queued` / `scanning`) rows so the caller can either reuse the
+   *  verdict or join the existing poll loop instead of POSTing a
+   *  duplicate `scans` row. Returns null on miss / 401 / 404 — the
+   *  caller falls through to the normal create+poll flow. The
+   *  response shape matches the SW's existing `Scan` type because
+   *  PB's record is what the API also returns. */
+  async function findExistingYouTubeScan(
+    sourceUrl: string,
+    token: string,
+    signal: AbortSignal,
+  ): Promise<Scan | null> {
+    const filter = `sourceUrl="${sourceUrl.replace(/"/g, '\\"')}" && status!="failed"`;
+    const params = new URLSearchParams({
+      filter,
+      sort: '-created',
+      perPage: '1',
+    });
+    try {
+      const r = await fetch(
+        `${PB_URL}/api/collections/scans/records?${params.toString()}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          signal,
+        },
+      );
+      if (!r.ok) return null;
+      const body = (await r.json()) as { items?: Scan[] };
+      return body.items?.[0] ?? null;
+    } catch {
+      // Network blip / aborted scan — fall through to live scan.
+      return null;
     }
   }
 
@@ -414,11 +514,124 @@ export default defineBackground(() => {
   }
 
   function sendTabMessage(tabId: number, msg: ExtensionMessage) {
-    chrome.tabs.sendMessage(tabId, msg).catch(() => {
-      // Content script may not be loaded (e.g. chrome:// pages where
-      // the menu item itself wouldn't appear, but defensive against
-      // race conditions).
-    });
+    chrome.tabs.sendMessage(tabId, msg).then(
+      () => {
+        console.info('[heynotai/sw] sendTabMessage delivered', {
+          tabId,
+          type: msg.type,
+        });
+      },
+      async (err) => {
+        // Content script not present — most often happens when the
+        // extension was reloaded after the page was already open. For
+        // verdict messages (YT_SCAN_COMPLETE / FAILED), re-inject the
+        // content script and retry once so the user actually sees the
+        // result instead of the overlay spinning forever.
+        const errMsg = err instanceof Error ? err.message : String(err);
+        console.warn('[heynotai/sw] sendTabMessage failed', {
+          tabId,
+          type: msg.type,
+          err: errMsg,
+        });
+        const isVerdict =
+          msg.type === 'YT_SCAN_COMPLETE' ||
+          msg.type === 'YT_SCAN_FAILED' ||
+          msg.type === 'YT_SCAN_AUTH_REQUIRED';
+        if (!isVerdict) return;
+        try {
+          await chrome.scripting.executeScript({
+            target: { tabId },
+            files: ['content-scripts/content.js'],
+          });
+          await new Promise((r) => setTimeout(r, 700));
+          await chrome.tabs.sendMessage(tabId, msg);
+          console.info('[heynotai/sw] sendTabMessage delivered (after inject)', {
+            tabId,
+            type: msg.type,
+          });
+        } catch (retryErr) {
+          console.warn('[heynotai/sw] verdict redelivery failed', {
+            tabId,
+            type: msg.type,
+            err: retryErr instanceof Error ? retryErr.message : String(retryErr),
+          });
+          // Last-ditch: broadcast to extension contexts (drawer) so the
+          // user at least sees that the verdict landed in PB even if
+          // the in-page overlay can't be updated.
+          if (msg.type === 'YT_SCAN_COMPLETE') {
+            chrome.runtime
+              .sendMessage({
+                type: 'SCAN_COMPLETE',
+                payload: {
+                  videoId: msg.scan.id,
+                  title: msg.scan.title ?? '',
+                  result:
+                    msg.scan.verdict === 'ai'
+                      ? 'ai-generated'
+                      : msg.scan.verdict === 'human'
+                        ? 'authentic'
+                        : 'suspicious',
+                  trustScore: 100 - (msg.scan.aiPct ?? 0),
+                  timestamp: Date.now(),
+                  url: msg.scan.sourceUrl ?? '',
+                },
+              })
+              .catch(() => {});
+          } else if (msg.type === 'YT_SCAN_FAILED') {
+            chrome.runtime
+              .sendMessage({ type: 'SCAN_FAILED', error: msg.error })
+              .catch(() => {});
+          }
+        }
+      },
+    );
+  }
+
+  /** Deliver a MANUAL_SCAN to a tab's content script. If the content
+   *  script isn't present (extension was reloaded after the page
+   *  loaded, etc.), inject content.js programmatically and retry once.
+   *  On total failure broadcast SCAN_FAILED via runtime.sendMessage so
+   *  the drawer can roll back its optimistic scanning UI. */
+  async function triggerManualScan(tabId: number): Promise<void> {
+    // Step 1 — direct delivery, in case the content script is already
+    // running.
+    try {
+      await chrome.tabs.sendMessage(tabId, { type: 'MANUAL_SCAN' });
+      console.info('[heynotai/sw] MANUAL_SCAN delivered (no inject)', { tabId });
+      return;
+    } catch (err) {
+      console.info('[heynotai/sw] direct delivery failed — will inject', {
+        tabId,
+        err: err instanceof Error ? err.message : String(err),
+      });
+    }
+    // Step 2 — programmatically inject content.js, then retry. Path is
+    // relative to the extension's web_accessible_resources output —
+    // matches the build artifact in `.output/chrome-mv3/`.
+    try {
+      const injectResults = await chrome.scripting.executeScript({
+        target: { tabId },
+        files: ['content-scripts/content.js'],
+      });
+      console.info('[heynotai/sw] content.js injected', {
+        tabId,
+        frames: injectResults?.length ?? 0,
+      });
+      // The freshly-loaded content script adds its onMessage listener
+      // inside a post-loadPrefs() promise chain, so give it a tick.
+      await new Promise((r) => setTimeout(r, 700));
+      await chrome.tabs.sendMessage(tabId, { type: 'MANUAL_SCAN' });
+      console.info('[heynotai/sw] MANUAL_SCAN delivered (after inject)', { tabId });
+    } catch (err) {
+      console.warn('[heynotai/sw] inject + retry failed', {
+        tabId,
+        err: err instanceof Error ? err.message : String(err),
+      });
+      // Notify the drawer so its scanning UI doesn't spin forever.
+      chrome.runtime
+        .sendMessage({ type: 'SCAN_FAILED', error: 'content_script_missing' })
+        .catch(() => {});
+    }
   }
 
   async function injectDrawer(tabId: number, fromAutoReopen: boolean) {
@@ -444,7 +657,15 @@ export default defineBackground(() => {
     injectDrawer(tab.id, false);
   });
 
+  console.info('[heynotai/sw] booted', {
+    version: chrome.runtime.getManifest().version,
+  });
+
   chrome.runtime.onMessage.addListener((msg: ExtensionMessage, sender) => {
+    console.info('[heynotai/sw] message', {
+      type: msg?.type,
+      fromTab: sender.tab?.id ?? null,
+    });
     if (msg.type === 'SCAN_COMPLETE' && sender.tab?.id != null) {
       const cfg = badgeConfig[msg.payload.result] ?? badgeConfig.authentic;
       const tabId = sender.tab.id;
@@ -455,15 +676,33 @@ export default defineBackground(() => {
     if (msg.type === 'PIN_STATE') {
       setPinnedTab(msg.tabId, msg.pinned);
     }
+    if (msg.type === 'TEXT_SELECTION_PRIMED' && sender.tab?.id != null) {
+      primedTextSelections.set(sender.tab.id, msg.text);
+    }
     if (msg.type === 'OPEN_DRAWER' && sender.tab?.id != null) {
       if (isInjectableUrl(sender.tab.url)) {
         injectDrawer(sender.tab.id, false);
       }
     }
+    if (msg.type === 'TRIGGER_MANUAL_SCAN') {
+      console.info('[heynotai/sw] TRIGGER_MANUAL_SCAN', { tabId: msg.tabId });
+      // Fire-and-forget: don't rely on async sendResponse (MV3 SWs have
+      // quirks around it). Status is broadcast back via SCAN_STARTED
+      // (from the freshly-running content script) or SCAN_FAILED (if
+      // the inject + retry both fail).
+      void triggerManualScan(msg.tabId);
+      return;
+    }
     if (msg.type === 'YT_SCAN_REQUEST' && sender.tab?.id != null) {
-      runYouTubeScan(sender.tab.id, msg.url, msg.mediaId, msg.title).catch(() => {
+      console.info('[heynotai/sw] YT_SCAN_REQUEST received', {
+        tabId: sender.tab.id,
+        url: msg.url,
+        mediaId: msg.mediaId,
+      });
+      runYouTubeScan(sender.tab.id, msg.url, msg.mediaId, msg.title).catch((err) => {
         // runYouTubeScan handles its own error reporting via
         // YT_SCAN_FAILED. Anything reaching here would be a bug.
+        console.warn('[heynotai/sw] runYouTubeScan threw', err);
       });
     }
     // NOTE: we used to abort in-flight scans on PAGE_CHANGED here, but
@@ -493,6 +732,7 @@ export default defineBackground(() => {
     inFlightTextScans.delete(tabId);
     inFlightYouTubeScans.get(tabId)?.abort();
     inFlightYouTubeScans.delete(tabId);
+    primedTextSelections.delete(tabId);
     stopTextScanBadge(tabId);
   });
 });
@@ -541,6 +781,14 @@ function toggleHeynotaiDrawer(
     return;
   }
 
+  // Mount target. We previously appended to <html> as a sibling of
+  // <body>, but that location is non-standard and YouTube's watch
+  // pages (in particular theatre/ambient mode and SPA navigations)
+  // route clicks past elements that aren't body descendants. Pick
+  // <body> when it exists so the drawer participates in the normal
+  // hit-testing tree like any other floating UI.
+  const mount: HTMLElement = document.body ?? document.documentElement;
+
   if (!document.getElementById(STYLE_ID)) {
     const style = document.createElement('style');
     style.id = STYLE_ID;
@@ -560,6 +808,12 @@ function toggleHeynotaiDrawer(
           transform 0.5s cubic-bezier(0.22, 1, 0.36, 1),
           opacity   0.4s ease;
         will-change: transform, opacity;
+        /* Defensive: some hosts (YouTube watch pages, FB feed) ship
+           rules like \`iframe, [role="dialog"] { pointer-events: none }\`
+           that win specificity against an injected element. Force
+           interactivity so clicks always land on our drawer instead
+           of falling through to the page underneath. */
+        pointer-events: auto !important;
       }
       #${ROOT_ID}[data-theme="dark"] { background: #0f1013; }
       #${ROOT_ID}[data-side="right"] {
@@ -578,6 +832,7 @@ function toggleHeynotaiDrawer(
         border: 0;
         display: block;
         background: transparent;
+        pointer-events: auto !important;
       }
 
       /* Vertical control rail — matches the extension's .icon-btn design
@@ -598,7 +853,9 @@ function toggleHeynotaiDrawer(
           0 2px 6px rgba(20,18,10,0.06),
           0 0 0 1px rgba(26,25,22,0.09);
         z-index: 1;
+        pointer-events: auto !important;
       }
+      #${ROOT_ID} .hn-rail button { pointer-events: auto !important; }
       #${ROOT_ID}[data-side="right"] .hn-rail { left: -44px; }
       #${ROOT_ID}[data-side="left"]  .hn-rail { right: -44px; }
 
@@ -655,7 +912,7 @@ function toggleHeynotaiDrawer(
         #${ROOT_ID} { transition-duration: 0.01ms !important; }
       }
     `;
-    document.documentElement.appendChild(style);
+    mount.appendChild(style);
   }
 
   // ── Build the drawer + rail ──
@@ -710,7 +967,19 @@ function toggleHeynotaiDrawer(
     pinBtn?.classList.add('is-active');
   }
 
-  document.documentElement.appendChild(root);
+  // Inline `pointer-events: auto !important` on every interactive
+  // element. Inline styles with `important` priority beat any host
+  // page CSS regardless of selector specificity — required because
+  // YouTube's watch page ships rules that, on top of normal hit
+  // testing, were eating clicks on the drawer iframe.
+  root.style.setProperty('pointer-events', 'auto', 'important');
+  iframe.style.setProperty('pointer-events', 'auto', 'important');
+  rail.style.setProperty('pointer-events', 'auto', 'important');
+  rail.querySelectorAll('button').forEach((btn) => {
+    btn.style.setProperty('pointer-events', 'auto', 'important');
+  });
+
+  mount.appendChild(root);
 
   // Slide in: flip --hn-x on next frame so the transition catches.
   requestAnimationFrame(() => {

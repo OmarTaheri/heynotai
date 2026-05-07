@@ -106,3 +106,53 @@ export async function listScans(
   }
   return (await r.json()) as ScansListPage;
 }
+
+/** Look up the most recent successful scan for a given YouTube URL.
+ *  Used by the content script to short-circuit re-scanning a video that
+ *  the user already verified — auto-scan is supposed to feel like
+ *  "this video has been checked" forever, not "let me re-bill you".
+ *
+ *  PB collection rules already restrict to the current user, so the
+ *  filter doesn't need to mention userId. Returns null on miss. */
+export async function findExistingYouTubeScan(
+  sourceUrl: string,
+): Promise<Scan | null> {
+  if (!pb.authStore.isValid) return null;
+  const escaped = sourceUrl.replace(/"/g, '\\"');
+  try {
+    const record = await pb
+      .collection('scans')
+      .getFirstListItem<Scan>(
+        `sourceUrl = "${escaped}" && status = "done"`,
+        { sort: '-created' },
+      );
+    return record;
+  } catch {
+    // 404 (no match) or 403 (auth lapsed) — both treated as "no cache".
+    return null;
+  }
+}
+
+/** Realtime subscription on the `scans` collection. PB filters events
+ *  to records the auth context can read, which (per migration) means
+ *  only the user's own scans. Returns an unsubscribe fn.
+ *
+ *  Both surfaces (drawer Content tab + frontend library page) use this
+ *  to flip the working pill the moment a scan transitions
+ *  queued → scanning → done. */
+export type ScanRealtimeAction = 'create' | 'update' | 'delete';
+export interface ScanRealtimeEvent {
+  action: ScanRealtimeAction;
+  record: Scan;
+}
+
+export async function subscribeScans(
+  cb: (event: ScanRealtimeEvent) => void,
+): Promise<() => void> {
+  await pb.collection('scans').subscribe<Scan>('*', (e) => {
+    cb({ action: e.action as ScanRealtimeAction, record: e.record });
+  });
+  return () => {
+    void pb.collection('scans').unsubscribe('*');
+  };
+}

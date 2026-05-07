@@ -41,11 +41,18 @@ export interface QueryStateResponse {
 export type ExtensionMessage =
   | { type: 'SCAN_COMPLETE'; payload: ScanEntry }
   | { type: 'SCAN_STARTED' }
+  | { type: 'SCAN_FAILED'; error?: string }
   | { type: 'PAGE_CHANGED'; payload: PageInfoPayload }
   | { type: 'QUERY_STATE' }
   | { type: 'RESCAN' }
   | { type: 'MANUAL_SCAN' }
   | { type: 'PIN_STATE'; tabId: number; pinned: boolean }
+  // Drawer → SW. Manual-scan dispatch routed via the SW so it can
+  // re-inject content.js if the tab somehow lost it (extension reload
+  // while the page was already open). The SW resolves with
+  // { ok: boolean } once it has either delivered MANUAL_SCAN to the
+  // content script or given up.
+  | { type: 'TRIGGER_MANUAL_SCAN'; tabId: number }
   // Right-click "AI check this text" lifecycle. Origin: background SW
   // (driven by chrome.contextMenus.onClicked) → text-overlay content
   // script. Each tab has at most one in-flight scan.
@@ -53,6 +60,12 @@ export type ExtensionMessage =
   | { type: 'TEXT_SCAN_COMPLETE'; scan: Scan }
   | { type: 'TEXT_SCAN_FAILED'; error: string }
   | { type: 'TEXT_AI_CHECK_AUTH_REQUIRED' }
+  // Content script → SW. Pushed on every `contextmenu` event so the SW
+  // has the up-to-date selection (with newlines preserved) by the time
+  // chrome.contextMenus.onClicked fires. `info.selectionText` from the
+  // contextMenus API normalizes whitespace in some Chrome builds, which
+  // collapses bullet lists and paragraph breaks into one line.
+  | { type: 'TEXT_SELECTION_PRIMED'; text: string }
   // YouTube scan lifecycle. Content script asks the background SW to
   // run a real backend scan against the video URL; the SW POSTs to
   // /scans, polls until done, then pushes the verdict back.

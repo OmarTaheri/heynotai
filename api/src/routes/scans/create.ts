@@ -94,6 +94,26 @@ create.post("/", async (c) => {
   }
   const kind = type as ScanKind;
 
+  // Dedup by (userId, type, sourceUrl): if a non-failed scan already exists
+  // for this URL, return it instead of creating a duplicate. Catches both
+  // already-finished scans (re-visiting the same video) and concurrent
+  // in-flight ones (multi-tab YouTube auto-scan, frontend retries while
+  // a queued row is still spinning). `failed` rows are deliberately
+  // excluded so the user can retry after a transient detector failure.
+  const dedupUrl = input.sourceUrl?.trim();
+  if (dedupUrl) {
+    try {
+      const existing = await pb.collection("scans").getFirstListItem(
+        `userId = "${user.id}" && type = "${type}" && ` +
+          `sourceUrl = "${dedupUrl.replace(/"/g, '\\"')}" && status != "failed"`,
+        { sort: "-created", requestKey: null },
+      );
+      return c.json(serializeScan(existing, pb), 200);
+    } catch {
+      // No existing scan — fall through to the normal create path.
+    }
+  }
+
   // ── Resolve model + token ─────────────────────────────────────────
   const admin = await pbAdmin();
   const modelRow = await resolveModel(admin, kind, input.modelSlug, user);

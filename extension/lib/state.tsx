@@ -3,6 +3,7 @@ import {
   type ReactNode,
 } from 'react';
 import type { Site } from './types';
+import type { PageInfoPayload } from './messaging';
 import { SITES as DEFAULT_SITES } from './sample-data';
 import {
   loadExtensionPrefs,
@@ -45,8 +46,20 @@ interface AppState {
   scanning: boolean;
   progress: number;
   scanned: boolean;
+  /** Last failure reason from the host scan (e.g. "youtube_too_long:4044s",
+   *  "youtube_download_failed", "detection_failed"). Null when the last
+   *  scan succeeded or there hasn't been one yet. The drawer uses this
+   *  to surface a human-readable explanation in the idle state instead
+   *  of silently dropping the user back to the "Check this page" UI. */
+  scanError: string | null;
   startScan: () => void;
   resetScan: () => void;
+  clearScanError: () => void;
+  /** Latest PAGE_CHANGED payload from the host tab — `null` until the
+   *  content script has reported in. The Content tab uses this to
+   *  inject an optimistic "Scanning…" row for the current YouTube
+   *  video before the backend's scan record reaches PB realtime. */
+  currentPage: PageInfoPayload | null;
 
   scanMode: ScanMode;
   setScanMode: (m: ScanMode) => void;
@@ -115,6 +128,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState(0);
   const [scanned, setScanned] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState<PageInfoPayload | null>(null);
 
   const [view, setView] = useState<View>('main');
 
@@ -231,11 +246,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
             const r = response as {
               scanning?: boolean;
               scanned?: boolean;
-              pageInfo?: { url?: string };
+              pageInfo?: PageInfoPayload;
             };
             // Seed lastPageUrl so the next same-page settle broadcast
             // doesn't wipe the scan state we're about to restore.
             if (r.pageInfo?.url) lastPageUrl = r.pageInfo.url;
+            if (r.pageInfo) setCurrentPage(r.pageInfo);
             if (r.scanning) {
               setProgress(0);
               setScanned(false);
@@ -254,21 +270,44 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     const onMessage = (msg: unknown, sender: chrome.runtime.MessageSender) => {
-      const m = msg as { type?: string; payload?: { url?: string } } | null;
+      const m = msg as {
+        type?: string;
+        payload?: PageInfoPayload;
+        error?: string;
+      } | null;
       if (!m?.type) return;
-      // Only react to events from our own host tab.
-      if (myTabId != null && sender.tab?.id !== myTabId) return;
+      // Only filter content-script messages by tabId. SW broadcasts
+      // (no sender.tab) — like the SCAN_FAILED dispatched after a
+      // re-inject failure — apply globally and must not be dropped.
+      if (sender.tab && myTabId != null && sender.tab.id !== myTabId) return;
 
       if (m.type === 'SCAN_STARTED') {
+        console.info('[heynotai/drawer] SCAN_STARTED received', {
+          tabId: sender.tab?.id,
+        });
         setProgress(0);
         setScanned(false);
+        setScanError(null);
         setScanning(true);
       } else if (m.type === 'SCAN_COMPLETE') {
+        console.info('[heynotai/drawer] SCAN_COMPLETE received');
         setProgress(100);
         setScanning(false);
+        setScanError(null);
         setScanned(true);
+      } else if (m.type === 'SCAN_FAILED') {
+        console.info('[heynotai/drawer] SCAN_FAILED received', { error: m.error });
+        setScanning(false);
+        setScanned(false);
+        setProgress(0);
+        setScanError(m.error ?? 'unknown_error');
       } else if (m.type === 'PAGE_CHANGED') {
         const nextUrl = m.payload?.url ?? null;
+        // Always mirror the latest page info — even on a settle
+        // re-broadcast, where the URL is the same but the youtube
+        // payload may now have hydrated title/channel that the
+        // optimistic Content row needs.
+        if (m.payload) setCurrentPage(m.payload);
         if (lastPageUrl !== null && nextUrl === lastPageUrl) {
           // Same page, just a metadata-settle re-broadcast — leave the
           // scan lifecycle alone.
@@ -280,6 +319,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setScanning(false);
         setScanned(false);
         setProgress(0);
+        setScanError(null);
       }
     };
     chrome.runtime.onMessage.addListener(onMessage);
@@ -347,6 +387,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Push every change to PB (debounced and only when authed).
   const debounceRef = useRef<number | null>(null);
+
+  const sitesJson = JSON.stringify(sites);
+  const platformsJson = JSON.stringify(platforms);
+  const notificationsJson = JSON.stringify(notifications);
+  const privacyJson = JSON.stringify(privacy);
+
   useEffect(() => {
     if (!pb.authStore.isValid) return;
     if (ignoreRealtimeRef.current) return;
@@ -356,16 +402,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
         mode,
         autoModelMode,
         scanMode,
-        sites: sites,
-        platforms,
-        notifications,
-        privacy,
+        sites: JSON.parse(sitesJson),
+        platforms: JSON.parse(platformsJson),
+        notifications: JSON.parse(notificationsJson),
+        privacy: JSON.parse(privacyJson),
       });
     }, 400);
     return () => {
       if (debounceRef.current) window.clearTimeout(debounceRef.current);
     };
-  }, [mode, autoModelMode, scanMode, sites, platforms, notifications, privacy]);
+  }, [mode, autoModelMode, scanMode, sitesJson, platformsJson, notificationsJson, privacyJson]);
 
   // No simulated progress sweep — the drawer ring is now driven by
   // SCAN_STARTED/SCAN_COMPLETE messages from the content script (which
@@ -373,6 +419,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // and 100 at the lifecycle bookends; the visual is an indeterminate
   // spinner regardless. The 0→100 sweep was lying to users when real
   // YouTube scans took 30-90s.
+
+  // Note: previously had a "self-heal" effect that reset scanning when
+  // the active platform was disabled in prefs. That fought against
+  // legitimate manual scans (the user can click "Check this page" on a
+  // disabled platform — that scan should still show its loading UI).
+  // The content script is the single source of truth for scan
+  // lifecycle now: it sends SCAN_FAILED if a pref change cancels an
+  // in-flight scan.
 
   function setTheme(t: Theme) { setThemeState(t); }
   function setMode(m: Mode) { setModeState(m); }
@@ -385,6 +439,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (scanning) return;
     setProgress(0);
     setScanned(false);
+    setScanError(null);
     setScanning(true);
   }
 
@@ -392,6 +447,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setScanning(false);
     setProgress(0);
     setScanned(false);
+    setScanError(null);
+  }
+
+  function clearScanError() {
+    setScanError(null);
   }
 
   function setScanMode(m: ScanMode) { setScanModeState(m); }
@@ -458,7 +518,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   return (
     <AppCtx.Provider value={{
       theme, setTheme, appliedTheme,
-      scanning, progress, scanned, startScan, resetScan,
+      scanning, progress, scanned, scanError,
+      startScan, resetScan, clearScanError, currentPage,
       scanMode, setScanMode,
       sites, setSites, addSite, toggleSiteAt, removeSiteAt, setSiteEnabledByHost,
       platforms, setPlatformEnabled, setPlatformSurface,

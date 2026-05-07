@@ -51,6 +51,16 @@ export default defineContentScript({
         const rect = sel.getRangeAt(0).getBoundingClientRect();
         if (rect.width === 0 && rect.height === 0) return;
         cachedSelectionRect = rect;
+        // Hand the SW the *exact* selection string with newlines intact
+        // before chrome.contextMenus.onClicked fires. info.selectionText
+        // delivered to onClicked normalizes whitespace, which is why
+        // pasted bullet lists / paragraphs collapse in the editor.
+        const text = sel.toString();
+        if (text) {
+          chrome.runtime
+            .sendMessage({ type: 'TEXT_SELECTION_PRIMED', text })
+            .catch(() => {});
+        }
       },
       { capture: true },
     );

@@ -1,4 +1,4 @@
-import type { Scan, ScanOrigin, ScanType } from './scans-api';
+import type { Scan, ScanOrigin, ScanStatus, ScanType } from './scans-api';
 
 export type Origin = 'ext' | 'up' | 'url' | 'mon' | 'paste';
 
@@ -25,6 +25,11 @@ export interface LibraryRowItem {
   verdict: 'human' | 'ai' | 'mixed' | 'unknown';
   model: string;
   when: string;
+  // Backend lifecycle. Rows with `queued`/`scanning` render an animated
+  // "Scanning…" pill instead of the confidence bar so the user can see
+  // an in-flight scan as soon as the extension creates the record.
+  // Optional so legacy mock rows (CONTENT_ITEMS) don't need backfill.
+  status?: ScanStatus;
 }
 
 const SOCIAL_TYPES = new Set<ScanType>([
@@ -181,5 +186,6 @@ export function scanToRow(scan: Scan): LibraryRowItem {
     verdict: scan.verdict,
     model: scan.model || '—',
     when: formatRelative(scan.created),
+    status: scan.status,
   };
 }

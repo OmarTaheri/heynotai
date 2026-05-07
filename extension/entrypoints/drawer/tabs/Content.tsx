@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Icon } from '@/components/Icon';
 import { Chip } from '@/components/Chip';
 import { LibraryRow } from '@/components/LibraryRow';
+import { useApp } from '@/lib/state';
 import { useAuth } from '@/lib/auth-state';
-import { listScans, FRONTEND_URL, ScanApiError } from '@/lib/scans-api';
+import { FRONTEND_URL } from '@/lib/scans-api';
+import { useScansLive } from '@/lib/use-scans-live';
 import { scanToRow, type LibraryRowItem } from '@/lib/library';
 import { CONTENT_ITEMS } from '@/lib/sample-data';
 import type { ContentItem, Verdict } from '@/lib/types';
@@ -44,7 +46,7 @@ function openLibrary() {
 }
 
 function openEditor(id: string) {
-  if (id.startsWith('mock-')) return openLibrary();
+  if (id.startsWith('mock-') || id.startsWith('pending:')) return openLibrary();
   const url = `${FRONTEND_URL}/editor/${encodeURIComponent(id)}`;
   if (chrome?.tabs?.create) chrome.tabs.create({ url });
   else window.open(url, '_blank', 'noopener,noreferrer');
@@ -52,65 +54,83 @@ function openEditor(id: string) {
 
 export function Content() {
   const { user, loading: authLoading } = useAuth();
+  const { scanning, currentPage } = useApp();
   const [filter, setFilter] = useState<Filter>('all');
-  const [rows, setRows] = useState<LibraryRowItem[] | null>(null);
-  const [totalItems, setTotalItems] = useState(0);
-  const [error, setError] = useState<string | null>(null);
+  const live = useScansLive(PER_PAGE);
 
   // Mock rows for the signed-out preview state.
   const mockRows = useMemo(() => CONTENT_ITEMS.map(mockToRow), []);
 
-  useEffect(() => {
-    if (authLoading) return;
-    if (!user) {
-      // Guest preview — keep mock data so the tab isn't empty.
-      setRows(mockRows);
-      setTotalItems(mockRows.length);
-      setError(null);
-      return;
-    }
-    let cancelled = false;
-    setError(null);
-    (async () => {
-      try {
-        const result = await listScans({ perPage: PER_PAGE });
-        if (cancelled) return;
-        setRows(result.items.map(scanToRow));
-        setTotalItems(result.totalItems);
-      } catch (err) {
-        if (cancelled) return;
-        if (err instanceof ScanApiError && err.status === 401) {
-          setRows(mockRows);
-          setTotalItems(mockRows.length);
-        } else {
-          setRows([]);
-          setTotalItems(0);
-          setError("Couldn't load your recent content.");
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
+  // Optimistic in-flight row. Inserted at the top while the host page
+  // is mid-scan and the PB realtime `create` event hasn't reached us
+  // yet. Once the real record arrives via realtime, the dedupe by
+  // canonical YouTube URL hides this synthetic row so we don't show
+  // the same video twice. Stays visible until the real row is `done`
+  // — same UX a user would expect from any "currently scanning" pill.
+  const optimisticRow: LibraryRowItem | null = useMemo(() => {
+    if (!user || !scanning || !currentPage) return null;
+    if (currentPage.platform !== 'youtube' || currentPage.surface !== 'videos') return null;
+    const yt = currentPage.youtube;
+    if (!yt) return null;
+    return {
+      id: `pending:${yt.videoId}`,
+      type: 'yt-vid',
+      name: yt.title || 'YouTube video',
+      origin: 'ext',
+      meta: { socialFormat: 'video', socialId: yt.videoId },
+      link: currentPage.url,
+      confidence: 0,
+      verdict: 'unknown',
+      model: '—',
+      when: 'just now',
+      status: 'scanning',
     };
-  }, [user, authLoading, mockRows]);
+  }, [user, scanning, currentPage]);
 
-  const visibleAll = rows ?? [];
+  const liveRows = useMemo(
+    () => live.scans.map(scanToRow),
+    [live.scans],
+  );
+
+  // Compose final rows. When auth fails or guest, fall back to mock
+  // preview. Otherwise: optimistic row (if any) at the top, deduped
+  // against any real row that already represents the same video.
+  const rows: LibraryRowItem[] = useMemo(() => {
+    if (!user) return mockRows;
+    if (live.error === 'auth') return mockRows;
+    if (live.error === 'fetch') return [];
+    if (!optimisticRow) return liveRows;
+    const optimisticUrl = optimisticRow.link;
+    const dup = liveRows.some((r) => {
+      // De-dupe by canonical sourceUrl when the live row is a yt-vid
+      // sharing the same URL. The live row will have status='queued'
+      // / 'scanning' until the backend transitions it, so the user
+      // sees a single working pill, not two.
+      if (r.type !== 'yt-vid') return false;
+      if (!optimisticUrl) return false;
+      return rowSourceUrl(r) === optimisticUrl;
+    });
+    return dup ? liveRows : [optimisticRow, ...liveRows];
+  }, [user, live.error, liveRows, mockRows, optimisticRow]);
 
   const counts = useMemo(() => ({
-    all: visibleAll.length,
-    ai: visibleAll.filter(i => i.verdict === 'ai').length,
-    mixed: visibleAll.filter(i => i.verdict === 'mixed').length,
-    human: visibleAll.filter(i => i.verdict === 'human').length,
-  }), [visibleAll]);
+    all: rows.length,
+    ai: rows.filter(i => i.verdict === 'ai').length,
+    mixed: rows.filter(i => i.verdict === 'mixed').length,
+    human: rows.filter(i => i.verdict === 'human').length,
+  }), [rows]);
 
   const filtered = filter === 'all'
-    ? visibleAll
-    : visibleAll.filter(i => i.verdict === filter);
+    ? rows
+    : rows.filter(i => i.verdict === filter);
 
   const filters: Filter[] = ['all', 'ai', 'mixed', 'human'];
 
-  const showLoading = rows === null && user;
-  const moreAvailable = user && totalItems > visibleAll.length;
+  const showLoading = !authLoading && user && live.loading && rows.length === 0;
+  const errorMessage =
+    live.error === 'fetch' ? "Couldn't load your recent content." : null;
+  const totalItems = user ? live.totalItems : mockRows.length;
+  const moreAvailable = user && totalItems > rows.length;
 
   return (
     <div className="panel">
@@ -124,8 +144,8 @@ export function Content() {
 
       {showLoading ? (
         <div className="lib-empty-state">Loading your recent content…</div>
-      ) : error ? (
-        <div className="lib-empty-state">{error}</div>
+      ) : errorMessage ? (
+        <div className="lib-empty-state">{errorMessage}</div>
       ) : filtered.length === 0 ? (
         <div className="lib-empty-state">
           {user ? 'No scans match this filter yet.' : 'Sign in to see your scans.'}
@@ -152,4 +172,11 @@ export function Content() {
       </button>
     </div>
   );
+}
+
+/** Recover the original sourceUrl from a row so we can dedupe the
+ *  optimistic in-flight row against the real PB record. `link` is
+ *  populated for social subtypes — see scanToRow / library.ts. */
+function rowSourceUrl(row: LibraryRowItem): string | undefined {
+  return row.link;
 }

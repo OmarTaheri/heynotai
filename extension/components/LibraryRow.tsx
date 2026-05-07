@@ -24,6 +24,8 @@ export function LibraryRow({
     item.link &&
     item.meta.socialFormat &&
     item.meta.socialId;
+  const inFlight = item.status === 'queued' || item.status === 'scanning';
+  const failed = item.status === 'failed';
 
   return (
     <button
@@ -56,13 +58,26 @@ export function LibraryRow({
         </div>
       </div>
       <div className="lib-row-side">
-        <span className="lib-row-conf">
-          <span className="lib-conf-bar" aria-hidden>
-            <span style={{ width: `${item.confidence}%` }} />
+        {inFlight ? (
+          <span className="lib-row-working" aria-label="Scan in progress">
+            <span className="lib-row-working-dot" aria-hidden />
+            Scanning…
           </span>
-          <span className="lib-conf-num">{item.confidence}%</span>
+        ) : failed ? (
+          <span className="lib-row-failed" aria-label="Scan failed">
+            Scan failed
+          </span>
+        ) : (
+          <span className="lib-row-conf">
+            <span className="lib-conf-bar" aria-hidden>
+              <span style={{ width: `${item.confidence}%` }} />
+            </span>
+            <span className="lib-conf-num">{item.confidence}%</span>
+          </span>
+        )}
+        <span className="lib-row-model" title={item.model}>
+          {inFlight ? 'Working…' : item.model}
         </span>
-        <span className="lib-row-model" title={item.model}>{item.model}</span>
         <span className="lib-row-when">{item.when}</span>
       </div>
     </button>
