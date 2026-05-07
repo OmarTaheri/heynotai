@@ -26,7 +26,10 @@ if [ -z "$TOKEN" ]; then
   exit 1
 fi
 
-# Upsert one detection_models row by slug.
+# Upsert one detection_models row by slug. Logs HTTP status + slug or
+# error so silent insert failures (e.g. schema field missing on a stale
+# pb_data volume) show up in `docker logs` instead of leaving the
+# collection partially seeded.
 upsert() {
   local PAYLOAD="$1"
   local SLUG=$(echo "$PAYLOAD" | python3 -c "import sys, json; print(json.load(sys.stdin)['slug'])")
@@ -38,11 +41,18 @@ upsert() {
     curl -s -X DELETE "$PB_URL/api/collections/detection_models/records/$EXISTING_ID" \
       -H "Authorization: $TOKEN" > /dev/null
   fi
-  curl -s -X POST "$PB_URL/api/collections/detection_models/records" \
+  HTTP_CODE=$(curl -s -o /tmp/pb-rec.json -w '%{http_code}' \
+    -X POST "$PB_URL/api/collections/detection_models/records" \
     -H "Authorization: $TOKEN" \
     -H "Content-Type: application/json" \
-    -d "$PAYLOAD" > /tmp/pb-rec.json
-  python3 -c "import json; d=json.load(open('/tmp/pb-rec.json')); print('  ', d.get('slug') or d.get('message','?'))"
+    -d "$PAYLOAD")
+  if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ]; then
+    echo "   ✓ $SLUG"
+  else
+    echo "   ✗ $SLUG (HTTP $HTTP_CODE)"
+    cat /tmp/pb-rec.json 2>/dev/null
+    echo
+  fi
 }
 
 echo "→ seeding detection_models"
@@ -206,9 +216,9 @@ upsert "$(cat <<'JSON'
   "enabled": true,
   "tokenCost": 12,
   "costUnit": "per_scan",
-  "tier": "verify",
-  "plansAllowed": ["verify","certify","team"],
-  "defaultForPlans": ["verify","certify","team"]
+  "tier": "check",
+  "plansAllowed": ["check","verify","certify","team"],
+  "defaultForPlans": ["check","verify","certify","team"]
 }
 JSON
 )"
@@ -228,9 +238,9 @@ upsert "$(cat <<'JSON'
   "enabled": true,
   "tokenCost": 8,
   "costUnit": "per_minute",
-  "tier": "verify",
-  "plansAllowed": ["verify","certify","team"],
-  "defaultForPlans": ["verify","certify","team"]
+  "tier": "check",
+  "plansAllowed": ["check","verify","certify","team"],
+  "defaultForPlans": ["check","verify","certify","team"]
 }
 JSON
 )"
