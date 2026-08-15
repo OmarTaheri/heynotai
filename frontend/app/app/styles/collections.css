@@ -2036,7 +2036,7 @@
 
 /* ─────────────────────────────────────────────────
    Detail-page loading + missing states (rendered by
-   `<CollectionDetailContent>` while PB lookup is in
+   `<CollectionDetailContent>` while backend lookup is in
    flight or when no record matches the slug).
    ───────────────────────────────────────────────── */
 .coll-detail-skeleton {

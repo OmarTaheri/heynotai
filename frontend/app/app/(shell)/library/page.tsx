@@ -90,18 +90,8 @@ function uploadBucket(type: LibraryItem["type"]): UploadSubTabKey | null {
   return null;
 }
 
-/** Static seed list so the Collection dropdown isn't empty on first
- *  load. The page also adds any collection title that appears on a
- *  visible row, so user-created collections show up automatically. */
-const DEMO_COLLECTION_OPTIONS = [
-  "Fall semester essays",
-  "Brand monitoring",
-  "Influencer reels review",
-  "Press inbox",
-];
-
-/** PocketBase record ids are 15 alphanumeric chars. Used as a
- *  defensive guard so bulk mutations never send a non-PB id (e.g. a
+/** application backend record ids are 15 alphanumeric chars. Used as a
+ *  defensive guard so bulk mutations never send a non-backend id (e.g. a
  *  client-only placeholder) to an endpoint that would reject it. */
 const isPersistedScanId = (id: string) => /^[a-z0-9]{15}$/i.test(id);
 
@@ -120,10 +110,10 @@ export default function LibraryPage() {
   const [totalItems, setTotalItems] = useState(0);
   const [pageCount, setPageCount] = useState(1);
   const [loadError, setLoadError] = useState<string | null>(null);
-  // Bumps on every PB scans-collection event for the current user
+  // Bumps on every backend scans-collection event for the current user
   // (extension auto-scan, drawer rescan, monitor cron, anything).
   // Used as a useEffect dep so the table refetches without us having
-  // to mirror PB's record merge logic on the client.
+  // to mirror backend's record merge logic on the client.
   const realtimeTick = useScansRealtime();
 
   const apiOrigin = activeTab === "all" ? undefined : ORIGIN_FOR_TAB[activeTab];
@@ -215,8 +205,11 @@ export default function LibraryPage() {
     }));
   }, [allRows]);
 
+  /** Collection chip options come only from collections that actually
+   *  appear on a loaded row. The dropdown used to be seeded with four
+   *  invented titles ("Fall semester essays", …) that matched nothing. */
   const collectionOptions = useMemo<string[]>(() => {
-    const seen = new Set<string>(DEMO_COLLECTION_OPTIONS);
+    const seen = new Set<string>();
     for (const r of allRows) {
       const t = r.meta.collection?.title;
       if (t) seen.add(t);
@@ -379,7 +372,7 @@ export default function LibraryPage() {
   };
 
   const handleBulkDelete = async () => {
-    // Demo seed rows have non-PB ids that would 404; skip them so the
+    // Demo seed rows have non-backend ids that would 404; skip them so the
     // request batch only hits real scans the user can actually delete.
     const ids = [...selectedIds].filter(isPersistedScanId);
     if (ids.length === 0) {

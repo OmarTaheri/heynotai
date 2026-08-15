@@ -1,26 +1,22 @@
 import { Icon } from '@/components/Icon';
 import { MetricCard } from '@/components/MetricCard';
-import { Row } from '@/components/Row';
-import type { PlatformContent, Creator } from '@/lib/sample-data';
+import type { PageContent } from '@/lib/page-content';
 import type { Platform } from '@/lib/platform';
-import type { Verdict } from '@/lib/types';
-import { colorVarOf, platformIcon } from './helpers';
+import { platformIcon } from './helpers';
 
+/** Channel/author card. Only renders what the host page actually
+ *  exposed. The historical stat rows ("Content scanned", "Flagged
+ *  history", "Avg AI-likelihood", "Last checked") used to be filled
+ *  from fixtures — there is no per-creator history in the backend yet,
+ *  so they are gone rather than faked. */
 export function CreatorCard({
   content, platform,
-}: { content: PlatformContent; platform: Platform }) {
-  const c: Creator = content.creator;
-  const v: Verdict = c.avgAi >= 50 ? 'ai' : c.avgAi >= 25 ? 'mixed' : 'human';
-  // We only have historical-stat data for the sample-driven cards
-  // (FB/IG). YouTube currently goes through real metadata (no stats
-  // tracked yet), so `scanned === 0` is the signal to hide the stat
-  // rows entirely instead of showing fake zeros.
-  const hasStats = c.scanned > 0;
+}: { content: PageContent; platform: Platform }) {
+  const c = content.creator;
+  if (!c) return null;
+
   return (
-    <MetricCard
-      title={content.creatorCardTitle}
-      action={<a className="link-action">View all →</a>}
-    >
+    <MetricCard title={content.creatorCardTitle}>
       <div className="creator-head">
         <div className={`creator-avatar plat-${platform}`}>
           <Icon name={platformIcon(platform)} size={16} />
@@ -31,24 +27,12 @@ export function CreatorCard({
             {c.verified && <span className="creator-verified" title="verified">✓</span>}
           </div>
           <div className="creator-meta mono">
-            <span>{c.handle}</span>
-            {c.sub && <><span className="ch-dot">·</span><span>{c.sub}</span></>}
+            {c.handle && <span>{c.handle}</span>}
+            {c.handle && c.sub && <span className="ch-dot">·</span>}
+            {c.sub && <span>{c.sub}</span>}
           </div>
         </div>
-        {hasStats && <span className={`verdict-tag ${v}`}>{c.avgAi}% avg</span>}
       </div>
-      {hasStats && (
-        <div>
-          <Row label="Content scanned" value={String(c.scanned)} />
-          <Row
-            label="Flagged history"
-            value={<span style={{ color: colorVarOf(v) }}>{c.flagged}</span>}
-            hint={`(${Math.round((c.flagged / Math.max(1, c.scanned)) * 100)}%)`}
-          />
-          <Row label="Avg AI-likelihood" value={`${c.avgAi}%`} />
-          <Row label="Last checked" value={c.lastChecked} />
-        </div>
-      )}
     </MetricCard>
   );
 }

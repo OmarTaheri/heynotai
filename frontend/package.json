@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack --port 3010",
     "prebuild": "node scripts/build-extension-zip.mjs",
     "build": "next build",
     "start": "next start",
@@ -21,7 +21,6 @@
     "@tiptap/react": "^3.22.4",
     "@tiptap/starter-kit": "^3.22.4",
     "next": "^16.2.4",
-    "pocketbase": "^0.26.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-easy-crop": "^5.5.7"

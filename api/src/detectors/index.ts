@@ -1,11 +1,11 @@
 /* Detector registry. The route layer asks for a detector by `ScanKind`
  * (txt/img/aud/vid) and an optional `provider` — model rows in
  * `detection_models` are data, not code, so adding a new HF model is
- * a PB insert, no compile required.
+ * a backend insert, no compile required.
  *
  * Provider routing: by default everything lands on Hugging Face's
  * `hf-inference` router. Audio is the exception — HF's free serverless
- * tier doesn't host audio-classification models, so audio rows in PB
+ * tier doesn't host audio-classification models, so audio rows in backend
  * are seeded with `provider: "velma"` and dispatched to Modulate. */
 
 import { detect as hfText } from "./hf-text.js";

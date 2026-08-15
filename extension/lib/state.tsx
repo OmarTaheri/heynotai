@@ -2,18 +2,19 @@ import {
   createContext, useContext, useEffect, useRef, useState,
   type ReactNode,
 } from 'react';
-import type { Site } from './types';
+import type { ScanEntry, Site } from './types';
 import type { PageInfoPayload } from './messaging';
-import { SITES as DEFAULT_SITES } from './sample-data';
 import {
   loadExtensionPrefs,
   saveExtensionPrefs,
   subscribeExtensionPrefs,
 } from './extension-prefs-sync';
-import { pb } from './pocketbase';
+import { backend } from './backend';
 import {
   DEFAULT_EXTENSION_PREFS,
+  extensionFlag,
   migrateLegacyPlatforms,
+  type ExtensionFlagId,
   type Platforms,
   type PlatformKey,
   type ScanMode,
@@ -58,8 +59,9 @@ interface AppState {
   /** Latest PAGE_CHANGED payload from the host tab — `null` until the
    *  content script has reported in. The Content tab uses this to
    *  inject an optimistic "Scanning…" row for the current YouTube
-   *  video before the backend's scan record reaches PB realtime. */
+   *  video before the backend's scan record reaches backend realtime. */
   currentPage: PageInfoPayload | null;
+  lastScanResult: ScanEntry | null;
 
   scanMode: ScanMode;
   setScanMode: (m: ScanMode) => void;
@@ -69,6 +71,10 @@ interface AppState {
   toggleSiteAt: (index: number) => void;
   removeSiteAt: (index: number) => void;
   setSiteEnabledByHost: (host: string, enabled: boolean) => void;
+  /** Named behaviour toggles synced from the website's Extension page.
+   *  Only the ids in `EXTENSION_FLAG_IDS` do anything. */
+  flags: Record<string, boolean>;
+  flag: (id: ExtensionFlagId) => boolean;
   platforms: Platforms;
   setPlatformEnabled: (k: PlatformKey, v: boolean) => void;
   setPlatformSurface: <P extends PlatformKey>(
@@ -130,6 +136,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [scanned, setScanned] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState<PageInfoPayload | null>(null);
+  const [lastScanResult, setLastScanResult] = useState<ScanEntry | null>(null);
 
   const [view, setView] = useState<View>('main');
 
@@ -156,12 +163,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
     load<ScanMode>('heynotai-scan-mode', 'allowlist',
       (v) => v === 'allowlist' || v === 'manual' || v === 'everything'),
   );
+  // Starts empty. This used to be seeded with six invented hosts
+  // (streamline.app, news.example, …) carrying invented scan counts,
+  // which then synced to the user's account as if they had added them.
   const [sites, setSitesState] = useState<Site[]>(() =>
-    load<Site[]>('heynotai-sites', DEFAULT_SITES, (v) => Array.isArray(v)),
+    load<Site[]>('heynotai-sites', [], (v) => Array.isArray(v)),
   );
   const [platforms, setPlatformsState] = useState<Platforms>(() =>
     migrateLegacyPlatforms(
       load<unknown>('heynotai-platforms', DEFAULT_EXTENSION_PREFS.platforms),
+    ),
+  );
+  const [flags, setFlagsState] = useState<Record<string, boolean>>(() =>
+    load<Record<string, boolean>>('heynotai-flags', {}, (v) =>
+      !!v && typeof v === 'object' && !Array.isArray(v),
     ),
   );
 
@@ -201,17 +216,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => { save('heynotai-scan-mode', scanMode); }, [scanMode]);
   useEffect(() => { save('heynotai-sites', sites); }, [sites]);
   useEffect(() => { save('heynotai-platforms', platforms); }, [platforms]);
+  useEffect(() => { save('heynotai-flags', flags); }, [flags]);
 
-  // Mirror gating prefs into chrome.storage.local so content scripts can
-  // read them without a PB round-trip and react to changes via
-  // chrome.storage.onChanged.
+  // Mirror gating prefs into chrome.storage.local so content scripts and
+  // the service worker can read them without a backend round-trip, and
+  // react to changes via chrome.storage.onChanged. `flags` rides along
+  // because the overlay/context-menu/badge behaviours are gated on it.
   useEffect(() => {
     try {
       chrome.storage?.local.set({
-        extensionPrefs: { platforms, scanMode },
+        extensionPrefs: { platforms, scanMode, sites, flags },
       });
     } catch {}
-  }, [platforms, scanMode]);
+  }, [platforms, scanMode, sites, flags]);
 
   // ── Mirror the host page's scan lifecycle into drawer UI ────────
   // The drawer's scanning/scanned UI used to be local-only; now the
@@ -273,6 +290,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const m = msg as {
         type?: string;
         payload?: PageInfoPayload;
+        result?: ScanEntry;
         error?: string;
       } | null;
       if (!m?.type) return;
@@ -287,6 +305,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         });
         setProgress(0);
         setScanned(false);
+        setLastScanResult(null);
         setScanError(null);
         setScanning(true);
       } else if (m.type === 'SCAN_COMPLETE') {
@@ -295,10 +314,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setScanning(false);
         setScanError(null);
         setScanned(true);
+        const result = (msg as { payload?: ScanEntry }).payload;
+        if (result) setLastScanResult(result);
       } else if (m.type === 'SCAN_FAILED') {
         console.info('[heynotai/drawer] SCAN_FAILED received', { error: m.error });
         setScanning(false);
         setScanned(false);
+        setLastScanResult(null);
         setProgress(0);
         setScanError(m.error ?? 'unknown_error');
       } else if (m.type === 'PAGE_CHANGED') {
@@ -318,6 +340,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         // the drawer doesn't show last page's result for this one.
         setScanning(false);
         setScanned(false);
+        setLastScanResult(null);
         setProgress(0);
         setScanError(null);
       }
@@ -326,7 +349,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => chrome.runtime.onMessage.removeListener(onMessage);
   }, []);
 
-  // ── PB sync: hydrate from server on auth, push changes back ────
+  // ── backend sync: hydrate from server on auth, push changes back ────
   // Hydrate on mount + whenever auth state changes.
   useEffect(() => {
     let cancelled = false;
@@ -342,6 +365,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setPlatformsState(migratedPlatforms);
       setNotificationsState(remote.notifications);
       setPrivacyState(remote.privacy);
+      setFlagsState(remote.flags ?? {});
       setTimeout(() => {
         ignoreRealtimeRef.current = false;
       }, 50);
@@ -354,28 +378,40 @@ export function AppProvider({ children }: { children: ReactNode }) {
         Object.values(remote.platforms as Record<string, unknown>).some(
           (v) => typeof v === 'boolean',
         );
-      if (wasLegacy && pb.authStore.isValid) {
+      if (wasLegacy && backend.authStore.isValid) {
         void saveExtensionPrefs({ platforms: migratedPlatforms });
       }
     };
     void hydrate();
 
-    const unsubAuth = pb.authStore.onChange(() => {
-      void hydrate();
-    });
-
     let unsubRealtime: (() => void) | null = null;
-    void subscribeExtensionPrefs((remote) => {
-      if (cancelled || ignoreRealtimeRef.current) return;
-      setModeState(remote.mode);
-      setAutoModelModeState(remote.autoModelMode);
-      setScanModeState(remote.scanMode);
-      setSitesState(remote.sites as Site[]);
-      setPlatformsState(migrateLegacyPlatforms(remote.platforms));
-      setNotificationsState(remote.notifications);
-      setPrivacyState(remote.privacy);
-    }).then((u) => {
-      unsubRealtime = u;
+    const subscribe = async () => {
+      unsubRealtime?.();
+      unsubRealtime = null;
+      if (!backend.authStore.isValid) return;
+      const next = await subscribeExtensionPrefs((remote) => {
+        if (cancelled) return;
+        ignoreRealtimeRef.current = true;
+        setModeState(remote.mode);
+        setAutoModelModeState(remote.autoModelMode);
+        setScanModeState(remote.scanMode);
+        setSitesState(remote.sites as Site[]);
+        setPlatformsState(migrateLegacyPlatforms(remote.platforms));
+        setNotificationsState(remote.notifications);
+        setPrivacyState(remote.privacy);
+        setFlagsState(remote.flags ?? {});
+        window.setTimeout(() => {
+          ignoreRealtimeRef.current = false;
+        }, 500);
+      });
+      if (cancelled) next();
+      else unsubRealtime = next;
+    };
+    void subscribe();
+
+    const unsubAuth = backend.authStore.onChange(() => {
+      void hydrate();
+      void subscribe();
     });
 
     return () => {
@@ -385,16 +421,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Push every change to PB (debounced and only when authed).
+  // Push every change to backend (debounced and only when authed).
   const debounceRef = useRef<number | null>(null);
 
   const sitesJson = JSON.stringify(sites);
   const platformsJson = JSON.stringify(platforms);
   const notificationsJson = JSON.stringify(notifications);
   const privacyJson = JSON.stringify(privacy);
+  const flagsJson = JSON.stringify(flags);
 
   useEffect(() => {
-    if (!pb.authStore.isValid) return;
+    if (!backend.authStore.isValid) return;
     if (ignoreRealtimeRef.current) return;
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
     debounceRef.current = window.setTimeout(() => {
@@ -406,12 +443,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         platforms: JSON.parse(platformsJson),
         notifications: JSON.parse(notificationsJson),
         privacy: JSON.parse(privacyJson),
+        flags: JSON.parse(flagsJson),
       });
     }, 400);
     return () => {
       if (debounceRef.current) window.clearTimeout(debounceRef.current);
     };
-  }, [mode, autoModelMode, scanMode, sitesJson, platformsJson, notificationsJson, privacyJson]);
+  }, [mode, autoModelMode, scanMode, sitesJson, platformsJson, notificationsJson, privacyJson, flagsJson]);
 
   // No simulated progress sweep — the drawer ring is now driven by
   // SCAN_STARTED/SCAN_COMPLETE messages from the content script (which
@@ -427,6 +465,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // The content script is the single source of truth for scan
   // lifecycle now: it sends SCAN_FAILED if a pref change cancels an
   // in-flight scan.
+
+  /** Reads a behaviour flag with its documented default applied, so
+   *  "never set" and "explicitly on" behave identically. */
+  function flag(id: ExtensionFlagId): boolean {
+    return extensionFlag(flags, id);
+  }
 
   function setTheme(t: Theme) { setThemeState(t); }
   function setMode(m: Mode) { setModeState(m); }
@@ -462,7 +506,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (prev.some(s => s.host === clean)) {
         return prev.map(s => s.host === clean ? { ...s, enabled: true } : s);
       }
-      return [{ host: clean, enabled: true, count: 0, ai: 0 }, ...prev];
+      return [{ host: clean, enabled: true }, ...prev];
     });
   }
   function toggleSiteAt(index: number) {
@@ -519,10 +563,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     <AppCtx.Provider value={{
       theme, setTheme, appliedTheme,
       scanning, progress, scanned, scanError,
-      startScan, resetScan, clearScanError, currentPage,
+      startScan, resetScan, clearScanError, currentPage, lastScanResult,
       scanMode, setScanMode,
       sites, setSites, addSite, toggleSiteAt, removeSiteAt, setSiteEnabledByHost,
       platforms, setPlatformEnabled, setPlatformSurface,
+      flags, flag,
       view, setView, toggleAccount, toggleSettings,
       mode, setMode,
       autoModelMode, setAutoModelMode,

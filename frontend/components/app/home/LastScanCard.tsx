@@ -21,6 +21,8 @@ export type SignalBar = {
 };
 
 export type LastScan = {
+  /** Backing scan id — the card's actions operate on this record. */
+  id: string;
   type: ScanType;
   filename: string;
   meta: string;
@@ -33,6 +35,14 @@ export type LastScan = {
   signals: SignalBar[];
 };
 
+export type LastScanActions = {
+  onOpen: () => void;
+  onAddToCollection: () => void;
+  onRescan: () => void;
+  /** Disables the re-scan button while a rescan request is in flight. */
+  rescanning?: boolean;
+};
+
 /**
  * "Last scan" detail card — title bar with type chip + verdict pill,
  * then a two-column body: prose excerpt with inline highlights on the
@@ -41,7 +51,13 @@ export type LastScan = {
  * Composes ui/Card + ui/Pill + ui/ScoreRing + ui/ProgressBar +
  * ui/TypeChip + ui/Button — every primitive is reusable elsewhere.
  */
-export function LastScanCard({ scan }: { scan: LastScan }) {
+export function LastScanCard({
+  scan,
+  actions,
+}: {
+  scan: LastScan;
+  actions: LastScanActions;
+}) {
   const verdictTone = scan.verdict === "human" ? "human" : "ai";
   const ringTone = scan.verdict === "human" ? "human" : "ai";
   const labelClass =
@@ -120,18 +136,22 @@ export function LastScanCard({ scan }: { scan: LastScan }) {
             </div>
           </div>
 
+          {/* Every action here hits a real endpoint. The card used to
+              lead with "Export report", which had nothing behind it —
+              report generation isn't built yet, so the primary action
+              is now the one that always works: open the full scan. */}
           <div className="home-actions">
-            <Button variant="primary">
+            <Button variant="primary" onClick={actions.onOpen}>
               <Icon name="file-text" size={12} />
-              Export report
+              Open scan
             </Button>
-            <Button>
+            <Button onClick={actions.onAddToCollection}>
               <Icon name="folder" size={12} />
               Add to collection
             </Button>
-            <Button>
+            <Button onClick={actions.onRescan} disabled={actions.rescanning}>
               <Icon name="refresh" size={12} />
-              Re-scan
+              {actions.rescanning ? "Re-scanning…" : "Re-scan"}
             </Button>
           </div>
         </div>

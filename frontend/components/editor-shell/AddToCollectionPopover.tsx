@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import type { RecordModel } from "pocketbase";
-import { pb } from "@/lib/pocketbase";
+import type { BackendRecord as RecordModel } from "@heynotai/shared";
+import { backend } from "@/lib/backend";
 import { useAuth } from "@/lib/auth";
 import {
   addScansToCollection,
@@ -55,9 +55,9 @@ export function AddToCollectionPopover({
     let cancelled = false;
     setError(null);
     setList(null);
-    pb.collection("collections")
+    backend.collection("collections")
       .getFullList<CollectionRow>({
-        filter: pb.filter("userId = {:uid}", { uid: user.id }),
+        filter: backend.filter("userId = {:uid}", { uid: user.id }),
         sort: "-updated",
         requestKey: null,
       })

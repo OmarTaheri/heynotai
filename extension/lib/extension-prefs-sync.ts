@@ -3,7 +3,7 @@ import {
   migrateLegacyPlatforms,
   type ExtensionPrefs,
 } from '@heynotai/shared';
-import { pb } from './pocketbase';
+import { backend } from './backend';
 
 const COLL = 'extension_prefs';
 
@@ -18,16 +18,16 @@ function normalize(record: ExtensionPrefs): ExtensionPrefs {
 }
 
 export async function loadExtensionPrefs(): Promise<ExtensionPrefs | null> {
-  if (!pb.authStore.isValid) return null;
-  const userId = pb.authStore.record!.id;
+  if (!backend.authStore.isValid) return null;
+  const userId = backend.authStore.record!.id;
   try {
-    const row = await pb
+    const row = await backend
       .collection(COLL)
       .getFirstListItem<ExtensionPrefs>(`userId="${userId}"`);
     return normalize(row);
   } catch {
     try {
-      const row = await pb
+      const row = await backend
         .collection(COLL)
         .create<ExtensionPrefs>({ userId, ...DEFAULT_EXTENSION_PREFS });
       return normalize(row);
@@ -40,10 +40,10 @@ export async function loadExtensionPrefs(): Promise<ExtensionPrefs | null> {
 export async function saveExtensionPrefs(
   patch: Partial<ExtensionPrefs>,
 ): Promise<ExtensionPrefs | null> {
-  if (!pb.authStore.isValid) return null;
+  if (!backend.authStore.isValid) return null;
   const current = await loadExtensionPrefs();
   if (!current) return null;
-  const row = await pb
+  const row = await backend
     .collection(COLL)
     .update<ExtensionPrefs>((current as { id: string }).id, patch);
   return normalize(row);
@@ -55,10 +55,10 @@ export async function subscribeExtensionPrefs(
   const current = await loadExtensionPrefs();
   if (!current) return () => undefined;
   const id = (current as { id: string }).id;
-  await pb.collection(COLL).subscribe(id, (e) => {
+  await backend.collection(COLL).subscribe(id, (e) => {
     if (e.action === 'update') cb(normalize(e.record as unknown as ExtensionPrefs));
   });
   return () => {
-    void pb.collection(COLL).unsubscribe(id);
+    void backend.collection(COLL).unsubscribe(id);
   };
 }

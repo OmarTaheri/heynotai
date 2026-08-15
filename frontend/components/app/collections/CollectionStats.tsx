@@ -7,7 +7,7 @@ import type { CollectionStatsSummary } from "./collection-stats";
  * delta node (mini split-bar visualizing flagged vs clean).
  *
  * Stats are derived from the loaded items list, not from static fields
- * on the collection record (which PB doesn't store).
+ * on the collection record (which backend doesn't store).
  */
 export function CollectionStats({ stats }: { stats: CollectionStatsSummary }) {
   const aiPct = Math.max(0, Math.min(100, stats.aiPct));

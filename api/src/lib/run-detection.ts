@@ -1,178 +1,199 @@
-/* Background detection runner.
- *
- *  `scans/create` and `scans/rescan` both persist a `status: "queued"`
- *  row first and return immediately, then call `runDetectionInBackground`
- *  to do the actual HF call without blocking the request. The runner
- *  flips the row to `scanning` while it works, then `done` (with the
- *  real verdict) or `failed` (with an `error` JSON blob) when it finishes.
- *
- *  The frontend editor polls the row by id and swaps in the result
- *  once status leaves `queued`/`scanning`.
- *
- *  Logs are noisy on purpose — these runs are async and silent failures
- *  are the worst UX. Every transition (queued→scanning, →done, →failed)
- *  emits a line so a tail of the api log tells the full story. */
-
-import { pbAdmin } from "./pb-admin.js";
+import { getAdminStore } from "./admin-store.js";
 import { downloadYoutubeVideo } from "./youtube-download.js";
 import {
   DetectorError,
   getDetector,
   type DetectorInput,
-  type DetectorProvider,
   type ScanKind,
 } from "../detectors/index.js";
-import { aiPctFromResult } from "../detectors/types.js";
+import { aiPctFromResult, type DetectorResult } from "../detectors/types.js";
+import {
+  executeModel,
+  loadRuntimeBinding,
+  ModelRuntimeError,
+  resolveProviderCredential,
+  type CanonicalModelResult,
+  type RuntimeInput,
+} from "../model-runtime/index.js";
 import type { EngineResultEntry } from "../routes/scans/shape.js";
+import { writeStructuredLog } from "../services/structured-log.js";
+import { refundModelUsage } from "../services/usage-ledger.js";
 
 export type RunDetectionInput = {
   scanId: string;
+  userId?: string;
   kind: ScanKind;
   detectorInput: DetectorInput;
-  provider?: DetectorProvider;
-  hfToken: string;
-  hfModelId: string;
-  velmaApiKey?: string;
+  modelId: string;
   modelSlug: string;
+  /** The built-in video-frame pipeline still delegates each frame to its
+   * configured image model. Generic video HTTP models do not use these. */
   videoFrameModelId?: string;
   videoFrameCount?: number;
-  /** Already-deducted token cost — written on the row at create time so
-   *  parallel scans can't double-spend the user's monthly budget. We
-   *  zero it here on failure. */
   tokensCharged: number;
-  /** When set, the runner resolves this URL into bytes (via yt-dlp)
-   *  BEFORE calling the detector and persists the bytes onto the scan
-   *  row's `file` field so a future rescan reuses them. Today only
-   *  YouTube /watch URLs flow through this path. */
+  usageReservationKey?: string;
+  /** YouTube videos are downloaded once, then cached in the scan's file row. */
   pendingSourceUrl?: string;
 };
 
-/** Fire-and-forget. Catches its own errors so an unhandled rejection
- *  can't crash the api process. The route layer should `void` this. */
+/** Fire-and-forget compatibility entry point. The durable scan_jobs table
+ * records queued work; this process executes immediately for low latency. */
 export function runDetectionInBackground(input: RunDetectionInput): void {
-  void execute(input).catch((err) => {
-    console.error(`[scan ${input.scanId}] runDetectionInBackground unexpected`, err);
+  void execute(input).catch(async (error) => {
+    console.error(`[scan ${input.scanId}] unexpected detection failure`, error);
+    await writeStructuredLog({
+      level: "fatal",
+      service: "worker",
+      event: "model.run_unexpected",
+      message: "Detection runner exited unexpectedly",
+      userId: input.userId,
+      scanId: input.scanId,
+      modelId: input.modelId,
+      errorCode: "run_unexpected",
+      context: { error },
+    });
   });
 }
 
 async function execute(input: RunDetectionInput): Promise<void> {
-  const tag = `[scan ${input.scanId}]`;
-  console.log(
-    `${tag} start kind=${input.kind} model=${input.modelSlug} provider=${input.provider ?? "hf-inference"} ` +
-      `hfModel=${input.hfModelId || "(none)"} videoFrameModel=${input.videoFrameModelId ?? "—"} ` +
-      `input=${describeInput(input.detectorInput)}`,
-  );
-
-  const admin = await pbAdmin();
+  const admin = await getAdminStore();
   const startedAt = new Date();
+  let providerId: string | undefined;
+
+  await writeStructuredLog({
+    service: "worker",
+    event: "model.run_started",
+    message: `Started ${input.kind} detection with ${input.modelSlug}`,
+    userId: input.userId,
+    scanId: input.scanId,
+    modelId: input.modelId,
+    context: { kind: input.kind, input: describeInput(input.detectorInput) },
+  });
 
   try {
     await admin.collection("scans").update(input.scanId, {
       status: "scanning",
       scanStartedAt: startedAt.toISOString(),
     });
-    console.log(`${tag} status=scanning`);
-  } catch (err) {
-    console.error(`${tag} could not mark scanning`, err);
+  } catch (error) {
+    await writeStructuredLog({
+      level: "error",
+      service: "worker",
+      event: "scan.state_failed",
+      message: "Could not mark scan as scanning",
+      userId: input.userId,
+      scanId: input.scanId,
+      modelId: input.modelId,
+      errorCode: "scan_state_write_failed",
+      context: { error },
+    });
     return;
   }
 
-  // ── URL pre-fetch — resolve YouTube URL → bytes BEFORE the detector
-  //    runs. Caching the result on the row's `file` field means a later
-  //    rescan (different model, same id) reads bytes from PB instead of
-  //    re-downloading from YouTube. ─────────────────────────────────
   let detectorInput = input.detectorInput;
   if (input.pendingSourceUrl && input.kind === "vid") {
     try {
-      console.log(`${tag} resolving URL ${input.pendingSourceUrl}`);
-      const dl = await downloadYoutubeVideo(input.pendingSourceUrl);
+      const download = await downloadYoutubeVideo(input.pendingSourceUrl);
       detectorInput = {
         kind: "vid",
-        bytes: dl.bytes,
-        mime: dl.mime,
-        durationSec: dl.durationSec,
+        bytes: download.bytes,
+        mime: download.mime,
+        durationSec: download.durationSec,
       };
-      // Cache bytes on the row. PB's JS SDK accepts FormData on update
-      // so we can stuff the file alongside the metadata fields.
+
       try {
         const cacheForm = new FormData();
         cacheForm.append(
           "file",
-          new File([new Uint8Array(dl.bytes)], `yt-${input.scanId}.mp4`, {
-            type: dl.mime,
+          new File([new Uint8Array(download.bytes)], `yt-${input.scanId}.mp4`, {
+            type: download.mime,
           }),
         );
-        cacheForm.append("mimeType", dl.mime);
-        cacheForm.append("sizeBytes", String(dl.bytes.byteLength));
-        if (dl.durationSec > 0) {
-          cacheForm.append("durationMs", String(Math.round(dl.durationSec * 1000)));
+        cacheForm.append("mimeType", download.mime);
+        cacheForm.append("sizeBytes", String(download.bytes.byteLength));
+        if (download.durationSec > 0) {
+          cacheForm.append("durationMs", String(Math.round(download.durationSec * 1000)));
         }
         await admin.collection("scans").update(input.scanId, cacheForm);
-        console.log(
-          `${tag} cached download bytes=${dl.bytes.byteLength} dur=${dl.durationSec}s`,
-        );
-      } catch (cacheErr) {
-        // Caching is best-effort — detection continues on the in-memory
-        // bytes even if the row write hiccups.
-        console.warn(`${tag} could not cache bytes`, cacheErr);
-      }
-    } catch (err) {
-      const detail =
-        err instanceof DetectorError
-          ? { code: "youtube_download_failed", status: err.status, message: err.providerMessage }
-          : { code: "internal_error", message: err instanceof Error ? err.message : String(err) };
-      console.error(`${tag} URL pre-fetch FAILED`, detail);
-      try {
-        await admin.collection("scans").update(input.scanId, {
-          status: "failed",
-          creditsUsed: 0,
-          error: detail,
-          scanCompletedAt: new Date().toISOString(),
+      } catch (error) {
+        await writeStructuredLog({
+          level: "warn",
+          service: "worker",
+          event: "scan.source_cache_failed",
+          message: "Detection will continue, but downloaded media was not cached",
+          userId: input.userId,
+          scanId: input.scanId,
+          modelId: input.modelId,
+          errorCode: "source_cache_failed",
+          context: { error },
         });
-        console.log(`${tag} status=failed (tokens refunded)`);
-      } catch (writeErr) {
-        console.error(`${tag} could not mark failed`, writeErr);
       }
+    } catch (error) {
+      await failRun(admin, input, error, "youtube_download_failed", providerId);
       return;
     }
   }
 
   try {
-    const detector = getDetector(input.kind, input.provider);
-    const result = await detector(detectorInput, {
-      provider: input.provider,
-      hfToken: input.hfToken,
-      hfModelId: input.hfModelId,
-      velmaApiKey: input.velmaApiKey,
-      videoFrameModelId: input.videoFrameModelId,
-      videoFrameCount: input.videoFrameCount,
-    });
+    const binding = await loadRuntimeBinding(input.modelId);
+    providerId = binding.provider.id;
+    const usesVideoFramePipeline =
+      binding.model.runtimeConfig?.pipeline === "video-frames";
+
+    let result: DetectorResult | CanonicalModelResult;
+    if (usesVideoFramePipeline) {
+      if (input.kind !== "vid" || !input.videoFrameModelId) {
+        throw new ModelRuntimeError(
+          "video_pipeline_misconfigured",
+          "Video frame pipeline is missing its frame model",
+          500,
+        );
+      }
+      const detector = getDetector("vid", "hf-inference");
+      result = await detector(detectorInput, {
+        provider: "hf-inference",
+        hfToken: resolveProviderCredential(binding.provider) ?? "",
+        hfModelId: binding.model.externalModelId ?? "",
+        videoFrameModelId: input.videoFrameModelId,
+        videoFrameCount: input.videoFrameCount,
+      });
+    } else {
+      result = await executeModel(
+        binding.provider,
+        binding.model,
+        toRuntimeInput(detectorInput),
+      );
+    }
+
     const completedAt = new Date();
+    const aiPct = "aiProbability" in result
+      ? result.aiProbability
+      : aiPctFromResult(result);
 
-    const aiPct = aiPctFromResult(result);
-    console.log(
-      `${tag} done verdict=${result.verdict} confidence=${result.confidence} aiPct=${aiPct} ` +
-        `model=${result.model} took=${result.durationMs}ms`,
-    );
-
-    // Merge this run into the per-engine cache. Re-fetch the row first
-    // so a concurrent rescan (different engine, same scan) doesn't
-    // clobber its sibling entry by writing a stale snapshot. We also
-    // capture the existing `analysis` so client-extracted metadata
-    // (e.g. image width/height set at create time) survives the write.
     let engineResults: Record<string, EngineResultEntry> = {};
-    let prevAnalysis: Record<string, unknown> = {};
+    let previousAnalysis: Record<string, unknown> = {};
     try {
       const fresh = await admin.collection("scans").getOne(input.scanId);
       if (fresh.engineResults && typeof fresh.engineResults === "object") {
         engineResults = fresh.engineResults as Record<string, EngineResultEntry>;
       }
       if (fresh.analysis && typeof fresh.analysis === "object") {
-        prevAnalysis = fresh.analysis as Record<string, unknown>;
+        previousAnalysis = fresh.analysis as Record<string, unknown>;
       }
-    } catch (err) {
-      console.warn(`${tag} engineResults pre-read failed; starting empty`, err);
+    } catch (error) {
+      await writeStructuredLog({
+        level: "warn",
+        service: "worker",
+        event: "scan.merge_read_failed",
+        message: "Could not read existing engine results before merge",
+        userId: input.userId,
+        scanId: input.scanId,
+        modelId: input.modelId,
+        providerId,
+        context: { error },
+      });
     }
+
     engineResults[input.modelSlug] = {
       aiPct,
       verdict: result.verdict,
@@ -194,41 +215,107 @@ async function execute(input: RunDetectionInput): Promise<void> {
       engineId: input.modelSlug,
       scanCompletedAt: completedAt.toISOString(),
       scanDurationMs: result.durationMs,
-      analysis: { ...prevAnalysis, providerRaw: result.rawProviderResponse },
+      analysis: {
+        ...previousAnalysis,
+        providerRaw: boundedProviderRaw(result.rawProviderResponse),
+      },
       analysisVersion: 1,
       engineResults,
     });
-    console.log(`${tag} persisted ✓ engines=${Object.keys(engineResults).length}`);
-  } catch (err) {
-    const detail =
-      err instanceof DetectorError
-        ? { code: "provider_error", status: err.status, message: err.providerMessage }
-        : { code: "internal_error", message: err instanceof Error ? err.message : String(err) };
-    console.error(`${tag} FAILED`, detail);
-    if (!(err instanceof DetectorError)) {
-      // Non-detector errors (network, ffmpeg crash, etc.) — print stack
-      // too so we can chase root cause from the log alone.
-      console.error(`${tag} stack`, err);
-    }
-    try {
-      await admin.collection("scans").update(input.scanId, {
-        status: "failed",
-        // Refund tokens — we charged at create time so parallel scans
-        // can't race the budget check.
-        creditsUsed: 0,
-        error: detail,
-        scanCompletedAt: new Date().toISOString(),
-      });
-      console.log(`${tag} status=failed (tokens refunded)`);
-    } catch (writeErr) {
-      console.error(`${tag} could not mark failed`, writeErr);
-    }
+
+    await writeStructuredLog({
+      service: "worker",
+      event: "model.run_completed",
+      message: `Completed ${input.kind} detection with ${input.modelSlug}`,
+      userId: input.userId,
+      scanId: input.scanId,
+      modelId: input.modelId,
+      providerId,
+      durationMs: result.durationMs,
+      context: { verdict: result.verdict, confidence: result.confidence, aiPct },
+    });
+  } catch (error) {
+    await failRun(admin, input, error, "provider_error", providerId);
   }
 }
 
-function describeInput(input: DetectorInput): string {
-  if (input.kind === "txt") {
-    return `text(${input.text.length} chars)`;
+async function failRun(
+  admin: Awaited<ReturnType<typeof getAdminStore>>,
+  input: RunDetectionInput,
+  error: unknown,
+  fallbackCode: string,
+  providerId?: string,
+): Promise<void> {
+  const detail = errorDetail(error, fallbackCode);
+  await refundModelUsage(input.usageReservationKey, detail.code).catch((refundError) => {
+    detail.persistenceError = refundError instanceof Error
+      ? refundError.message
+      : String(refundError);
+  });
+  try {
+    await admin.collection("scans").update(input.scanId, {
+      status: "failed",
+      creditsUsed: 0,
+      error: detail,
+      scanCompletedAt: new Date().toISOString(),
+    });
+  } catch (writeError) {
+    detail.persistenceError = writeError instanceof Error ? writeError.message : String(writeError);
   }
-  return `${input.kind}(${input.bytes.byteLength} bytes, mime=${input.mime})`;
+  await writeStructuredLog({
+    level: "error",
+    service: "worker",
+    event: "model.run_failed",
+    message: `Detection failed for ${input.modelSlug}`,
+    userId: input.userId,
+    scanId: input.scanId,
+    modelId: input.modelId,
+    providerId,
+    durationMs: null,
+    errorCode: detail.code,
+    context: { error, status: detail.status },
+  });
+}
+
+function errorDetail(
+  error: unknown,
+  fallbackCode: string,
+): { code: string; status?: number; message: string; persistenceError?: string } {
+  if (error instanceof DetectorError) {
+    return { code: fallbackCode, status: error.status, message: error.providerMessage };
+  }
+  if (error instanceof ModelRuntimeError) {
+    return { code: error.code, status: error.status, message: error.message };
+  }
+  return {
+    code: fallbackCode,
+    message: error instanceof Error ? error.message : String(error),
+  };
+}
+
+function toRuntimeInput(input: DetectorInput): RuntimeInput {
+  if (input.kind === "txt") return { kind: "txt", text: input.text };
+  return {
+    kind: input.kind,
+    bytes: input.bytes,
+    mime: input.mime,
+    durationSec: "durationSec" in input ? input.durationSec : undefined,
+  };
+}
+
+function describeInput(input: DetectorInput): Record<string, unknown> {
+  if (input.kind === "txt") return { kind: input.kind, characters: input.text.length };
+  return { kind: input.kind, bytes: input.bytes.byteLength, mime: input.mime };
+}
+
+/** Preserve small adapter payloads used by the video result UI, but prevent a
+ * provider from writing an unbounded response or user content into a scan row. */
+function boundedProviderRaw(value: unknown): unknown {
+  try {
+    const encoded = JSON.stringify(value);
+    if (encoded.length <= 128 * 1024) return value;
+    return { truncated: true, originalBytes: Buffer.byteLength(encoded, "utf8") };
+  } catch {
+    return { unavailable: true };
+  }
 }

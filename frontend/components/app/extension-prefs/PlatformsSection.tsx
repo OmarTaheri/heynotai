@@ -64,7 +64,7 @@ export function PlatformsSection() {
   const platforms: Platforms = migrateLegacyPlatforms(prefs?.platforms);
 
   // Auto-save on every toggle so the extension drawer picks up changes
-  // instantly via PB realtime — this is a live-control surface, not a
+  // instantly via backend realtime — this is a live-control surface, not a
   // dirty/save form. Other sections on /app/extension still use the
   // explicit Save bar via plain `patch()`.
   // Master ↔ surfaces are linked: toggling the master sets all

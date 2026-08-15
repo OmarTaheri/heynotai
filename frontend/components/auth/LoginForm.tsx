@@ -16,7 +16,7 @@ export function LoginForm({
   onAuthenticated,
 }: {
   onSwitchMode: () => void;
-  onAuthenticated?: () => void;
+  onAuthenticated?: (systemRole: "user" | "admin") => void;
 }) {
   const { signIn, signInWithGoogle, confirmMfa } = useAuth();
   const [submitting, setSubmitting] = useState(false);
@@ -33,7 +33,7 @@ export function LoginForm({
 
     if (mfa) {
       const result = await confirmMfa(mfa.mfaId, mfa.otpId, otp);
-      if (result.ok) onAuthenticated?.();
+      if (result.ok) onAuthenticated?.(result.user.systemRole);
       else if ("error" in result) setError(result.error);
       setSubmitting(false);
       return;
@@ -41,7 +41,7 @@ export function LoginForm({
 
     const result = await signIn(email, password);
     if (result.ok) {
-      onAuthenticated?.();
+      onAuthenticated?.(result.user.systemRole);
     } else if ("mfaRequired" in result) {
       setMfa({ mfaId: result.mfaId, otpId: result.otpId });
       setSubmitting(false);
@@ -55,7 +55,7 @@ export function LoginForm({
     setError(null);
     setSubmitting(true);
     const result = await signInWithGoogle();
-    if (result.ok) onAuthenticated?.();
+    if (result.ok) onAuthenticated?.(result.user.systemRole);
     else if ("error" in result) setError(result.error);
     setSubmitting(false);
   };

@@ -12,7 +12,7 @@ The user controls this from two places:
 - the drawer's **Settings** tab (inside the extension), and
 - the `/app/extension` page on the web frontend.
 
-Both surfaces edit the same `extension_prefs.platforms` record in PocketBase.
+Both surfaces edit the same `extension_prefs.platforms` record in application backend.
 That record is a nested object of the form:
 
 ```ts

@@ -1,20 +1,19 @@
+import { extensionFlag, type ExtensionFlagId } from '@heynotai/shared';
 import type { ExtensionMessage } from '@/lib/messaging';
 import type { Scan } from '@/lib/scans-api';
 import type { ScanState } from '@/lib/types';
+import { slugForKind } from '@/lib/model-selection';
 import { getPinnedTabs, setPinnedTab } from '@/lib/storage';
 
 const API_URL =
   (import.meta.env.VITE_API_URL as string | undefined) ??
   'http://localhost:8787';
 
-// PB REST is hit directly (not via SDK) so the SW stays small —
+// backend REST is hit directly (not via SDK) so the SW stays small —
 // `auth-state.tsx` mirrors the bearer token into chrome.storage.local
 // for exactly this purpose. Used to look up an existing successful
 // scan for a YouTube URL before creating a new one, so revisiting a
 // video reuses the prior verdict instead of re-billing.
-const PB_URL =
-  (import.meta.env.VITE_POCKETBASE_URL as string | undefined) ??
-  'http://127.0.0.1:8090';
 
 // Keep this aligned with MAX_CONTENT_BYTES in api/src/routes/scans/validators.ts
 // — the server rejects above 1_000_000, so trimming here gives the user a
@@ -42,9 +41,40 @@ export default defineBackground(() => {
     'ai-generated': { text: '!', color: '#dc2626' },
   };
 
+  // ── Behaviour flags ─────────────────────────────────────────────
+  // Mirrored into chrome.storage.local by the drawer (see state.tsx)
+  // from the user's synced `extension_prefs.flags`. Cached so the badge
+  // and context-menu paths don't need an async hop on every event.
+  let cachedFlags: Record<string, boolean> = {};
+  const flag = (id: ExtensionFlagId) => extensionFlag(cachedFlags, id);
+
+  async function loadFlags(): Promise<void> {
+    try {
+      const out = await chrome.storage.local.get('extensionPrefs');
+      const prefs = out.extensionPrefs as
+        | { flags?: Record<string, boolean> }
+        | undefined;
+      cachedFlags = prefs?.flags ?? {};
+    } catch {
+      cachedFlags = {};
+    }
+  }
+
   // Track in-flight text scans by tabId so a second right-click during
   // a slow scan can cancel and replace the first.
+  //
+  // Selection scans (right-click) and whole-page scans (the drawer's
+  // "Check this page") are tracked separately: they're different user
+  // intents that can legitimately overlap on one tab, and sharing a
+  // single map meant whichever started second silently aborted the
+  // first — the user saw the pill vanish with no explanation.
   const inFlightTextScans = new Map<number, AbortController>();
+  const inFlightPageScans = new Map<number, AbortController>();
+
+  // tabIds with a right-click text scan currently running. Read by the
+  // drawer via QUERY_TEXT_SCAN so opening it mid-scan shows the loading
+  // card rather than the idle "Website detected" UI.
+  const activeTextScanTabs = new Set<number>();
 
   // Latest selection text primed by the text-overlay content script on
   // its `contextmenu` listener. We prefer this over `info.selectionText`
@@ -74,6 +104,7 @@ export default defineBackground(() => {
 
   function startTextScanBadge(tabId: number) {
     stopTextScanBadge(tabId);
+    if (!flag('badge-counter')) return;
     chrome.action.setBadgeBackgroundColor({ color: SCAN_BADGE_COLOR, tabId });
     chrome.action.setBadgeTextColor({ color: '#ffffff', tabId });
     let i = 0;
@@ -95,6 +126,7 @@ export default defineBackground(() => {
 
   function setTextScanVerdictBadge(tabId: number, verdict: string) {
     stopTextScanBadge(tabId);
+    if (!flag('badge-counter')) return;
     const cfg = VERDICT_BADGE_TEXT[verdict] ?? VERDICT_BADGE_TEXT.mixed!;
     chrome.action.setBadgeText({ text: cfg.text, tabId });
     chrome.action.setBadgeBackgroundColor({ color: cfg.color, tabId });
@@ -130,8 +162,12 @@ export default defineBackground(() => {
 
   // Six right-click entries — one per surface the content script can scan.
   // Wrapped in removeAll so the call is idempotent across SW restarts.
+  // Gated on the `right-click` flag from the website's Extension page:
+  // turning that toggle off now actually removes the menu entries
+  // instead of only persisting a boolean nobody read.
   function setupContextMenus() {
     chrome.contextMenus.removeAll(() => {
+      if (!flag('right-click')) return;
       chrome.contextMenus.create({
         id: 'hn-yt-video',
         title: 'Check this video with heynotai',
@@ -190,10 +226,30 @@ export default defineBackground(() => {
     });
   }
 
-  chrome.runtime.onInstalled.addListener(setupContextMenus);
+  chrome.runtime.onInstalled.addListener(() => void refreshFlagsAndMenus());
   // Service worker can be torn down between events; recreate on every
   // SW load so reloads-during-dev keep the menu populated.
-  setupContextMenus();
+  void refreshFlagsAndMenus();
+
+  async function refreshFlagsAndMenus(): Promise<void> {
+    await loadFlags();
+    setupContextMenus();
+  }
+
+  // React to the drawer (or the website, via prefs sync) flipping a
+  // behaviour flag without waiting for the next SW restart.
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== 'local' || !changes.extensionPrefs) return;
+    const next = changes.extensionPrefs.newValue as
+      | { flags?: Record<string, boolean> }
+      | undefined;
+    const before = flag('right-click');
+    cachedFlags = next?.flags ?? {};
+    if (flag('right-click') !== before) setupContextMenus();
+    if (!flag('badge-counter')) {
+      chrome.action.setBadgeText({ text: '' }).catch(() => {});
+    }
+  });
 
   chrome.contextMenus.onClicked.addListener((info, tab) => {
     if (tab?.id == null) return;
@@ -219,6 +275,22 @@ export default defineBackground(() => {
       });
   });
 
+  /** Fire-and-forget broadcast to extension pages (the drawer). Never
+   *  throws — with no drawer open there's no receiver and the promise
+   *  rejects, which is expected. */
+  function broadcast(msg: ExtensionMessage) {
+    chrome.runtime.sendMessage(msg).catch(() => {});
+  }
+
+  /** Text-scan lifecycle goes to two places at once: the tab (in-page
+   *  pill) and the drawer (loading/result card). Keeping them in one
+   *  helper means a state can never reach one surface and not the
+   *  other. */
+  function announceTextScan(tabId: number, msg: ExtensionMessage) {
+    sendTabMessage(tabId, msg);
+    broadcast({ ...msg, tabId } as ExtensionMessage);
+  }
+
   async function runTextScan(tabId: number, rawText: string) {
     const text = rawText.trim();
     if (!text) return;
@@ -233,25 +305,27 @@ export default defineBackground(() => {
 
     const auth = await loadAuth();
     if (!auth) {
-      sendTabMessage(tabId, { type: 'TEXT_AI_CHECK_AUTH_REQUIRED' });
+      announceTextScan(tabId, { type: 'TEXT_AI_CHECK_AUTH_REQUIRED' });
       inFlightTextScans.delete(tabId);
       return;
     }
 
-    sendTabMessage(tabId, { type: 'TEXT_SCAN_STARTED' });
+    activeTextScanTabs.add(tabId);
+    announceTextScan(tabId, { type: 'TEXT_SCAN_STARTED' });
     startTextScanBadge(tabId);
 
     try {
       const created = await createTextScan(trimmed, auth.token, controller.signal);
+      console.info('[heynotai/sw] text scan created', { scanId: created.id, tabId });
       const finalScan = await pollScan(created.id, auth.token, controller.signal);
       if (finalScan.status === 'failed') {
-        sendTabMessage(tabId, {
+        announceTextScan(tabId, {
           type: 'TEXT_SCAN_FAILED',
           error: 'detection_failed',
         });
         clearTextScanBadge(tabId);
       } else {
-        sendTabMessage(tabId, { type: 'TEXT_SCAN_COMPLETE', scan: finalScan });
+        announceTextScan(tabId, { type: 'TEXT_SCAN_COMPLETE', scan: finalScan });
         setTextScanVerdictBadge(tabId, finalScan.verdict);
       }
     } catch (err) {
@@ -260,12 +334,75 @@ export default defineBackground(() => {
         return;
       }
       const message = err instanceof Error ? err.message : 'unknown_error';
-      sendTabMessage(tabId, { type: 'TEXT_SCAN_FAILED', error: message });
+      console.warn('[heynotai/sw] text scan failed', { tabId, error: message });
+      if (message === 'auth_required') {
+        announceTextScan(tabId, { type: 'TEXT_AI_CHECK_AUTH_REQUIRED' });
+        clearTextScanBadge(tabId);
+        return;
+      }
+      announceTextScan(tabId, { type: 'TEXT_SCAN_FAILED', error: message });
       clearTextScanBadge(tabId);
     } finally {
       if (inFlightTextScans.get(tabId) === controller) {
         inFlightTextScans.delete(tabId);
+        activeTextScanTabs.delete(tabId);
       }
+    }
+  }
+
+  async function runPageTextScan(
+    tabId: number,
+    rawText: string,
+    title: string,
+    url: string,
+  ) {
+    const text = rawText.trim().slice(0, MAX_TEXT_BYTES);
+    if (!text) {
+      chrome.runtime.sendMessage({ type: 'SCAN_FAILED', error: 'no_readable_text' }).catch(() => {});
+      return;
+    }
+    const auth = await loadAuth();
+    if (!auth) {
+      chrome.runtime.sendMessage({ type: 'SCAN_FAILED', error: 'auth_required' }).catch(() => {});
+      return;
+    }
+    inFlightPageScans.get(tabId)?.abort();
+    const controller = new AbortController();
+    inFlightPageScans.set(tabId, controller);
+    try {
+      const created = await createTextScan(text, auth.token, controller.signal, title);
+      const finalScan = await pollScan(created.id, auth.token, controller.signal);
+      if (finalScan.status === 'failed') {
+        chrome.runtime.sendMessage({ type: 'SCAN_FAILED', error: 'detection_failed' }).catch(() => {});
+        return;
+      }
+      chrome.runtime.sendMessage({
+        type: 'SCAN_COMPLETE',
+        payload: {
+          videoId: finalScan.id,
+          scanId: finalScan.id,
+          title: finalScan.title || title,
+          result:
+            finalScan.verdict === 'ai'
+              ? 'ai-generated'
+              : finalScan.verdict === 'human'
+                ? 'authentic'
+                : 'suspicious',
+          trustScore: 100 - (finalScan.aiPct ?? 0),
+          timestamp: Date.now(),
+          url,
+        },
+      }).catch(() => {});
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        const message = error instanceof Error ? error.message : 'page_scan_failed';
+        chrome.runtime.sendMessage({
+          type: 'SCAN_FAILED',
+          error: message,
+        }).catch(() => {});
+      }
+    } finally {
+      if (inFlightPageScans.get(tabId) === controller) inFlightPageScans.delete(tabId);
     }
   }
 
@@ -286,11 +423,18 @@ export default defineBackground(() => {
     text: string,
     token: string,
     signal: AbortSignal,
+    title?: string,
   ): Promise<Scan> {
     const form = new FormData();
     form.set('type', 'txt');
     form.set('origin', 'ext');
     form.set('content', text);
+    if (title?.trim()) form.set('title', title.trim());
+    // Honour the checker the user picked in the drawer's Models tab.
+    // Omitted in auto mode so the API resolves its own plan-aware
+    // default (which also survives plan upgrades/downgrades).
+    const modelSlug = await slugForKind('txt');
+    if (modelSlug) form.set('modelSlug', modelSlug);
     const r = await fetch(`${API_URL}/scans`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
@@ -298,6 +442,10 @@ export default defineBackground(() => {
       signal,
     });
     if (!r.ok) {
+      if (r.status === 401) {
+        await clearStoredAuth();
+        throw new Error('auth_required');
+      }
       const reason = await safeReadError(r);
       throw new Error(`scans_create_${r.status}_${reason}`);
     }
@@ -320,6 +468,10 @@ export default defineBackground(() => {
         signal,
       });
       if (!r.ok) {
+        if (r.status === 401) {
+          await clearStoredAuth();
+          throw new Error('auth_required');
+        }
         // Transient failures (e.g. 502) shouldn't kill the whole scan —
         // keep polling unless we've burned through all attempts.
         if (attempt === maxAttempts - 1) {
@@ -339,7 +491,8 @@ export default defineBackground(() => {
     tabId: number,
     url: string,
     mediaId: string,
-    title?: string,
+    title: string | undefined,
+    userInitiated: boolean,
   ) {
     console.info('[heynotai/sw] runYouTubeScan starting', { tabId, url, mediaId });
     // Cancel any previous in-flight scan for this tab — the user has
@@ -352,7 +505,7 @@ export default defineBackground(() => {
     const auth = await loadAuth();
     if (!auth) {
       console.warn('[heynotai/sw] no auth — telling content script', { tabId, mediaId });
-      sendTabMessage(tabId, { type: 'YT_SCAN_AUTH_REQUIRED', mediaId });
+      sendTabMessage(tabId, { type: 'YT_SCAN_AUTH_REQUIRED', mediaId, userInitiated });
       inFlightYouTubeScans.delete(tabId);
       return;
     }
@@ -418,6 +571,10 @@ export default defineBackground(() => {
         return;
       }
       const message = err instanceof Error ? err.message : 'unknown_error';
+      if (message === 'auth_required') {
+        sendTabMessage(tabId, { type: 'YT_SCAN_AUTH_REQUIRED', mediaId, userInitiated });
+        return;
+      }
       sendTabMessage(tabId, { type: 'YT_SCAN_FAILED', error: message, mediaId });
     } finally {
       if (inFlightYouTubeScans.get(tabId) === controller) {
@@ -426,14 +583,14 @@ export default defineBackground(() => {
     }
   }
 
-  /** PB REST lookup for the most recent non-failed scan with the given
+  /** backend REST lookup for the most recent non-failed scan with the given
    *  YouTube source URL. Picks up both completed (`done`) and in-flight
    *  (`queued` / `scanning`) rows so the caller can either reuse the
    *  verdict or join the existing poll loop instead of POSTing a
    *  duplicate `scans` row. Returns null on miss / 401 / 404 — the
    *  caller falls through to the normal create+poll flow. The
    *  response shape matches the SW's existing `Scan` type because
-   *  PB's record is what the API also returns. */
+   *  backend's record is what the API also returns. */
   async function findExistingYouTubeScan(
     sourceUrl: string,
     token: string,
@@ -447,7 +604,7 @@ export default defineBackground(() => {
     });
     try {
       const r = await fetch(
-        `${PB_URL}/api/collections/scans/records?${params.toString()}`,
+        `${API_URL}/data/scans?${params.toString()}`,
         {
           headers: { Authorization: `Bearer ${token}` },
           signal,
@@ -477,6 +634,8 @@ export default defineBackground(() => {
     // backend's deriveTitle falls back to the URL, which renders as a
     // long unreadable string in the table.
     if (title && title.trim()) form.set('title', title.trim());
+    const modelSlug = await slugForKind('vid');
+    if (modelSlug) form.set('modelSlug', modelSlug);
     const r = await fetch(`${API_URL}/scans`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
@@ -484,6 +643,10 @@ export default defineBackground(() => {
       signal,
     });
     if (!r.ok) {
+      if (r.status === 401) {
+        await clearStoredAuth();
+        throw new Error('auth_required');
+      }
       const reason = await safeReadError(r);
       throw new Error(`scans_create_${r.status}_${reason}`);
     }
@@ -513,6 +676,33 @@ export default defineBackground(() => {
     return 'unknown';
   }
 
+  async function clearStoredAuth(): Promise<void> {
+    await chrome.storage.local.remove(['heynotai_auth', 'heynotai_backend_auth']);
+  }
+
+  /** Which bundled content script owns this message. The build merges
+   *  both scripts into one manifest entry, but they're separate files
+   *  and only the owner registers a listener for a given type — so a
+   *  redelivery has to inject the right one. */
+  function ownerScriptFor(type: ExtensionMessage['type']): string | null {
+    if (
+      type === 'TEXT_SCAN_STARTED' ||
+      type === 'TEXT_SCAN_COMPLETE' ||
+      type === 'TEXT_SCAN_FAILED' ||
+      type === 'TEXT_AI_CHECK_AUTH_REQUIRED'
+    ) {
+      return 'content-scripts/text-overlay.js';
+    }
+    if (
+      type === 'YT_SCAN_COMPLETE' ||
+      type === 'YT_SCAN_FAILED' ||
+      type === 'YT_SCAN_AUTH_REQUIRED'
+    ) {
+      return 'content-scripts/content.js';
+    }
+    return null;
+  }
+
   function sendTabMessage(tabId: number, msg: ExtensionMessage) {
     chrome.tabs.sendMessage(tabId, msg).then(
       () => {
@@ -523,25 +713,27 @@ export default defineBackground(() => {
       },
       async (err) => {
         // Content script not present — most often happens when the
-        // extension was reloaded after the page was already open. For
-        // verdict messages (YT_SCAN_COMPLETE / FAILED), re-inject the
-        // content script and retry once so the user actually sees the
-        // result instead of the overlay spinning forever.
+        // extension was reloaded (or freshly installed) after the page
+        // was already open. For anything the user is waiting to *see*
+        // — a YouTube verdict, or any stage of the text-selection pill
+        // — re-inject the owning content script and retry once.
+        //
+        // Without this the right-click "AI check this text" flow ran to
+        // completion server-side and showed absolutely nothing on the
+        // page, because every TEXT_SCAN_* message was dropped on the
+        // floor with no listener to receive it.
         const errMsg = err instanceof Error ? err.message : String(err);
         console.warn('[heynotai/sw] sendTabMessage failed', {
           tabId,
           type: msg.type,
           err: errMsg,
         });
-        const isVerdict =
-          msg.type === 'YT_SCAN_COMPLETE' ||
-          msg.type === 'YT_SCAN_FAILED' ||
-          msg.type === 'YT_SCAN_AUTH_REQUIRED';
-        if (!isVerdict) return;
+        const ownerScript = ownerScriptFor(msg.type);
+        if (!ownerScript) return;
         try {
           await chrome.scripting.executeScript({
             target: { tabId },
-            files: ['content-scripts/content.js'],
+            files: [ownerScript],
           });
           await new Promise((r) => setTimeout(r, 700));
           await chrome.tabs.sendMessage(tabId, msg);
@@ -556,7 +748,7 @@ export default defineBackground(() => {
             err: retryErr instanceof Error ? retryErr.message : String(retryErr),
           });
           // Last-ditch: broadcast to extension contexts (drawer) so the
-          // user at least sees that the verdict landed in PB even if
+          // user at least sees that the verdict landed in backend even if
           // the in-page overlay can't be updated.
           if (msg.type === 'YT_SCAN_COMPLETE') {
             chrome.runtime
@@ -564,6 +756,7 @@ export default defineBackground(() => {
                 type: 'SCAN_COMPLETE',
                 payload: {
                   videoId: msg.scan.id,
+                  scanId: msg.scan.id,
                   title: msg.scan.title ?? '',
                   result:
                     msg.scan.verdict === 'ai'
@@ -634,7 +827,11 @@ export default defineBackground(() => {
     }
   }
 
-  async function injectDrawer(tabId: number, fromAutoReopen: boolean) {
+  /** `mode: 'toggle'` is the toolbar button — clicking it again closes the
+   * drawer. `mode: 'open'` is for everything else (pinned auto-reopen, the
+   * OPEN_DRAWER message): it opens a closed drawer and leaves an open one
+   * alone, so a background event can never yank the drawer shut. */
+  async function injectDrawer(tabId: number, mode: 'toggle' | 'open') {
     const popupUrl = chrome.runtime.getURL('drawer.html');
     const pinned = await getPinnedTabs();
     const initialPinned = pinned[tabId] === true;
@@ -643,7 +840,7 @@ export default defineBackground(() => {
     try {
       await chrome.scripting.executeScript({
         target: { tabId },
-        args: [popupUrl, tabId, initialPinned, fromAutoReopen, theme],
+        args: [popupUrl, tabId, initialPinned, mode === 'open', theme],
         func: toggleHeynotaiDrawer,
       });
     } catch {
@@ -654,24 +851,43 @@ export default defineBackground(() => {
 
   chrome.action.onClicked.addListener(async (tab) => {
     if (!tab.id || !isInjectableUrl(tab.url)) return;
-    injectDrawer(tab.id, false);
+    injectDrawer(tab.id, 'toggle');
+  });
+
+  // Keyboard shortcuts declared in the manifest. `_execute_action` is
+  // handled by Chrome itself (it fires action.onClicked above), so only
+  // the custom command needs a listener here.
+  chrome.commands?.onCommand.addListener(async (command) => {
+    if (command !== 'scan-page') return;
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id || !isInjectableUrl(tab.url)) return;
+    void triggerManualScan(tab.id);
   });
 
   console.info('[heynotai/sw] booted', {
     version: chrome.runtime.getManifest().version,
   });
 
-  chrome.runtime.onMessage.addListener((msg: ExtensionMessage, sender) => {
+  chrome.runtime.onMessage.addListener((msg: ExtensionMessage, sender, sendResponse) => {
     console.info('[heynotai/sw] message', {
       type: msg?.type,
       fromTab: sender.tab?.id ?? null,
     });
+    if (msg.type === 'QUERY_TEXT_SCAN') {
+      // Synchronous answer from an in-memory set — the drawer asks this
+      // on mount so it can render the loading card when it was opened
+      // *during* a right-click scan rather than before one.
+      sendResponse({ scanning: activeTextScanTabs.has(msg.tabId) });
+      return;
+    }
     if (msg.type === 'SCAN_COMPLETE' && sender.tab?.id != null) {
-      const cfg = badgeConfig[msg.payload.result] ?? badgeConfig.authentic;
-      const tabId = sender.tab.id;
-      chrome.action.setBadgeText({ text: cfg.text, tabId });
-      chrome.action.setBadgeBackgroundColor({ color: cfg.color, tabId });
-      chrome.action.setBadgeTextColor({ color: '#ffffff', tabId });
+      if (flag('badge-counter')) {
+        const cfg = badgeConfig[msg.payload.result] ?? badgeConfig.authentic;
+        const tabId = sender.tab.id;
+        chrome.action.setBadgeText({ text: cfg.text, tabId });
+        chrome.action.setBadgeBackgroundColor({ color: cfg.color, tabId });
+        chrome.action.setBadgeTextColor({ color: '#ffffff', tabId });
+      }
     }
     if (msg.type === 'PIN_STATE') {
       setPinnedTab(msg.tabId, msg.pinned);
@@ -681,7 +897,7 @@ export default defineBackground(() => {
     }
     if (msg.type === 'OPEN_DRAWER' && sender.tab?.id != null) {
       if (isInjectableUrl(sender.tab.url)) {
-        injectDrawer(sender.tab.id, false);
+        injectDrawer(sender.tab.id, 'open');
       }
     }
     if (msg.type === 'TRIGGER_MANUAL_SCAN') {
@@ -693,13 +909,23 @@ export default defineBackground(() => {
       void triggerManualScan(msg.tabId);
       return;
     }
+    if (msg.type === 'PAGE_TEXT_SCAN_REQUEST' && sender.tab?.id != null) {
+      void runPageTextScan(sender.tab.id, msg.text, msg.title, msg.url);
+      return;
+    }
     if (msg.type === 'YT_SCAN_REQUEST' && sender.tab?.id != null) {
       console.info('[heynotai/sw] YT_SCAN_REQUEST received', {
         tabId: sender.tab.id,
         url: msg.url,
         mediaId: msg.mediaId,
       });
-      runYouTubeScan(sender.tab.id, msg.url, msg.mediaId, msg.title).catch((err) => {
+      runYouTubeScan(
+        sender.tab.id,
+        msg.url,
+        msg.mediaId,
+        msg.title,
+        msg.userInitiated,
+      ).catch((err) => {
         // runYouTubeScan handles its own error reporting via
         // YT_SCAN_FAILED. Anything reaching here would be a bug.
         console.warn('[heynotai/sw] runYouTubeScan threw', err);
@@ -723,15 +949,18 @@ export default defineBackground(() => {
     if (changeInfo.status !== 'complete') return;
     if (!isInjectableUrl(tab.url)) return;
     const pinned = await getPinnedTabs();
-    if (pinned[tabId]) injectDrawer(tabId, true);
+    if (pinned[tabId]) injectDrawer(tabId, 'open');
   });
 
   chrome.tabs.onRemoved.addListener((tabId) => {
     setPinnedTab(tabId, false);
     inFlightTextScans.get(tabId)?.abort();
     inFlightTextScans.delete(tabId);
+    inFlightPageScans.get(tabId)?.abort();
+    inFlightPageScans.delete(tabId);
     inFlightYouTubeScans.get(tabId)?.abort();
     inFlightYouTubeScans.delete(tabId);
+    activeTextScanTabs.delete(tabId);
     primedTextSelections.delete(tabId);
     stopTextScanBadge(tabId);
   });

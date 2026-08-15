@@ -32,9 +32,12 @@ export function CollectionHero({
   onTogglePin,
   shareUrl,
   onManageAccess,
+  onExport,
 }: {
   collection: Collection;
   onAddItems?: () => void;
+  /** Downloads the rows currently in this collection as CSV. */
+  onExport?: () => void;
   /** Opens the scan composer as a modal pre-linked to this
    *  collection — distinct from `onAddItems` which picks already-saved
    *  scans from the library. */
@@ -210,9 +213,12 @@ export function CollectionHero({
             <Icon name="more" size={14} />
           </button>
 
-          <Button variant="secondary">
+          {/* Downloads the collection's rows as CSV. It used to read
+              "Export report" with no handler — report generation does
+              not exist yet, so this offers the export we can back. */}
+          <Button variant="secondary" onClick={onExport} disabled={!onExport}>
             <Icon name="file-text" size={14} />
-            Export report
+            Export CSV
           </Button>
           <Button
             variant="secondary"

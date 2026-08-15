@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Icon, type IconName } from '@/components/Icon';
 import { useApp } from '@/lib/state';
 import { useAuth, type Plan } from '@/lib/auth-state';
-import { avatarUrl, pb } from '@/lib/pocketbase';
+import { avatarUrl, backend } from '@/lib/backend';
 
 const PLAN_LABEL: Record<Plan, string> = {
   check: 'Check',
@@ -127,7 +127,7 @@ export function Header() {
 
 function UserBadge() {
   const { user } = useAuth();
-  const avatar = avatarUrl(pb.authStore.record);
+  const avatar = avatarUrl(backend.authStore.record);
   if (avatar) {
     return <img className="header-avatar" src={avatar} alt="" />;
   }

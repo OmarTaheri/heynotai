@@ -22,24 +22,14 @@ interface Target {
   h: number; // % of height
 }
 
-function randomTarget(prev?: Target): Target {
-  // Vary the box dimensions noticeably so each lock-on feels different —
-  // sometimes a tall portrait, sometimes a wide letterbox slice.
-  const w = 18 + Math.random() * 28; // 18% – 46%
-  const h = 18 + Math.random() * 32; // 18% – 50%
-  const x = 4 + Math.random() * (92 - w);
-  const y = 4 + Math.random() * (90 - h);
-  const next = { x, y, w, h };
-  // Avoid landing on essentially the same region two frames in a row.
-  if (
-    prev &&
-    Math.abs(prev.x - next.x) < 8 &&
-    Math.abs(prev.y - next.y) < 8
-  ) {
-    return randomTarget(prev);
-  }
-  return next;
-}
+/** Full-frame reticle used during the scanning animation.
+ *
+ *  This used to be a randomly-placed box that jumped to a new region
+ *  every 1.1s. Nothing localizes regions — the image detectors return a
+ *  single whole-image probability — so a reticle that appeared to lock
+ *  onto a face or a corner was claiming an analysis that never happened.
+ *  It now frames the whole image, which is what is actually being sent. */
+const FULL_FRAME: Target = { x: 4, y: 4, w: 92, h: 92 };
 
 export function ImageCanvas({
   src,
@@ -48,16 +38,7 @@ export function ImageCanvas({
   zoom,
   rotation,
 }: Props) {
-  const [target, setTarget] = useState<Target>(() => randomTarget());
-
-  useEffect(() => {
-    if (!scanning) return;
-    setTarget((prev) => randomTarget(prev));
-    const id = setInterval(() => {
-      setTarget((prev) => randomTarget(prev));
-    }, 1100);
-    return () => clearInterval(id);
-  }, [scanning]);
+  const target = FULL_FRAME;
 
   const imgStyle: CSSProperties = {
     transform: `scale(${zoom}) rotate(${rotation}deg)`,

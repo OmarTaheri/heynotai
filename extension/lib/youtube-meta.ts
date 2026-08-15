@@ -13,7 +13,7 @@ export function extractYoutubeMeta(videoId: string): YoutubeMeta | null {
   // fallback for redesigns that drop the flexy wrapper. Returning
   // null here makes runScan skip the title and lets the backend's
   // URL-derived fallback take over, which is correct (just URL-y) —
-  // far better than persisting the previous video's title in PB.
+  // far better than persisting the previous video's title in backend.
   const flexyId =
     document
       .querySelector('ytd-watch-flexy[video-id]')

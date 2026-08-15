@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: "Collections" };
 /**
  * Collections — manual project groupings (class, campaign, semester,
  * release). Server shell; the grid itself is a client island that
- * fetches the real collections owned by the user from PocketBase.
+ * fetches the real collections owned by the user from application backend.
  */
 export default function CollectionsPage() {
   return (

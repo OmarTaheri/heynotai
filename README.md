@@ -1,91 +1,98 @@
 # heynotai
 
-AI-generated media detection for the web.
+AI-generated text, image, audio, and video detection for the web.
 
-heynotai brings text, image, audio, and video analysis into two places: a web workspace for managing scans and a browser extension for checking content in context.
+> AI-content detectors are probabilistic. Treat a result as evidence to investigate, not proof of authorship, authenticity, or intent.
 
-> **Important:** AI-content detectors are probabilistic. A result is evidence to investigate—not proof of authorship, authenticity, or intent. See [Limitations](#limitations).
+## What is included
 
-<!-- Add a product screenshot or short demo GIF here. -->
-
-## What it includes
-
-- **Browser extension** — a WXT/React extension with in-page detection workflows and a YouTube drawer.
-- **Web application** — a Next.js workspace for uploads, scans, results, history, models, team settings, and billing.
-- **Detection API** — a Hono/TypeScript service that validates requests, coordinates detectors, enforces plan limits, and records results.
-- **PocketBase** — authentication, application records, realtime updates, migrations, and file storage.
-- **Shared contracts** — Zod schemas and TypeScript types used across packages.
-- **Billing** — Stripe checkout, subscriptions, plan mapping, and webhook processing.
+- Next.js web workspace and WXT browser extension.
+- Hono API with API-owned password sessions and Google OAuth.
+- PostgreSQL for users, application data, model configuration, audit events, and durable logs.
+- Configurable local/API model providers with encrypted credentials.
+- Declarative request templates and response adapters for provider-specific result formats.
+- Platform admin panel for system state, users, quotas, providers, models, limits, tests, and logs.
+- Filesystem uploads for local deployments and Stripe billing integration.
 
 ## Architecture
 
 ```text
-Browser extension ─┐
-                   ├── auth/realtime ──▶ PocketBase
-Web application ───┤
-                   └── scan requests ──▶ Hono API ──▶ detector providers
-                                             │
-                                             ├──▶ PocketBase
-                                             └──▶ Stripe
+Web application ─┐
+                 ├── sessions/data/files ──> Hono API ──> PostgreSQL
+Browser extension┘                         │       └──> upload storage
+                                           ├──> local model runtimes
+                                           ├──> hosted model APIs
+                                           └──> Stripe
 ```
 
-The API owns detector orchestration and privileged application operations. Clients use PocketBase for authentication and selected realtime/file workflows. Production deployments therefore need both private service-to-service URLs and correctly configured public client URLs.
+All browser data operations pass through the API. The model runtime converts every provider response into the canonical result shape `{ verdict, confidence, aiProbability, model }`; arbitrary database-stored JavaScript is never executed.
 
-## Repository structure
+## Local setup
 
-```text
-heynotai/
-├── api/          Hono API and detector integrations
-├── extension/    WXT + React browser extension
-├── frontend/     Next.js web application
-├── pocketbase/   container, schema, migrations, and seed scripts
-├── shared/       shared TypeScript types and Zod schemas
-├── docker-compose.yaml
-└── pnpm-workspace.yaml
-```
-
-## Local development
-
-### Prerequisites
-
-- Node.js 20+
-- pnpm 9
-- Docker with Compose
-- credentials for any detector or billing provider you want to exercise
-
-### Setup
+Requirements: Node.js 20+, pnpm 9, and Docker Compose.
 
 ```bash
-git clone https://github.com/OmarTaheri/heynotai.git
-cd heynotai
 pnpm install
-
-cp api/.env.example api/.env
-cp frontend/.env.example frontend/.env.local
-```
-
-Replace every placeholder credential before starting the stack. Never deploy the example PocketBase administrator account.
-
-Start PocketBase:
-
-```bash
-pnpm pb:up
-```
-
-Run the API and frontend in separate terminals:
-
-```bash
+copy api/.env.example api/.env
+copy frontend/.env.example frontend/.env.local
+pnpm db:up
 pnpm dev:api
 pnpm dev:frontend
 ```
 
-Run the extension:
+`pnpm db:up` reads `.env.local-stack`, which holds the local PostgreSQL credentials and is passed to Docker Compose explicitly. The API applies checked-in SQL migrations on startup and serves on `http://localhost:8787`; the frontend serves on `http://localhost:3010`.
 
-```bash
-pnpm dev:extension
+`pnpm dev:api` reseeds two development accounts on every start, both with the password in `DEV_LOGIN_PASSWORD`:
+
+| Role | Email |
+| --- | --- |
+| Admin | `admin@heynotai.local` |
+| User | `user@heynotai.local` |
+
+For the extension, `pnpm dev:extension` runs the WXT dev server. To load a static build against the local stack instead, run `pnpm --filter @heynotai/extension build:local` and load `extension/.output/chrome-mv3-dev` as an unpacked extension. `pnpm --filter @heynotai/extension build` targets production hosts and is only for release packaging — its `VITE_FRONTEND_URL` must be serving `/extension-auth`, or extension sign-in fails with "Authorization page could not be loaded."
+
+Generate independent production secrets for:
+
+- `POSTGRES_PASSWORD`
+- `AUTH_PASSWORD_PEPPER`
+- `FILE_URL_SECRET`
+- `CREDENTIAL_ENCRYPTION_KEY` (32 bytes, hex/base64, or a 32+ character passphrase)
+
+Set `ADMIN_EMAILS` to a comma-separated list before those accounts register or sign in with Google. Those users receive the server-owned `systemRole=admin` claim; the ordinary profile `role` field is not used for platform authorization.
+
+## Admin panel
+
+Sign in with an address listed in `ADMIN_EMAILS`, then open `/app/admin`.
+
+- `/app/admin` — users, scans, service state, reliability, and recent failures.
+- `/app/admin/users` — search users, suspend/activate accounts, edit plan and monthly quota, revoke sessions, or delete.
+- `/app/admin/providers` — hosted HTTP, OpenAI-compatible, Hugging Face, Velma, and local HTTP connections; encrypted write-only credentials; health tests; timeout/retry/RPM/concurrency limits.
+- `/app/admin/models` — add, clone, edit, archive, enable, and test models; configure modality, plan access, cost, input/execution limits, request construction, and response mapping.
+- `/app/admin/logs` — filter persistent structured logs by severity, service, event, user, scan, model, provider, or request ID.
+
+The same structured logs are mirrored to the API process output, so `pnpm dev:api` and `docker logs` show request, audit, and error lines without a database query. `LOG_STDOUT` selects the format (`auto`, `pretty`, `json`, `off`) and `LOG_STDOUT_LEVEL` the minimum severity.
+
+Model response mapping supports classification lists, scalar scores, direct verdicts, segment/frame results, and bounded JSON paths. Use the sample-response test in the model editor before enabling a new adapter.
+
+For local runtimes, add allowed hostnames to `ALLOWED_LOCAL_MODEL_HOSTS`. Remote providers require HTTPS and cannot target private IP literals.
+
+## Google authentication
+
+Create a Web application OAuth client in Google Cloud and configure:
+
+```dotenv
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+GOOGLE_REDIRECT_URI=http://localhost:8787/auth/google/callback
 ```
 
-Load the generated development extension in a Chromium browser as instructed by WXT.
+The authorized redirect URI in Google Cloud must exactly match `GOOGLE_REDIRECT_URI`. Production should use the public HTTPS API URL. Add extension IDs to `EXTENSION_IDS`; the extension uses a server-mediated PKCE flow and exchanges a one-time code rather than copying the web session.
+
+## Model providers
+
+Seeded Hugging Face and Velma rows use `HUGGINGFACE_TOKEN` and `VELMA_API_KEY` as optional environment fallbacks. Credentials entered through the admin panel are encrypted with `CREDENTIAL_ENCRYPTION_KEY` and are returned only as masked hints.
+
+Custom providers can select JSON, binary, or multipart requests and use bounded templates such as `{{input.text}}`, `{{input.mime}}`, and `{{model.externalId}}`. Response adapters use a restricted mapping schema; do not store executable code in model configuration.
 
 ## Quality checks
 
@@ -97,42 +104,35 @@ pnpm build:frontend
 pnpm build:extension
 ```
 
-Current automated coverage is concentrated in the shared package. API integration, billing, extension, and browser end-to-end coverage are active priorities.
+`pnpm test` runs the unit suites in every package, including the
+extension's rules for page classification, auto-scan gating, verdict
+rendering, and scan-error copy.
+
+The extension also has an end-to-end suite that loads the built MV3
+bundle into a real browser profile and drives the drawer:
+
+```bash
+pnpm --filter @heynotai/extension e2e
+```
+
+Two prerequisites. It needs a browser that still honours
+`--load-extension`, which since Chrome 137 means **Microsoft Edge** —
+the suite tries Edge first, then Chrome, and `HEYNOTAI_E2E_CHANNEL`
+overrides the choice. And its signed-in specs need the API running
+(`pnpm dev:api`); they skip themselves with a message when it isn't,
+rather than failing. The `e2e` script builds in development mode on
+purpose, so the bundle points at `http://localhost:8787` instead of
+production.
 
 ## Deployment
 
-`docker-compose.yaml` provides a production-shaped deployment for:
-
-- `pocketbase`
-- `api`
-- `frontend`
-
-The compose file includes Coolify-compatible service URL variables. Review every environment variable and network boundary before using it outside a development environment.
+`docker-compose.yaml` runs PostgreSQL, the API, and the frontend. Database and upload volumes are persistent. Back up both volumes and configure retention for `system_logs`, audit events, and uploaded media.
 
 ## Limitations
 
-- Detection models can produce false positives and false negatives.
-- Performance varies by modality, language, compression, editing, and model/provider.
-- A score should not be used by itself for disciplinary, legal, employment, or academic-integrity decisions.
-- Provider availability and limits can affect scan results.
-- A public benchmark and model card are not yet included in this repository.
+- Models can produce false positives and false negatives.
+- Results vary by modality, language, compression, editing, and provider availability.
+- A score alone should not drive legal, employment, academic, or disciplinary decisions.
+- The built-in job table records work, but this version still starts scan execution in the API process; a dedicated multi-instance worker is the next operational hardening step.
 
-## Status
-
-heynotai is under active development at version `0.1`. Interfaces and data models may change.
-
-## Security and privacy
-
-Do not report vulnerabilities in a public issue. Contact the maintainer privately through the contact information at [omartaheri.com](https://omartaheri.com).
-
-Before deploying:
-
-- generate unique PocketBase administrator credentials;
-- use test-mode Stripe credentials until the full billing flow is verified;
-- set explicit CORS origins;
-- configure public and private PocketBase URLs correctly;
-- define retention and deletion rules for uploaded media and scan results.
-
-## License
-
-No open-source license is currently declared. You may inspect the source, but no reuse rights are granted until a license is added.
+No open-source license is currently declared.

@@ -1,7 +1,7 @@
 "use client";
 
-import { type RecordModel } from "pocketbase";
-import { pb } from "./pocketbase";
+import { type BackendRecord as RecordModel } from "@heynotai/shared";
+import { backend } from "./backend";
 import { recordActivity } from "./collection-activities";
 import type { CollectionMember } from "./collections-data";
 
@@ -9,7 +9,7 @@ export type MemberRole = "owner" | "editor" | "viewer";
 export type MemberStatus = "pending" | "accepted" | "rejected";
 
 /** Wire shape for a row in `collection_members`, kept thin so consumers
- *  can also pull whatever they need off the PB `expand`. */
+ *  can also pull whatever they need off the backend `expand`. */
 export type CollectionMemberRecord = RecordModel & {
   collection: string;
   userId: string;
@@ -38,17 +38,17 @@ type ExpandedCollection = RecordModel & {
 export async function listCollectionMembers(
   collectionId: string,
 ): Promise<CollectionMemberRecord[]> {
-  const records = await pb
+  const records = await backend
     .collection("collection_members")
     .getFullList<CollectionMemberRecord>({
-      filter: pb.filter("collection = {:cid}", { cid: collectionId }),
+      filter: backend.filter("collection = {:cid}", { cid: collectionId }),
       sort: "created",
       expand: "userId",
     });
   return records;
 }
 
-/** Project a PB row into the rich `CollectionMember` shape the
+/** Project a backend row into the rich `CollectionMember` shape the
  *  MembersPanel renders. Falls back to the invited email when the
  *  recipient hasn't been linked to a user yet. */
 export function adaptMemberRecord(
@@ -64,7 +64,7 @@ export function adaptMemberRecord(
   const initials = deriveInitials(name) || (email[0] ?? "U").toUpperCase();
   const avatarSrc =
     expanded && expanded.avatar
-      ? pb.files.getURL(expanded, expanded.avatar)
+      ? backend.files.getURL(expanded, expanded.avatar)
       : null;
   const roleLabel =
     record.role === "owner"
@@ -96,7 +96,7 @@ const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8787";
 
 /** Issue an invite to collaborate on a collection. Goes through the
- *  api server because the recipient's PB id is needed in `userId` for
+ *  api server because the recipient's backend id is needed in `userId` for
  *  their `listPendingRequests` filter to match — and the `users`
  *  listRule blocks the inviter from looking that id up directly. The
  *  api uses superuser auth to resolve. */
@@ -106,7 +106,7 @@ export async function inviteCollaborator(
   const email = input.email.trim().toLowerCase();
   if (!email) throw new InviteError("missing_email", "Enter an email.");
 
-  const token = pb.authStore.token;
+  const token = backend.authStore.token;
   const r = await fetch(`${API_URL}/me/collections/invite`, {
     method: "POST",
     headers: {
@@ -162,8 +162,8 @@ export async function inviteCollaborator(
 export async function listPendingRequests(
   userId: string,
 ): Promise<CollectionMemberRecord[]> {
-  return pb.collection("collection_members").getFullList<CollectionMemberRecord>({
-    filter: pb.filter(
+  return backend.collection("collection_members").getFullList<CollectionMemberRecord>({
+    filter: backend.filter(
       "userId = {:uid} && status = 'pending'",
       { uid: userId },
     ),
@@ -190,7 +190,7 @@ export async function respondToRequest(
   membershipId: string,
   decision: "accepted" | "rejected",
 ): Promise<CollectionMemberRecord> {
-  const updated = await pb
+  const updated = await backend
     .collection("collection_members")
     .update<CollectionMemberRecord>(membershipId, { status: decision });
   if (decision === "accepted") {
@@ -209,7 +209,7 @@ export async function respondToRequest(
  *
  *  The activity row is written BEFORE the delete because the "leave"
  *  flow lets a user remove their own membership — once that delete
- *  lands the actor is no longer a member, and PB's createRule on
+ *  lands the actor is no longer a member, and backend's createRule on
  *  `collection_activities` would reject the post-delete write. */
 export async function removeMember(
   membershipId: string,
@@ -221,7 +221,7 @@ export async function removeMember(
     type: "member.removed",
     payload: ctx.memberName ? { memberName: ctx.memberName } : {},
   });
-  await pb.collection("collection_members").delete(membershipId);
+  await backend.collection("collection_members").delete(membershipId);
 }
 
 export class InviteError extends Error {

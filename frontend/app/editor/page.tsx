@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { TextEditorClient } from "@/components/editor/TextEditorClient";
 import { consumePendingScan } from "@/lib/scanHandoff";
 import { syntheticScan, type Scan } from "@/lib/scan-types";
-import { pb } from "@/lib/pocketbase";
+import { backend } from "@/lib/backend";
 import { createScan } from "@/lib/scans-api";
 import editorStyles from "./editor.module.css";
 
@@ -23,7 +23,7 @@ export default function EditorPage() {
     const pending = consumePendingScan();
     const seeded = pending?.text ?? "";
 
-    if (pb.authStore.isValid && seeded.trim() !== "") {
+    if (backend.authStore.isValid && seeded.trim() !== "") {
       let cancelled = false;
       (async () => {
         try {

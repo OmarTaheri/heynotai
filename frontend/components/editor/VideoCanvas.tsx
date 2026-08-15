@@ -25,42 +25,12 @@ interface Props {
   onPlayingChange: (playing: boolean) => void;
 }
 
-interface DetectBox {
-  id: number;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  label?: string;
-}
-
-const BOX_COUNT = 5;
-const LABELS = [
-  undefined, undefined, undefined,
-  "Face 87%", "Face 73%",
-  "AI 92%", "AI 81%",
-  "Object", "Frame",
-  "78%", "65%",
-];
-
-function randomBox(id: number): DetectBox {
-  const w = 12 + Math.random() * 24;
-  const h = 14 + Math.random() * 26;
-  const x = 4 + Math.random() * (92 - w);
-  const y = 8 + Math.random() * (84 - h);
-  const label = LABELS[Math.floor(Math.random() * LABELS.length)];
-  return { id, x, y, w, h, label };
-}
 
 export const VideoCanvas = forwardRef<VideoCanvasHandle, Props>(function VideoCanvas(
   { src, scanning, playing, onTimeChange, onDurationChange, onPlayingChange },
   ref,
 ) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [boxes, setBoxes] = useState<DetectBox[]>(() =>
-    Array.from({ length: BOX_COUNT }, (_, i) => randomBox(i)),
-  );
-
   useImperativeHandle(ref, () => ({
     togglePlay() {
       const v = videoRef.current;
@@ -87,15 +57,6 @@ export const VideoCanvas = forwardRef<VideoCanvasHandle, Props>(function VideoCa
     if (!playing && !v.paused) v.pause();
   }, [playing]);
 
-  useEffect(() => {
-    if (!scanning) return;
-    setBoxes(Array.from({ length: BOX_COUNT }, (_, i) => randomBox(i)));
-  }, [scanning]);
-
-  const respawn = (i: number) => {
-    setBoxes((prev) => prev.map((b, idx) => (idx === i ? randomBox(b.id) : b)));
-  };
-
   return (
     <div className={styles.player}>
       <video
@@ -112,26 +73,14 @@ export const VideoCanvas = forwardRef<VideoCanvasHandle, Props>(function VideoCa
         onPause={() => onPlayingChange(false)}
         onEnded={() => onPlayingChange(false)}
       />
+      {/* Progress indicator only. This used to draw five randomly-placed
+          boxes labelled "Face 87%" / "AI 92%" — the video pipeline
+          classifies sampled frames whole and returns no bounding boxes,
+          so those overlays were inventing detections that never
+          happened. Per-frame results, when the provider reports them,
+          are surfaced as counts in the verdict panel. */}
       {scanning && (
         <div className={styles.scan} aria-hidden>
-          {boxes.map((box, i) => (
-            <div
-              key={`${box.id}-${box.x}-${box.y}`}
-              className={styles.detectBox}
-              style={{
-                left: `${box.x}%`,
-                top: `${box.y}%`,
-                width: `${box.w}%`,
-                height: `${box.h}%`,
-                animationDelay: `${i * 0.28}s`,
-              } as CSSProperties}
-              onAnimationIteration={() => respawn(i)}
-            >
-              {box.label && (
-                <span className={styles.detectLabel}>{box.label}</span>
-              )}
-            </div>
-          ))}
           <div className={styles.scanLabel}>Scanning frames</div>
         </div>
       )}

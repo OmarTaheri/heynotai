@@ -1,6 +1,6 @@
 "use client";
 
-import { pb } from "./pocketbase";
+import { backend } from "./backend";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8787";
@@ -22,7 +22,7 @@ export class UserSearchError extends Error {
   }
 }
 
-/** Search users on the API (which uses PB superuser to bypass the closed
+/** Search users on the API (which uses backend superuser to bypass the closed
  *  list rule and return only public-safe profile fields). The caller
  *  must already be authenticated — the API rejects unauthenticated
  *  requests. The optional `signal` lets the caller cancel an in-flight
@@ -35,7 +35,7 @@ export async function searchUsers(
   if (trimmed.length < 2) return [];
   const params = new URLSearchParams({ q: trimmed });
   if (options.limit) params.set("limit", String(options.limit));
-  const token = pb.authStore.token;
+  const token = backend.authStore.token;
   const r = await fetch(`${API_URL}/me/users/search?${params}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     signal: options.signal,

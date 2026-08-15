@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { ClientResponseError } from "pocketbase";
+import { BackendResponseError as ClientResponseError } from "@heynotai/shared";
 import {
   DEFAULT_EXTENSION_PREFS,
   describeAuthError,
@@ -18,7 +18,7 @@ import {
   type Plan,
   type PlanCycle,
 } from "@heynotai/shared";
-import { pb, type PBUserRecord } from "./pocketbase";
+import { backend, type BackendUserRecord } from "./backend";
 
 export type { Plan, PlanCycle };
 
@@ -55,10 +55,13 @@ export type AppUser = {
   verified?: boolean;
   mfa?: boolean;
   onboardingCompleted: boolean;
+  /** Server-owned platform authorization. This is distinct from the
+   * onboarding `role` field, which stores a user's occupation. */
+  systemRole: "user" | "admin";
 };
 
 export type AuthResult =
-  | { ok: true }
+  | { ok: true; user: AppUser }
   | { ok: false; error: string }
   | { ok: false; mfaRequired: true; mfaId: string; otpId: string };
 
@@ -96,8 +99,15 @@ function isCycle(c: unknown): c is PlanCycle {
   return c === "monthly" || c === "yearly";
 }
 
-function mapUser(record: PBUserRecord | null | undefined): AppUser | null {
+export function isPlatformAdmin(
+  user: Pick<AppUser, "systemRole"> | null | undefined,
+): boolean {
+  return user?.systemRole === "admin";
+}
+
+function mapUser(record: BackendUserRecord | null | undefined): AppUser | null {
   if (!record) return null;
+  const rawSystemRole = (record as { systemRole?: string }).systemRole;
   const name = (record.name as string | undefined) ?? "";
   const handle = (record.handle as string | undefined) ?? "";
   const plan: Plan = isPlan(record.plan) ? record.plan : "check";
@@ -125,7 +135,7 @@ function mapUser(record: PBUserRecord | null | undefined): AppUser | null {
   const avatarFile = record.avatar as string | undefined;
   const avatarUrlField = (record as { avatarUrl?: string }).avatarUrl;
   const avatarSrc = avatarFile
-    ? pb.files.getURL(record, avatarFile)
+    ? backend.files.getURL(record, avatarFile)
     : avatarUrlField || null;
   return {
     id: record.id,
@@ -145,6 +155,12 @@ function mapUser(record: PBUserRecord | null | undefined): AppUser | null {
     verified: record.verified as boolean | undefined,
     mfa: record.mfa as boolean | undefined,
     onboardingCompleted: Boolean(record.onboardingCompleted),
+    systemRole:
+      rawSystemRole === "admin" ||
+      rawSystemRole === "owner" ||
+      rawSystemRole === "support"
+        ? "admin"
+        : "user",
   };
 }
 
@@ -159,10 +175,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Hydrate from the SDK's persisted auth store, then subscribe to
   // changes (e.g. token refresh, sign-out from another tab).
   useEffect(() => {
-    setUser(mapUser(pb.authStore.record as PBUserRecord | null));
+    setUser(mapUser(backend.authStore.record as BackendUserRecord | null));
     setLoading(false);
-    const unsub = pb.authStore.onChange((_token, record) => {
-      setUser(mapUser(record as PBUserRecord | null));
+    const unsub = backend.authStore.onChange((_token, record) => {
+      setUser(mapUser(record as BackendUserRecord | null));
     });
     return () => {
       unsub();
@@ -170,12 +186,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refresh = useCallback(async () => {
-    if (!pb.authStore.isValid) return;
+    if (!backend.authStore.isValid) return;
     try {
-      const r = await pb.collection("users").authRefresh<PBUserRecord>();
+      const r = await backend.collection("users").authRefresh<BackendUserRecord>();
       setUser(mapUser(r.record));
     } catch {
-      pb.authStore.clear();
+      backend.authStore.clear();
     }
   }, []);
 
@@ -183,21 +199,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (email, password) => {
       const trimmedEmail = email.trim();
       try {
-        const r = await pb
+        const r = await backend
           .collection("users")
-          .authWithPassword<PBUserRecord>(trimmedEmail, password);
-        setUser(mapUser(r.record));
-        return { ok: true };
+          .authWithPassword<BackendUserRecord>(trimmedEmail, password);
+        const authenticatedUser = mapUser(r.record);
+        if (!authenticatedUser) throw new Error("Authentication returned no user");
+        setUser(authenticatedUser);
+        return { ok: true, user: authenticatedUser };
       } catch (err) {
         const mfaId = extractMfaId(err);
         if (mfaId) {
           // Second factor required. Email an OTP and ask the UI to
           // collect it. The OTP id is what `authWithOTP` needs along
-          // with the mfaId. Per PB docs, requestOTP returns an otpId
+          // with the mfaId. Per backend docs, requestOTP returns an otpId
           // even if the address doesn't exist — that's fine here, the
           // mfaId will simply not validate.
           try {
-            const otp = await pb
+            const otp = await backend
               .collection("users")
               .requestOTP(trimmedEmail);
             return {
@@ -221,7 +239,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const trimmedName = name.trim();
       const trimmedEmail = email.trim().toLowerCase();
       try {
-        await pb.collection("users").create({
+        const record = await backend.collection("users").create<BackendUserRecord>({
           email: trimmedEmail,
           password,
           passwordConfirm: password,
@@ -229,14 +247,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           plan: "check" satisfies Plan,
           language: "en",
         });
-        const r = await pb
-          .collection("users")
-          .authWithPassword<PBUserRecord>(trimmedEmail, password);
-        setUser(mapUser(r.record));
+        const authenticatedUser = mapUser(record);
+        if (!authenticatedUser) throw new Error("Registration returned no user");
+        setUser(authenticatedUser);
         // Best-effort default rows; ignore failures — rows will be
         // created lazily by settings-api on first read.
-        await seedDefaultPrefs(r.record.id).catch(() => undefined);
-        return { ok: true };
+        await seedDefaultPrefs(record.id).catch(() => undefined);
+        return { ok: true, user: authenticatedUser };
       } catch (err) {
         return mapAuthError(err, "signUp");
       }
@@ -248,11 +265,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     AuthContextValue["signInWithGoogle"]
   >(async () => {
     try {
-      const r = await pb
+      const r = await backend
         .collection("users")
-        .authWithOAuth2<PBUserRecord>({ provider: "google" });
-      setUser(mapUser(r.record));
-      return { ok: true };
+        .authWithOAuth2<BackendUserRecord>({ provider: "google" });
+      const authenticatedUser = mapUser(r.record);
+      if (!authenticatedUser) throw new Error("Google sign-in returned no user");
+      setUser(authenticatedUser);
+      return { ok: true, user: authenticatedUser };
     } catch (err) {
       return mapAuthError(err, "oauth");
     }
@@ -261,11 +280,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const confirmMfa = useCallback<AuthContextValue["confirmMfa"]>(
     async (mfaId, otpId, code) => {
       try {
-        const r = await pb
+        const r = await backend
           .collection("users")
-          .authWithOTP<PBUserRecord>(otpId, code, { mfaId });
-        setUser(mapUser(r.record));
-        return { ok: true };
+          .authWithOTP<BackendUserRecord>(otpId, code, { mfaId });
+        const authenticatedUser = mapUser(r.record);
+        if (!authenticatedUser) throw new Error("Verification returned no user");
+        setUser(authenticatedUser);
+        return { ok: true, user: authenticatedUser };
       } catch (err) {
         return mapAuthError(err, "mfa");
       }
@@ -274,6 +295,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const signOut = useCallback(() => {
+    void backend.request<void>("/auth/logout", { method: "POST" }).catch(() => undefined);
     setFarewell(FAREWELLS[Math.floor(Math.random() * FAREWELLS.length)]);
     setSigningOut(true);
     window.setTimeout(() => {
@@ -288,7 +310,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!signingOut) return;
     if (pathname && pathname.startsWith("/app")) return;
-    pb.authStore.clear();
+    backend.authStore.clear();
     setUser(null);
     setSigningOut(false);
   }, [signingOut, pathname]);
@@ -354,21 +376,21 @@ function extractMfaId(err: unknown): string | null {
 
 async function seedDefaultPrefs(userId: string): Promise<void> {
   const tasks: Array<Promise<unknown>> = [
-    pb.collection("notification_prefs").create({ userId, prefs: {} }),
-    pb.collection("appearance_prefs").create({
+    backend.collection("notification_prefs").create({ userId, prefs: {} }),
+    backend.collection("appearance_prefs").create({
       userId,
       theme: "system",
       dateFormat: "DD MMM YYYY",
       showAuthenticVerdicts: true,
     }),
-    pb.collection("privacy_prefs").create({
+    backend.collection("privacy_prefs").create({
       userId,
       scanRetention: "forever",
       modelTraining: false,
       anonymousAnalytics: true,
       publicProfile: true,
     }),
-    pb
+    backend
       .collection("extension_prefs")
       .create({ userId, ...DEFAULT_EXTENSION_PREFS }),
   ];

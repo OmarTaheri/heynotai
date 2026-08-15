@@ -13,7 +13,7 @@ import type { Collection } from "@/lib/collections-data";
  * to the collection detail page.
  *
  * The pin button in the cover's top-right toggles `collection.pinned`
- * on PocketBase. It's only rendered for owned collections — non-owners
+ * on application backend. It's only rendered for owned collections — non-owners
  * see a read-only "Pinned" pill when the owner has pinned it. Clicks
  * are stopped from bubbling so the surrounding Link doesn't navigate.
  */

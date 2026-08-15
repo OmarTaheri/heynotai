@@ -776,7 +776,7 @@ function PaymentStep({
         return;
       }
       // Stripe took the money. From here, the only thing that can
-      // fail is *us* failing to write the new plan into PB. If
+      // fail is *us* failing to write the new plan into backend. If
       // /confirm errors, fall back to /sync (which reads live state
       // from Stripe) before surfacing an error — the most common
       // /confirm failure is transient (network blip, subscription

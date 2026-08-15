@@ -12,6 +12,14 @@ export const TYPE_LABEL: Record<EngineType, string> = {
   vid: 'Video detection',
 };
 
+/** Lowercase noun used in sentences ("No audio checkers yet."). */
+export const TYPE_NOUN: Record<EngineType, string> = {
+  txt: 'text',
+  img: 'image',
+  aud: 'audio',
+  vid: 'video',
+};
+
 export const TYPE_ICON: Record<EngineType, 'text' | 'image' | 'audio' | 'video'> = {
   txt: 'text',
   img: 'image',

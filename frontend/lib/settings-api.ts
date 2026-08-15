@@ -1,6 +1,6 @@
 "use client";
 
-import { ClientResponseError } from "pocketbase";
+import { BackendResponseError as ClientResponseError } from "@heynotai/shared";
 import {
   DEFAULT_EXTENSION_PREFS,
   migrateLegacyPlatforms,
@@ -13,50 +13,50 @@ import {
   type PrivacyPrefs,
   type Session,
 } from "@heynotai/shared";
-import { pb, type PBUserRecord } from "./pocketbase";
+import { backend, type BackendUserRecord } from "./backend";
 
 /* All helpers assume the user is authenticated. Callers should gate on
- * `pb.authStore.isValid` (the AuthGuard in (shell) already does this). */
+ * `backend.authStore.isValid` (the AuthGuard in (shell) already does this). */
 
 function uid(): string {
-  const id = pb.authStore.record?.id;
+  const id = backend.authStore.record?.id;
   if (!id) throw new Error("Not authenticated");
   return id;
 }
 
 /* ── User profile ───────────────────────────────────────────── */
 
-export async function getProfile(): Promise<PBUserRecord> {
+export async function getProfile(): Promise<BackendUserRecord> {
   const id = uid();
-  // Multiple settings sections call this in parallel on mount. PB's
+  // Multiple settings sections call this in parallel on mount. backend's
   // SDK auto-cancels earlier in-flight calls with the same auto-
   // generated request key — pass `requestKey: null` to opt out so
   // every section gets the response.
-  return (await pb
+  return (await backend
     .collection("users")
-    .getOne(id, { requestKey: null })) as PBUserRecord;
+    .getOne(id, { requestKey: null })) as BackendUserRecord;
 }
 
 export async function updateProfile(
-  patch: Partial<PBUserRecord>,
-): Promise<PBUserRecord> {
+  patch: Partial<BackendUserRecord>,
+): Promise<BackendUserRecord> {
   const id = uid();
-  return (await pb.collection("users").update(id, patch)) as PBUserRecord;
+  return (await backend.collection("users").update(id, patch)) as BackendUserRecord;
 }
 
-export async function uploadAvatar(file: File): Promise<PBUserRecord> {
+export async function uploadAvatar(file: File): Promise<BackendUserRecord> {
   const id = uid();
   const fd = new FormData();
   fd.append("avatar", file);
-  return (await pb.collection("users").update(id, fd)) as PBUserRecord;
+  return (await backend.collection("users").update(id, fd)) as BackendUserRecord;
 }
 
 export async function changeEmail(newEmail: string): Promise<void> {
-  await pb.collection("users").requestEmailChange(newEmail);
+  await backend.collection("users").requestEmailChange(newEmail);
 }
 
 export async function requestPasswordReset(email: string): Promise<void> {
-  await pb.collection("users").requestPasswordReset(email);
+  await backend.collection("users").requestPasswordReset(email);
 }
 
 /* ── First-or-default helpers ───────────────────────────────── */
@@ -76,13 +76,13 @@ async function firstOrCreate<T extends Record<string, unknown>>(
 ): Promise<T & { id: string; userId: string }> {
   const userId = uid();
   try {
-    return (await pb
+    return (await backend
       .collection(collection)
       .getFirstListItem<T & { id: string; userId: string }>(
         `userId = "${userId}"`,
       )) as T & { id: string; userId: string };
   } catch (err) {
-    // PB returns 404 when the filter matches nothing — that's the
+    // backend returns 404 when the filter matches nothing — that's the
     // only case where falling through to `create` is correct.
     if (!(err instanceof ClientResponseError) || err.status !== 404) {
       throw err;
@@ -90,7 +90,7 @@ async function firstOrCreate<T extends Record<string, unknown>>(
   }
 
   try {
-    return (await pb
+    return (await backend
       .collection(collection)
       .create({ ...defaults, userId })) as T & { id: string; userId: string };
   } catch (err) {
@@ -98,7 +98,7 @@ async function firstOrCreate<T extends Record<string, unknown>>(
     // between our read and our create. Re-read and return that one.
     if (err instanceof ClientResponseError && err.status === 400) {
       try {
-        return (await pb
+        return (await backend
           .collection(collection)
           .getFirstListItem<T & { id: string; userId: string }>(
             `userId = "${userId}"`,
@@ -124,7 +124,7 @@ export async function saveNotifPrefs(
   prefs: Record<string, NotifPrefs>,
 ): Promise<void> {
   const r = await getNotifPrefs();
-  await pb.collection("notification_prefs").update(r.id!, { prefs });
+  await backend.collection("notification_prefs").update(r.id!, { prefs });
 }
 
 /* ── Appearance ─────────────────────────────────────────────── */
@@ -146,7 +146,7 @@ export async function saveAppearance(
   patch: Partial<AppearancePrefs>,
 ): Promise<void> {
   const r = await getAppearance();
-  await pb.collection("appearance_prefs").update(r.id!, patch);
+  await backend.collection("appearance_prefs").update(r.id!, patch);
 }
 
 /* ── Privacy ────────────────────────────────────────────────── */
@@ -167,7 +167,7 @@ export async function getPrivacy(): Promise<PrivacyPrefs> {
 
 export async function savePrivacy(patch: Partial<PrivacyPrefs>): Promise<void> {
   const r = await getPrivacy();
-  await pb.collection("privacy_prefs").update(r.id!, patch);
+  await backend.collection("privacy_prefs").update(r.id!, patch);
 }
 
 /* ── Extension preferences (bidirectional) ──────────────────── */
@@ -194,7 +194,7 @@ export async function saveExtensionPrefs(
   patch: Partial<ExtensionPrefs>,
 ): Promise<ExtensionPrefs> {
   const r = await getExtensionPrefs();
-  const updated = (await pb
+  const updated = (await backend
     .collection("extension_prefs")
     .update(r.id!, patch)) as unknown as ExtensionPrefs;
   return normalizeExtensionPrefs(updated);
@@ -204,19 +204,19 @@ export async function resetExtensionPrefs(): Promise<ExtensionPrefs> {
   return saveExtensionPrefs(DEFAULT_EXTENSION_PREFS);
 }
 
-/* PB realtime: caller passes a callback that fires on every update.
+/* backend realtime: caller passes a callback that fires on every update.
  * Returns an unsubscribe function. */
 export async function subscribeExtensionPrefs(
   cb: (prefs: ExtensionPrefs) => void,
 ): Promise<() => void> {
   const r = await getExtensionPrefs();
   const id = (r as unknown as { id: string }).id;
-  await pb.collection("extension_prefs").subscribe(id, (e) => {
+  await backend.collection("extension_prefs").subscribe(id, (e) => {
     if (e.action === "update")
       cb(normalizeExtensionPrefs(e.record as unknown as ExtensionPrefs));
   });
   return () => {
-    void pb.collection("extension_prefs").unsubscribe(id);
+    void backend.collection("extension_prefs").unsubscribe(id);
   };
 }
 
@@ -227,7 +227,7 @@ export async function getInvoices(): Promise<Invoice[]> {
   // Sort newest-first by paidOn, with `created` as a stable tiebreaker
   // so backfilled rows with identical `paidOn` dates keep a deterministic
   // order matching their creation sequence.
-  return (await pb.collection("invoices").getFullList({
+  return (await backend.collection("invoices").getFullList({
     filter: `userId="${userId}"`,
     sort: "-paidOn,-created",
     requestKey: null,
@@ -236,19 +236,19 @@ export async function getInvoices(): Promise<Invoice[]> {
 
 export function invoicePdfUrl(invoice: Invoice): string | null {
   if (!invoice.pdf) return null;
-  return pb.files.getURL(invoice as unknown as Record<string, unknown>, invoice.pdf);
+  return backend.files.getURL(invoice as unknown as Record<string, unknown>, invoice.pdf);
 }
 
 /* ── Sessions / auth origins ────────────────────────────────── */
 
-/* PB exposes the per-user auth origins (devices) on the system
+/* backend exposes the per-user auth origins (devices) on the system
  * `_authOrigins` collection. Read-only from the client SDK on recent
  * versions; if it's not exposed, the section degrades to "current
  * device only". */
 export async function listSessions(): Promise<Session[]> {
   const userId = uid();
   try {
-    const records = await pb.collection("_authOrigins").getFullList<{
+    const records = await backend.collection("_authOrigins").getFullList<{
       id: string;
       collectionRef: string;
       recordRef: string;
@@ -261,10 +261,10 @@ export async function listSessions(): Promise<Session[]> {
       device: shortFingerprint(r.fingerprint),
       meta: `Last used ${new Date(r.updated).toLocaleString()}`,
       when: relativeTime(r.updated),
-      current: pb.authStore.record?.id === r.recordRef && r.fingerprint === currentFingerprint(),
+      current: backend.authStore.record?.id === r.recordRef && r.fingerprint === currentFingerprint(),
     }));
   } catch {
-    // Older PB versions don't expose _authOrigins to clients; show only
+    // Older backend versions don't expose _authOrigins to clients; show only
     // the current session.
     return [
       {
@@ -279,7 +279,7 @@ export async function listSessions(): Promise<Session[]> {
 }
 
 export async function revokeSession(sessionId: string): Promise<void> {
-  await pb.collection("_authOrigins").delete(sessionId);
+  await backend.collection("_authOrigins").delete(sessionId);
 }
 
 function shortFingerprint(fp: string): string {
@@ -288,7 +288,7 @@ function shortFingerprint(fp: string): string {
 }
 
 function currentFingerprint(): string {
-  // PB doesn't expose the local fingerprint to the SDK; return "" so
+  // backend doesn't expose the local fingerprint to the SDK; return "" so
   // we never falsely tag a remote row as current.
   return "";
 }
@@ -309,7 +309,7 @@ function relativeTime(iso: string): string {
 
 export async function requestExport(kind: ExportKind): Promise<void> {
   const userId = uid();
-  await pb
+  await backend
     .collection("data_exports")
     .create({ userId, kind, status: "pending" });
 }
@@ -324,30 +324,30 @@ export async function clearScanHistory(): Promise<void> {
 
 export async function deleteAccount(): Promise<void> {
   const id = uid();
-  await pb.collection("users").delete(id);
-  pb.authStore.clear();
+  await backend.collection("users").delete(id);
+  backend.authStore.clear();
 }
 
 /* ── Auth helpers (Google OAuth + 2FA) ──────────────────────── */
 
-/* PB returns an MFA challenge as a 401 with a body containing
+/* backend returns an MFA challenge as a 401 with a body containing
  * `{ mfaId, ... }`. The SDK surfaces it on the thrown error. */
 export type MfaChallenge = { mfaId: string };
 
 export async function signInWithGoogle(): Promise<void> {
-  await pb.collection("users").authWithOAuth2({ provider: "google" });
+  await backend.collection("users").authWithOAuth2({ provider: "google" });
 }
 
 export async function enable2FA(): Promise<{
   otpauthUri: string;
   backupCodes: string[];
 }> {
-  // PB v0.23+ exposes /api/collections/users/request-otp for email
+  // backend v0.23+ exposes /api/collections/users/request-otp for email
   // OTP. For TOTP/authenticator-app support, the project may need a
-  // PB hook — wire the UI here and the hook lives in pb_hooks/. For
+  // Server hook — wire the UI here when the account recovery flow ships. For
   // now we surface the email-OTP path and return placeholders so the
   // SecuritySection has something concrete to render.
-  const id = pb.authStore.record?.id;
+  const id = backend.authStore.record?.id;
   if (!id) throw new Error("Not authenticated");
   await updateProfile({ mfa: true });
   return { otpauthUri: "", backupCodes: [] };
@@ -358,5 +358,5 @@ export async function disable2FA(): Promise<void> {
 }
 
 export async function confirm2FA(_code: string): Promise<void> {
-  // Wire this when the otpauth flow ships in pb_hooks.
+  // Wire this when the server-side OTP enrollment flow ships.
 }

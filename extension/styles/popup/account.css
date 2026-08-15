@@ -37,12 +37,6 @@
   text-align: center; line-height: 1.5;
 }
 
-.signin-form {
-  display: flex; flex-direction: column;
-  gap: 8px;
-  width: 100%;
-  margin-top: 6px;
-}
 .signin-input {
   height: 38px;
   width: 100%;
@@ -115,9 +109,6 @@
   transition: color 0.15s ease;
 }
 .btn-link:hover { color: var(--fg); }
-.tiny-square { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
-.tiny-square.google { background: linear-gradient(135deg, #4285f4, #ea4335 50%, #fbbc05); }
-.tiny-square.sso { background: #0f0f0f; }
 
 .legal-note {
   font-size: 11px; color: var(--fg-dim);
@@ -166,6 +157,14 @@
   font-family: inherit;
 }
 .signout-btn svg { width: 13px; height: 13px; }
+
+.signout-note {
+  margin: 8px 2px 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--fg-dim);
+  text-align: center;
+}
 
 /* ── Footer ──────────────────────────────── */
 .pop-footer {

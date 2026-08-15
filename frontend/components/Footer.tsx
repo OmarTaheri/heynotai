@@ -69,7 +69,7 @@ export function Footer() {
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-4 text-[11px] text-[var(--color-fg-dim)]">
           <span>© heynotai Inc. 2026. Designed and built by Claude.</span>
           <div className="flex gap-5">
-            <Link href="#">Privacy Policy</Link>
+            <Link href="/privacy">Privacy Policy</Link>
             <Link href="#">Terms of Service</Link>
             <Link href="#">Press kit</Link>
             <Link href="#">Legal</Link>

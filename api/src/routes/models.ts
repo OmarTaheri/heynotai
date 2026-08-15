@@ -8,7 +8,7 @@
  *  endpoints (see `routes/scans/create.ts`, `rescan.ts`).
  *
  *  Internal credentials (`hfModelId`, API keys) are never returned —
- *  those live in the PB row for the API to read at scan time.
+ *  those live in the backend row for the API to read at scan time.
  *
  *  Two routes:
  *    GET /models           → catalog grouped by type, cheapest-first
@@ -19,7 +19,7 @@
 
 import { Hono } from "hono";
 import { requireAuth } from "../middleware/auth.js";
-import { pbAdmin } from "../lib/pb-admin.js";
+import { getAdminStore } from "../lib/admin-store.js";
 import { isPlan, PLAN_RANK, tierFromRow, type Plan } from "../lib/plans.js";
 
 export const models = new Hono();
@@ -106,12 +106,12 @@ type DetectionModelRow = {
 };
 
 async function fetchAllEnabledModels(): Promise<DetectionModelRow[]> {
-  // Admin client used for a stable read identity. The PB collection
+  // Admin client used for a stable read identity. The backend collection
   // rule already gates on `enabled = true`, but filtering here keeps
   // responses consistent if a user/admin client reads it directly.
   // Sort cheapest-first within each type so default-selection and
   // picker order both come out of a single query.
-  const admin = await pbAdmin();
+  const admin = await getAdminStore();
   const records = await admin.collection("detection_models").getFullList({
     filter: `enabled = true`,
     sort: "type,tokenCost,accuracy",

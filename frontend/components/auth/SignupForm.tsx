@@ -11,7 +11,7 @@ export function SignupForm({
   onAuthenticated,
 }: {
   onSwitchMode: () => void;
-  onAuthenticated?: () => void;
+  onAuthenticated?: (systemRole: "user" | "admin") => void;
 }) {
   const { signUp, signInWithGoogle } = useAuth();
   const [submitting, setSubmitting] = useState(false);
@@ -26,7 +26,7 @@ export function SignupForm({
     setSubmitting(true);
     const result = await signUp(name, email, password);
     if (result.ok) {
-      onAuthenticated?.();
+      onAuthenticated?.(result.user.systemRole);
     } else if ("mfaRequired" in result) {
       setError("Unexpected MFA challenge during signup.");
       setSubmitting(false);
@@ -40,7 +40,7 @@ export function SignupForm({
     setError(null);
     setSubmitting(true);
     const result = await signInWithGoogle();
-    if (result.ok) onAuthenticated?.();
+    if (result.ok) onAuthenticated?.(result.user.systemRole);
     else if ("error" in result) setError(result.error);
     setSubmitting(false);
   };
@@ -109,7 +109,7 @@ export function SignupForm({
             </a>{" "}
             and{" "}
             <a
-              href="#privacy"
+              href="/privacy"
               className="text-[var(--color-fg)] underline-offset-2 hover:underline"
             >
               Privacy Policy

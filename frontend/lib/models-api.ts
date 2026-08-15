@@ -1,14 +1,14 @@
 "use client";
 
 import type { Plan } from "@heynotai/shared";
-import { pb } from "./pocketbase";
+import { backend } from "./backend";
 import type { Engine, EngineType, TokenUsage } from "./models-data";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8787";
 
 function authHeaders(): Record<string, string> {
-  const token = pb.authStore.token;
+  const token = backend.authStore.token;
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
@@ -48,18 +48,17 @@ export type ModelsCatalog = {
   defaults: Record<EngineType, string>;
 };
 
-const EMPTY_CATALOG: ModelsCatalog = {
-  engines: { txt: [], img: [], aud: [], vid: [] },
-  defaults: { txt: "", img: "", aud: "", vid: "" },
-};
-
-export async function fetchModelsCatalog(): Promise<ModelsCatalog> {
+/** Returns `null` when the catalog could not be loaded, so callers can
+ *  say so instead of falling back to a hard-coded engine list. An
+ *  unreachable API used to leave the Models page showing seeded engines
+ *  the backend has never heard of. */
+export async function fetchModelsCatalog(): Promise<ModelsCatalog | null> {
   const [modelsRes, defaultsRes] = await Promise.all([
     fetch(`${API_URL}/models`, { headers: authHeaders() }),
     fetch(`${API_URL}/models/defaults`, { headers: authHeaders() }),
-  ]);
-  if (!modelsRes.ok || !defaultsRes.ok) {
-    return EMPTY_CATALOG;
+  ]).catch(() => [null, null] as const);
+  if (!modelsRes?.ok || !defaultsRes?.ok) {
+    return null;
   }
   const modelsBody = (await modelsRes.json()) as {
     models: Record<EngineType, ApiCatalogEntry[]>;
@@ -79,8 +78,10 @@ export async function fetchModelsCatalog(): Promise<ModelsCatalog> {
 }
 
 export async function fetchMonthlyUsage(): Promise<TokenUsage | null> {
-  const res = await fetch(`${API_URL}/me/usage`, { headers: authHeaders() });
-  if (!res.ok) return null;
+  const res = await fetch(`${API_URL}/me/usage`, {
+    headers: authHeaders(),
+  }).catch(() => null);
+  if (!res?.ok) return null;
   const body = (await res.json()) as {
     used: number;
     total: number | null;

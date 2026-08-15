@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { Avatar } from "@/components/ui/Avatar";
 import { Icon } from "@/components/Icon";
 import { useAuth } from "@/lib/auth";
-import { pb } from "@/lib/pocketbase";
+import { backend } from "@/lib/backend";
 import {
   adaptActivity,
   formatActivity,
@@ -79,14 +79,14 @@ export function ActivityModal({
     let cancelled = false;
     void (async () => {
       try {
-        const fn = await pb
+        const fn = await backend
           .collection("collection_activities")
           .subscribe<CollectionActivityRecord>(
             "*",
             (e) => {
               if (e.action !== "create") return;
               if (e.record.collection !== collectionId) return;
-              void pb
+              void backend
                 .collection("collection_activities")
                 .getOne<CollectionActivityRecord>(e.record.id, {
                   expand: "actor",

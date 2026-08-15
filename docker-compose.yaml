@@ -1,44 +1,22 @@
-# Production-shaped compose file for Coolify.
-#
-# Coolify reads this from the repo root and uses the SERVICE_FQDN_*
-# environment variables below as "Magic FQDN" hints — it auto-generates
-# the matching Traefik labels at deploy time so each service gets a
-# public subdomain managed by Coolify's reverse proxy + Let's Encrypt.
-# You set the actual hostname per service in the Coolify UI; the values
-# here are placeholders that Coolify will fill in.
-#
-# All `${VAR}` references are filled in by Coolify's Environment
-# Variables section per resource. See Coolify deployment notes in
-# /home/waaa3/.claude/plans/luminous-squishing-twilight.md.
-#
-# `environment:` blocks use the map form (KEY: VALUE) rather than the
-# list form (- KEY=VALUE). Coolify's compose-file parser fails with
-# "non-string key in services.<svc>.environment: 0" on bare list
-# entries like `- SERVICE_FQDN_*` (no `=` value), so map form keeps
-# things portable.
-
+# Production-shaped stack for Coolify and local Docker Compose.
 services:
-  pocketbase:
-    build: ./pocketbase
-    container_name: heynotai-pocketbase
+  postgres:
+    image: postgres:16-alpine
+    container_name: heynotai-postgres
     restart: unless-stopped
-    expose:
-      - "8090"
-    volumes:
-      - pb_data:/pb_data
     environment:
+      POSTGRES_DB: ${POSTGRES_DB:-heynotai}
+      POSTGRES_USER: ${POSTGRES_USER:-heynotai}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
       TZ: UTC
-      SERVICE_FQDN_POCKETBASE_8090: ${SERVICE_FQDN_POCKETBASE_8090:-}
-      # Read by pocketbase/entrypoint.sh on every boot to upsert the
-      # admin account, so /_/ login uses these credentials instead of
-      # requiring a manual `superuser create` step after each deploy.
-      PB_ADMIN_EMAIL: ${PB_ADMIN_EMAIL:-}
-      PB_ADMIN_PASSWORD: ${PB_ADMIN_PASSWORD:-}
-      # Set HEYNOTAI_SEED=true in Coolify env vars to auto-create the
-      # demo user (O.Taheri@aui.ma / O.Taheri) plus a sample collection
-      # and a handful of scans. Idempotent — leaving it set across
-      # deploys is fine. Unset for true production.
-      HEYNOTAI_SEED: ${HEYNOTAI_SEED:-}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
 
   api:
     build:
@@ -47,26 +25,36 @@ services:
     container_name: heynotai-api
     restart: unless-stopped
     depends_on:
-      - pocketbase
+      postgres:
+        condition: service_healthy
     expose:
       - "8787"
+    volumes:
+      - uploads_data:/data/uploads
     environment:
       PORT: "8787"
-      # Internal service-name routing — never set this to a public URL,
-      # the api hits PocketBase over the docker network.
-      POCKETBASE_URL: http://pocketbase:8090
-      # Publicly reachable PB host, embedded in `fileUrl` returned to
-      # the browser. Without this, `<img src>` points at the internal
-      # docker hostname (http://pocketbase:8090) and 404s in the
-      # browser. Resolution order:
-      #   1. POCKETBASE_PUBLIC_URL — explicit override
-      #   2. NEXT_PUBLIC_POCKETBASE_URL — same value the frontend uses
-      #   3. SERVICE_URL_POCKETBASE — Coolify's auto-generated FQDN
-      # so any one of those being set in Coolify env vars is enough.
-      POCKETBASE_PUBLIC_URL: ${POCKETBASE_PUBLIC_URL:-${NEXT_PUBLIC_POCKETBASE_URL:-${SERVICE_URL_POCKETBASE:-}}}
+      # Set DATABASE_URL to point at an external/managed Postgres (a Coolify
+      # database resource, for instance); leave it unset to use the bundled
+      # `postgres` service below.
+      DATABASE_URL: ${DATABASE_URL:-postgres://${POSTGRES_USER:-heynotai}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heynotai}}
+      DATABASE_POOL_SIZE: ${DATABASE_POOL_SIZE:-10}
+      UPLOAD_DIR: /data/uploads
+      API_PUBLIC_URL: ${API_PUBLIC_URL:-${SERVICE_URL_API:-http://localhost:8787}}
+      FRONTEND_URL: ${FRONTEND_URL:-${SERVICE_URL_FRONTEND:-http://localhost:3000}}
       CORS_ORIGINS: ${CORS_ORIGINS:-}
-      PB_ADMIN_EMAIL: ${PB_ADMIN_EMAIL:-}
-      PB_ADMIN_PASSWORD: ${PB_ADMIN_PASSWORD:-}
+      AUTH_PASSWORD_PEPPER: ${AUTH_PASSWORD_PEPPER:?Set AUTH_PASSWORD_PEPPER}
+      FILE_URL_SECRET: ${FILE_URL_SECRET:?Set FILE_URL_SECRET}
+      AUTH_ACCESS_TTL_SECONDS: ${AUTH_ACCESS_TTL_SECONDS:-2592000}
+      AUTH_REFRESH_TTL_SECONDS: ${AUTH_REFRESH_TTL_SECONDS:-2592000}
+      CREDENTIAL_ENCRYPTION_KEY: ${CREDENTIAL_ENCRYPTION_KEY:?Set CREDENTIAL_ENCRYPTION_KEY}
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-}
+      EXTENSION_IDS: ${EXTENSION_IDS:-}
+      ALLOWED_LOCAL_MODEL_HOSTS: ${ALLOWED_LOCAL_MODEL_HOSTS:-}
+      HUGGINGFACE_TOKEN: ${HUGGINGFACE_TOKEN:-}
+      VELMA_API_KEY: ${VELMA_API_KEY:-}
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
       STRIPE_PRICE_VERIFY_MONTHLY: ${STRIPE_PRICE_VERIFY_MONTHLY:-}
@@ -75,20 +63,24 @@ services:
       STRIPE_PRICE_CERTIFY_YEARLY: ${STRIPE_PRICE_CERTIFY_YEARLY:-}
       STRIPE_PRICE_TEAM_MONTHLY: ${STRIPE_PRICE_TEAM_MONTHLY:-}
       STRIPE_PRICE_TEAM_YEARLY: ${STRIPE_PRICE_TEAM_YEARLY:-}
-      VELMA_BASE_URL: ${VELMA_BASE_URL:-}
-      VELMA_DETECT_PATH: ${VELMA_DETECT_PATH:-}
+      # Optional one-time seed of the Chrome Web Store reviewer account. The
+      # API creates or syncs it at boot when both are set (see
+      # api/src/services/seed-reviewer.ts) and ignores them when they are not.
+      REVIEWER_EMAIL: ${REVIEWER_EMAIL:-}
+      REVIEWER_PASSWORD: ${REVIEWER_PASSWORD:-}
+      REVIEWER_PLAN: ${REVIEWER_PLAN:-}
+      MODAL_AUDIO_API_KEY: ${MODAL_AUDIO_API_KEY:-}
       SERVICE_FQDN_API_8787: ${SERVICE_FQDN_API_8787:-}
 
   frontend:
     build:
       context: .
       dockerfile: frontend/Dockerfile
-      # NEXT_PUBLIC_* are baked into the client bundle at build time —
-      # they have to be passed as args here, not just runtime env vars.
       args:
-        NEXT_PUBLIC_POCKETBASE_URL: ${NEXT_PUBLIC_POCKETBASE_URL:-}
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
         NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:-}
+        VITE_API_URL: ${NEXT_PUBLIC_API_URL:-}
+        VITE_FRONTEND_URL: ${FRONTEND_URL:-}
     container_name: heynotai-frontend
     restart: unless-stopped
     depends_on:
@@ -100,4 +92,5 @@ services:
       SERVICE_FQDN_FRONTEND_3000: ${SERVICE_FQDN_FRONTEND_3000:-}
 
 volumes:
-  pb_data:
+  postgres_data:
+  uploads_data:

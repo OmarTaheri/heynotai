@@ -4,7 +4,7 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
-import type { PBUserRecord } from "@/lib/pocketbase";
+import type { BackendUserRecord } from "@/lib/backend";
 import type { Plan } from "@heynotai/shared";
 import { getPlan, formatTokens, TOP_PLANS } from "@/lib/plans-data";
 import { cancelSubscription, undoCancelSubscription } from "@/lib/billing-api";
@@ -68,7 +68,7 @@ export function PlanCard({
   record,
   onCancelled,
 }: {
-  record: PBUserRecord | null;
+  record: BackendUserRecord | null;
   /** Called after the cancel/undo round-trip succeeds so the parent
    *  can re-fetch the user record + refresh auth context. */
   onCancelled?: () => void;

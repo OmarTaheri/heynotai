@@ -19,20 +19,16 @@ export type BrowserSupport = {
   hue: "chrome" | "firefox" | "edge" | "safari";
 };
 
-export const EXTENSION_META = {
-  browser: "Chrome",
-  version: "2.4.1",
-  installedAt: "Aug 14, 2025",
-  lastSyncedSeconds: 12,
-  scansLast7Days: 298,
-  autoUpdates: true,
-  storeUrl: "https://chrome.google.com/webstore",
-};
+export const EXTENSION_STORE_URL = "https://chrome.google.com/webstore";
 
+/** Which browsers a build exists for. Install *state* is not encoded
+ *  here — it's detected at runtime via `useExtensionPresence`, because
+ *  only the running browser can answer that. This list used to claim
+ *  "Chrome · Installed · v2.4.1" unconditionally. */
 export const BROWSERS: BrowserSupport[] = [
-  { id: "chrome", name: "Chrome", status: "installed", version: "v2.4.1", initial: "C", hue: "chrome" },
-  { id: "firefox", name: "Firefox", status: "available", initial: "F", hue: "firefox" },
+  { id: "chrome", name: "Chrome", status: "available", initial: "C", hue: "chrome" },
   { id: "edge", name: "Edge", status: "available", initial: "e", hue: "edge" },
+  { id: "firefox", name: "Firefox", status: "soon", initial: "F", hue: "firefox" },
   { id: "safari", name: "Safari", status: "soon", initial: "S", hue: "safari" },
 ];
 
@@ -50,103 +46,66 @@ export type ToggleSetting = {
   locked?: { reason: string; tag: ToggleTag };
 };
 
+/* Every toggle below maps to an id in `EXTENSION_FLAG_IDS`, which is
+   the set the browser extension actually reads. Toggles that only
+   persisted a boolean — "Scan on hover", "On-device pre-filter",
+   "Send anonymous usage stats", desktop notifications and the flag
+   chime — were removed rather than left looking functional. */
+
 export const SCAN_BEHAVIORS: ToggleSetting[] = [
   {
     id: "right-click",
     name: "Right-click to scan",
     description:
-      'Adds a "Scan with Detect" option to your right-click menu on text selections, images, and videos. Most privacy-respecting mode.',
+      'Adds "Check this…" entries to your right-click menu on videos, posts, and text selections. Turning this off removes them from the menu.',
     defaultOn: true,
     tag: { tone: "info", label: "RECOMMENDED" },
-  },
-  {
-    id: "auto-scan",
-    name: "Auto-scan trusted sites",
-    description:
-      "Silently scan content on sites you've allowlisted (set up below). Verdicts appear inline; nothing is stored unless you save it. Currently allowlisted on 4 sites.",
-    defaultOn: true,
-    tag: { tone: "human", label: "YOU CONTROL" },
-  },
-  {
-    id: "scan-on-hover",
-    name: "Scan on hover (1s delay)",
-    description:
-      "When you hover over an image or paragraph for more than one second on an allowlisted site, run a quick scan. Off by default — most users prefer click-to-scan.",
-    defaultOn: false,
   },
   {
     id: "inline-overlay",
     name: "Inline verdict overlays",
     description:
-      "When auto-scan flags something as AI, show a small badge inline (next to the image or paragraph). Otherwise verdicts only appear in the extension popup.",
+      "Draw the verdict border and badge directly on the media being checked. With this off, scans still run — the result only appears in the extension drawer.",
     defaultOn: true,
   },
   {
     id: "show-authentic",
     name: "Show authentic verdicts too",
     description:
-      "By default, only AI-flagged content gets a badge. Enable this to also see green checkmarks on content the scanner verified as authentic. More visual noise, but more reassuring.",
+      "By default the overlay fades out a few seconds after a human verdict, so clean pages stay undecorated. Enable this to keep it on screen.",
     defaultOn: false,
   },
 ];
 
 export const ALERT_SETTINGS: ToggleSetting[] = [
   {
-    id: "browser-notifs",
-    name: "Browser notifications when AI is detected",
-    description:
-      "A native OS notification when the extension flags content. Otherwise alerts only appear in the extension popup.",
-    defaultOn: true,
-  },
-  {
-    id: "sound",
-    name: "Sound on flag",
-    description:
-      "Play a soft chime when content is flagged. Helpful when you have auto-scan running while reading; off by default to keep things quiet.",
-    defaultOn: false,
-  },
-  {
     id: "badge-counter",
-    name: "Badge counter on the toolbar icon",
+    name: "Verdict badge on the toolbar icon",
     description:
-      "Show the number of AI-flagged items found on your current page, right on the extension icon. Resets when you change tabs.",
+      "Mark the extension icon with the verdict for the current tab — a tick, a tilde, or an exclamation mark — and animate it while a scan is running.",
     defaultOn: true,
   },
 ];
 
 export const ADVANCED_SETTINGS: ToggleSetting[] = [
   {
-    id: "on-device",
-    name: "On-device pre-filter",
+    id: "debug",
+    name: "Verbose scan logging",
     description:
-      "Run a tiny classifier locally before sending anything to our servers. Filters out obvious authentic content so cloud scans only happen when needed. Reduces token usage by ~30%.",
+      "Print the extension's scan decisions to the browser console — which page it classified, why it did or didn't auto-scan, and every message it exchanged. Useful when reporting a bug.",
     defaultOn: false,
-    tag: { tone: "neutral", label: "BETA" },
+    tag: { tone: "neutral", label: "DIAGNOSTIC" },
   },
   {
     id: "sync",
     name: "Sync settings across devices",
     description:
-      "Keep your per-site rules, hotkeys, and alert preferences synced across every browser you sign in to. Currently locked to this device only on your plan.",
+      "Keep your per-site rules and preferences synced across every browser you sign in to.",
     defaultOn: false,
     locked: {
       reason: "Available on Team plan",
       tag: { tone: "gold", label: "TEAM PLAN" },
     },
-  },
-  {
-    id: "anon-stats",
-    name: "Send anonymous usage stats",
-    description:
-      "Help us improve by sending error logs and performance data. Never includes page content, URLs, or what you scanned.",
-    defaultOn: true,
-  },
-  {
-    id: "debug",
-    name: "Show debug overlay",
-    description:
-      "Display engine name, latency, and confidence breakdown next to every scan. Useful for testing detection across sites; otherwise distracting.",
-    defaultOn: false,
   },
 ];
 
@@ -161,80 +120,14 @@ export type SiteRule = {
   initial: string;
   /** Token from SiteFavicon's brand map (x, yt, ig, rd, bbc, li, …). */
   brand: string;
-  scans7d: number;
-  flagged7d: number;
   mode: SiteMode;
   /** Active content types — ordered TXT, IMG, AUD, VID. */
   types: ContentType[];
   /** Greyed-out content types shown after the active ones for context. */
   typesOff: ContentType[];
-  /** Replaces the scans/flagged stats line when present. */
+  /** Replaces the default mode-description sub-line when present. */
   customStats?: string;
 };
-
-export const SITE_RULES: SiteRule[] = [
-  {
-    domain: "x.com / twitter.com",
-    initial: "𝕏",
-    brand: "x",
-    scans7d: 147,
-    flagged7d: 12,
-    mode: "auto",
-    types: ["txt", "img", "vid"],
-    typesOff: [],
-  },
-  {
-    domain: "youtube.com",
-    initial: "▶",
-    brand: "yt",
-    scans7d: 32,
-    flagged7d: 4,
-    mode: "click",
-    types: ["vid", "aud"],
-    typesOff: ["txt"],
-  },
-  {
-    domain: "instagram.com",
-    initial: "IG",
-    brand: "ig",
-    scans7d: 89,
-    flagged7d: 22,
-    mode: "auto",
-    types: ["img", "vid"],
-    typesOff: ["txt"],
-  },
-  {
-    domain: "bbc.com / bbc.co.uk",
-    initial: "B",
-    brand: "bbc",
-    scans7d: 18,
-    flagged7d: 0,
-    mode: "auto",
-    types: ["txt", "img"],
-    typesOff: [],
-  },
-  {
-    domain: "reddit.com",
-    initial: "r/",
-    brand: "rd",
-    scans7d: 12,
-    flagged7d: 3,
-    mode: "click",
-    types: ["txt", "img"],
-    typesOff: ["vid"],
-  },
-  {
-    domain: "linkedin.com",
-    initial: "in",
-    brand: "li",
-    scans7d: 0,
-    flagged7d: 0,
-    mode: "off",
-    types: [],
-    typesOff: ["txt", "img"],
-    customStats: "0 scans · 7 days · paused by you",
-  },
-];
 
 /* ── Hotkeys ─────────────────────────────────────────────────── */
 
@@ -245,11 +138,13 @@ export type Hotkey = {
   keys: string[];
 };
 
+/** Mirrors the `commands` block in the extension manifest. Only list
+ *  shortcuts that are actually registered — the previous four included
+ *  "Scan selected text" and "Toggle auto-scan on this site", neither of
+ *  which was bound to anything. */
 export const HOTKEYS: Hotkey[] = [
-  { id: "open-popup", label: "Open extension popup", keys: ["⌘", "Shift", "D"] },
-  { id: "scan-text", label: "Scan selected text", keys: ["⌘", "Shift", "S"] },
-  { id: "scan-page", label: "Scan full page", keys: ["⌘", "Shift", "P"] },
-  { id: "toggle-auto", label: "Toggle auto-scan on this site", keys: ["⌘", "Shift", "A"] },
+  { id: "open-drawer", label: "Open the heynotai drawer", keys: ["Ctrl", "Shift", "D"] },
+  { id: "scan-page", label: "Check the current page", keys: ["Ctrl", "Shift", "S"] },
 ];
 
 /* ── Confidence threshold options ────────────────────────────── */

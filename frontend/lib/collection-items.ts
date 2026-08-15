@@ -1,7 +1,10 @@
 "use client";
 
-import { ClientResponseError, type RecordModel } from "pocketbase";
-import { pb } from "./pocketbase";
+import {
+  BackendResponseError as ClientResponseError,
+  type BackendRecord as RecordModel,
+} from "@heynotai/shared";
+import { backend } from "./backend";
 import { recordActivity } from "./collection-activities";
 import type { CollectionItem } from "./collections-data";
 import { detectorDisplayName } from "./detector-display";
@@ -30,20 +33,20 @@ export type ScanCollectionRef = {
 };
 
 /** Items for the table on a single collection detail page. Owner sees
- *  everything; accepted members see everything (PB rule does the work
+ *  everything; accepted members see everything (backend rule does the work
  *  — this just expands the relation). */
 export async function listCollectionItems(
   collectionId: string,
 ): Promise<CollectionItemRecord[]> {
-  return pb.collection("collection_items").getFullList<CollectionItemRecord>({
-    filter: pb.filter("collection = {:cid}", { cid: collectionId }),
+  return backend.collection("collection_items").getFullList<CollectionItemRecord>({
+    filter: backend.filter("collection = {:cid}", { cid: collectionId }),
     sort: "-created",
     expand: "scanId",
   });
 }
 
 /** Add a batch of scans to a collection. Skips scans that are already
- *  in the collection (PB unique index will reject those anyway). */
+ *  in the collection (backend unique index will reject those anyway). */
 export async function addScansToCollection(opts: {
   collectionId: string;
   addedBy: string;
@@ -51,7 +54,7 @@ export async function addScansToCollection(opts: {
 }): Promise<{ added: number; skipped: number }> {
   let added = 0;
   let skipped = 0;
-  // PB's JS SDK auto-cancels concurrent requests that share a request
+  // backend's JS SDK auto-cancels concurrent requests that share a request
   // key. `Promise.all` over `create` would assign the same key to every
   // call and only the last one would land — pass `requestKey: null` to
   // opt each call out of the dedup pool so they all complete.
@@ -59,7 +62,7 @@ export async function addScansToCollection(opts: {
   await Promise.all(
     opts.scanIds.map(async (scanId) => {
       try {
-        await pb.collection("collection_items").create(
+        await backend.collection("collection_items").create(
           {
             collection: opts.collectionId,
             scanId,
@@ -96,7 +99,7 @@ export async function removeItem(
   itemId: string,
   ctx: { collectionId: string; actorId: string; scanTitle?: string },
 ): Promise<void> {
-  await pb.collection("collection_items").delete(itemId);
+  await backend.collection("collection_items").delete(itemId);
   void recordActivity({
     collectionId: ctx.collectionId,
     actorId: ctx.actorId,
@@ -107,17 +110,17 @@ export async function removeItem(
 
 /** Resolve the collection a scan currently belongs to. The editor uses
  *  a single-link UX, so it only needs the first row — multi-link can
- *  exist in the data but isn't surfaced from the breadcrumb. PB rules
+ *  exist in the data but isn't surfaced from the breadcrumb. backend rules
  *  scope the read to records the caller is allowed to see, so a 404
  *  here genuinely means "not linked (to anything you can see)". */
 export async function getScanCollection(
   scanId: string,
 ): Promise<ScanCollectionRef | null> {
   try {
-    const row = await pb
+    const row = await backend
       .collection("collection_items")
       .getFirstListItem<CollectionItemRecord>(
-        pb.filter("scanId = {:sid}", { sid: scanId }),
+        backend.filter("scanId = {:sid}", { sid: scanId }),
         { expand: "collection", requestKey: null },
       );
     const c = row.expand?.collection;
@@ -130,7 +133,7 @@ export async function getScanCollection(
 }
 
 /** Batch variant of `getScanCollection` for tables (Recent activity,
- *  Library). One PocketBase round trip with `scanId IN (...)` expressed
+ *  Library). One application backend round trip with `scanId IN (...)` expressed
  *  as an OR'd filter, then bucketed into a Map<scanId, ref>. If a scan
  *  has multiple links, the most recently created one wins (matches the
  *  single-link UX surfaced elsewhere). Returns an empty map for an
@@ -150,10 +153,10 @@ export async function getScanCollections(
   });
 
   try {
-    const rows = await pb
+    const rows = await backend
       .collection("collection_items")
       .getFullList<CollectionItemRecord>({
-        filter: pb.filter(placeholders, params),
+        filter: backend.filter(placeholders, params),
         expand: "collection",
         sort: "-created",
         requestKey: null,

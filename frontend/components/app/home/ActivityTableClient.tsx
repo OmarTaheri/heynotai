@@ -6,14 +6,17 @@ import { ActivityTable, type ActivityRow } from "./ActivityTable";
 import { listScans, ScanApiError } from "@/lib/scans-api";
 import { scanToLibraryItem } from "@/lib/library-data";
 import { getScanCollections } from "@/lib/collection-items";
+import { useScansRealtime } from "@/lib/use-scans-realtime";
 
 const RECENT_LIMIT = 5;
 
 /** Client wrapper that fetches the user's most recent scans and renders
  *  them via the presentational ActivityTable. Rows navigate to the
- *  per-scan editor. */
+ *  per-scan editor. Refetches on every realtime tick so a scan started
+ *  from the extension lands here without a page reload. */
 export function ActivityTableClient() {
   const router = useRouter();
+  const realtimeTick = useScansRealtime();
   const [rows, setRows] = useState<ActivityRow[] | null>(null);
 
   useEffect(() => {
@@ -63,7 +66,7 @@ export function ActivityTableClient() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [realtimeTick]);
 
   return (
     <ActivityTable

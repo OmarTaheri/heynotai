@@ -6,7 +6,7 @@
  * Run:        npm run probe:models
  * Custom img: npm run probe:models -- --image=path/to/photo.jpg
  *
- * Reads the same PB superuser creds + service_secrets.huggingfaceToken
+ * Reads the same backend superuser creds + service_secrets.huggingfaceToken
  * the api uses at runtime, so what's tested is exactly what ships.
  *
  * Image fixture:
@@ -28,7 +28,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
-import { pbAdmin } from "../src/lib/pb-admin.js";
+import { getAdminStore } from "../src/lib/admin-store.js";
 import { detect as detectText } from "../src/detectors/hf-text.js";
 import { detect as detectImage } from "../src/detectors/hf-image.js";
 import {
@@ -106,16 +106,16 @@ async function main() {
   const here = dirname(fileURLToPath(import.meta.url));
   const fixturesDir = join(here, "fixtures");
 
-  const admin = await pbAdmin();
+  const admin = await getAdminStore();
 
-  // 1. HF token from PocketBase service_secrets (same source the api uses).
+  // 1. HF token from application backend service_secrets (same source the api uses).
   const secrets = await admin
     .collection("service_secrets")
     .getList(1, 1, { sort: "-created" });
   const hfToken = String(secrets.items[0]?.huggingfaceToken ?? "").trim();
   if (!hfToken) {
     console.error(
-      "✗ no HF token in service_secrets — set one in the PB admin UI first",
+      "✗ no HF token in service_secrets — set one in the backend admin UI first",
     );
     process.exit(1);
   }

@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Logo } from "./Logo";
 import { Button } from "./Button";
 import { AuthModal, type AuthMode } from "./auth/AuthModal";
@@ -17,11 +16,10 @@ const LINKS = [
 
 export function Nav() {
   const { user } = useAuth();
-  const router = useRouter();
   const [authMode, setAuthMode] = useState<AuthMode | null>(null);
   /** `?next=` value captured at modal-open time. The query param gets
    *  stripped on close, so we cache it so post-login routing still works. */
-  const [nextPath, setNextPath] = useState<string>("/app");
+  const [nextPath, setNextPath] = useState<string | null>(null);
 
   /** Open the modal from a URL query param (?login=1 or ?signup=1) and
    *  remember any ?next=… so we can route there after a successful sign-in.
@@ -53,10 +51,13 @@ export function Nav() {
     window.history.replaceState(null, "", url.pathname + (qs ? `?${qs}` : "") + url.hash);
   }, []);
 
-  const handleAuthenticated = useCallback(() => {
+  const handleAuthenticated = useCallback((systemRole: "user" | "admin") => {
+    const destination = nextPath ?? (systemRole === "admin" ? "/app/admin" : "/app");
     setAuthMode(null);
-    router.push(nextPath || "/app");
-  }, [router, nextPath]);
+    // A full navigation prevents the marketing header/modal state from
+    // lingering while React applies the authenticated context update.
+    window.location.replace(destination);
+  }, [nextPath]);
 
   return (
     <>
@@ -84,8 +85,12 @@ export function Nav() {
 
           <div className="flex items-center gap-4">
             {user ? (
-              <Button variant="green" size="md" href="/app">
-                Open app
+              <Button
+                variant="green"
+                size="md"
+                href={user.systemRole === "admin" ? "/app/admin" : "/app"}
+              >
+                Dashboard
               </Button>
             ) : (
               <>

@@ -3,27 +3,27 @@ import { Icon } from '@/components/Icon';
 import { MetricCard } from '@/components/MetricCard';
 import { RingScore } from '@/components/RingScore';
 import { Row } from '@/components/Row';
-import { MiniSpark } from '@/components/MiniSpark';
-import { BREAKDOWN, WATCHING } from '@/lib/sample-data';
 import { usePlatform, platformLabel } from '@/lib/platform';
 import { useApp, type PlatformKey, type SurfaceKey } from '@/lib/state';
-import type { Verdict } from '@/lib/types';
+import { signalsFromScan, taglineFromScan } from '@/lib/page-content';
+import type { Site, Verdict } from '@/lib/types';
 import {
   colorVarOf,
   contentFor,
   contentNoun,
   hostMatches,
+  openEditor,
   platformIcon,
   verdictFromScan,
-  verdictOf,
 } from './helpers';
 import { useLatestTextScan } from './use-latest-text-scan';
 import { useExistingScan } from './use-existing-scan';
-import { TextScanResultView } from './text-scan-result';
+import { useResultScan } from './use-result-scan';
+import { TextScanPendingView, TextScanResultView } from './text-scan-result';
 import { CreatorCard } from './creator-card';
 import { ScanFailedCard } from './scan-failed-card';
 
-/** Build the canonical URL the SW uses for de-dup so the hook's PB
+/** Build the canonical URL the SW uses for de-dup so the hook's backend
  *  lookup matches scans created by the extension/site flows. Returns
  *  null when we don't know the media id yet — the hook just won't
  *  query in that case. */
@@ -53,10 +53,44 @@ function canonicalSourceUrl(
     : `https://www.youtube.com/watch?v=${id}`;
 }
 
+/** Row labels the finished result card will show, used to shape the
+ *  loading skeleton. Kept in sync with `signalsFromScan`. */
+const PENDING_SIGNAL_LABELS = [
+  'AI likelihood',
+  'Confidence',
+  'Detector',
+  'Scan time',
+];
+
+/** The user's own allow-list, straight from their synced prefs. The
+ *  card this replaced listed four invented hosts with invented scan
+ *  counts ("streamline.app · 128 scanned"). */
+function WatchingCard({ sites }: { sites: Site[] }) {
+  if (sites.length === 0) return null;
+  return (
+    <MetricCard title="Allow-list">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {sites.map((s) => (
+          <div key={s.host} className="site-inline">
+            <span className="host">
+              <span
+                className="dot"
+                style={{ background: s.enabled ? 'var(--human)' : 'var(--fg-dim)' }}
+              />
+              {s.host}
+            </span>
+            <span className="count">{s.enabled ? 'auto-scan on' : 'paused'}</span>
+          </div>
+        ))}
+      </div>
+    </MetricCard>
+  );
+}
+
 export function Home() {
   const { platform, surface, host, tabId, youtube, url } = usePlatform();
   const {
-    scanning, progress, scanned, scanError,
+    scanning, progress, scanned, scanError, lastScanResult,
     startScan, clearScanError,
     scanMode, setScanMode, sites, platforms, addSite,
     setPlatformEnabled, setPlatformSurface, setSiteEnabledByHost,
@@ -64,7 +98,11 @@ export function Home() {
 
   const isSocial = platform !== 'other';
 
-  const latestTextScan = useLatestTextScan();
+  const {
+    scan: latestTextScan,
+    pending: textScanPending,
+    live: textScanLive,
+  } = useLatestTextScan();
   const cachedSourceUrl = useMemo(
     () => canonicalSourceUrl(platform, surface, url, youtube?.videoId),
     [platform, surface, url, youtube?.videoId],
@@ -175,19 +213,33 @@ export function Home() {
     whitelistedSite, isPaused,
   ]);
 
-  const content = contentFor(platform, youtube);
-  // Cached verdict overrides the sample-data score/verdict so the
-  // result panel reflects the user's actual prior scan instead of the
-  // mock numbers. Dismissed scans fall through to the idle UI so the
-  // user can re-run a check if they want.
+  // Dismissed scans fall through to the idle UI so the user can re-run
+  // a check if they want.
   const useExistingResult =
     !!existingScan && existingScan.id !== dismissedScanId;
+  const realResult = useExistingResult ? null : lastScanResult;
+  // The backend record behind whatever verdict is on screen. Every
+  // number and label in the result card comes from here — the card used
+  // to fill its rows from fixtures, so a scan of any video reported the
+  // same invented "voice cloning / lip-sync drift" signals.
+  const resultScan = useResultScan(
+    useExistingResult ? existingScan : null,
+    realResult,
+  );
+  const content = contentFor(platform, youtube, resultScan);
   const pageScore = useExistingResult
     ? Math.max(0, Math.min(100, Math.round(existingScan!.aiPct)))
-    : (content?.score ?? 62);
+    : realResult
+      ? Math.max(0, Math.min(100, 100 - realResult.trustScore))
+      : 0;
   const pageVerdict: Verdict = useExistingResult
     ? verdictFromScan(existingScan!)
-    : (content?.verdict ?? 'ai');
+    : realResult?.result === 'authentic'
+      ? 'human'
+      : realResult?.result === 'ai-generated'
+        ? 'ai'
+        : 'mixed';
+  const resultSignals = signalsFromScan(resultScan);
 
   const hostLabel = host || (isSocial ? platformLabel(platform) : 'unknown');
   const displayed = Math.round(scanning ? (pageScore * progress) / 100 : pageScore);
@@ -198,6 +250,30 @@ export function Home() {
       {platformLabel(platform)}
     </span>
   );
+
+  // ── State 0: right-click text check ──────────────────────────
+  // Owns the panel whenever the user has just asked for one, ahead of
+  // the page-level scan states: they triggered it explicitly and are
+  // waiting on it, so it shouldn't be buried under whatever the page
+  // scan last reported. Backfilled (non-live) results stay in the idle
+  // branch further down, where they can't hijack a page verdict.
+  if (textScanPending && !isSocial) {
+    return (
+      <div className="panel panel-centered">
+        <TextScanPendingView />
+      </div>
+    );
+  }
+  if (textScanLive && showTextResult && latestTextScan) {
+    return (
+      <div className="panel panel-centered">
+        <TextScanResultView
+          scan={latestTextScan}
+          onDismiss={dismissTextResult}
+        />
+      </div>
+    );
+  }
 
   // ── State 1: scanning — skeleton mirror of the result layout ─
   if (scanning) {
@@ -249,74 +325,20 @@ export function Home() {
               {content.title}
             </div>
           )}
+          {/* Skeleton rows mirror the labels the finished card will
+              show, so the swap to real values doesn't reshuffle the
+              layout. Labels only — no placeholder numbers. */}
           <div>
-            {(content ? content.signals : [
-              { label: 'Scanned items' },
-              { label: 'Flagged items' },
-              { label: 'Confidence avg' },
-              { label: 'Scan time' },
-            ]).map((s, i) => (
-              <div key={i} className="row">
-                <span className="row-label">{s.label}</span>
+            {PENDING_SIGNAL_LABELS.map((label) => (
+              <div key={label} className="row">
+                <span className="row-label">{label}</span>
                 <span className="skeleton-block s-val" />
               </div>
             ))}
           </div>
         </MetricCard>
 
-        {content ? (
-          // Render the real end-state CreatorCard during scanning too.
-          // The historical-stat rows ("Content scanned", "Flagged
-          // history", "Avg AI-likelihood", "Last checked") only render
-          // for sample-data platforms (FB/IG) — YouTube returns
-          // `scanned = 0` from `youtubeContentFromMeta`, so the same
-          // component naturally hides the rows that don't exist in the
-          // end state. No skeleton blocks for fields the result
-          // wouldn't show anyway.
-          <CreatorCard content={content} platform={platform} />
-        ) : (
-          <>
-            <MetricCard
-              title="By content type"
-              action={<span className="skeleton-block s-chip" />}
-            >
-              <div>
-                {BREAKDOWN.map(b => (
-                  <div key={b.kind} className="breakdown-row">
-                    <div className="br-icon"><Icon name={b.kind} size={14} /></div>
-                    <div className="br-body">
-                      <div className="br-head">
-                        <span className="br-name">{b.label}</span>
-                        <span className="skeleton-block s-count" />
-                      </div>
-                      <div className="br-track">
-                        <div className="br-fill skeleton-bar" />
-                      </div>
-                    </div>
-                    <span className="skeleton-block s-spark" />
-                  </div>
-                ))}
-              </div>
-            </MetricCard>
-
-            <MetricCard
-              title="Watching"
-              action={<span className="skeleton-block s-chip" />}
-            >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {WATCHING.map(s => (
-                  <div key={s.host} className="site-inline">
-                    <span className="host">
-                      <span className="dot" style={{ background: 'var(--fg-dim)' }} />
-                      {s.host}
-                    </span>
-                    <span className="skeleton-block s-val" />
-                  </div>
-                ))}
-              </div>
-            </MetricCard>
-          </>
-        )}
+        {content && <CreatorCard content={content} platform={platform} />}
       </div>
     );
   }
@@ -571,9 +593,20 @@ export function Home() {
                 <Icon name="info" size={12} />
               </div>
               <div className="score">
-                {displayed}% <span className={`verdict-tag ${pageVerdict}`}>likely AI</span>
+                {displayed}%{' '}
+                <span className={`verdict-tag ${pageVerdict}`}>
+                  {pageVerdict === 'human'
+                    ? 'likely human'
+                    : pageVerdict === 'ai'
+                      ? 'likely AI'
+                      : 'uncertain'}
+                </span>
               </div>
-              <div className="sub">{content ? content.tagline : '4 of 6 posts flagged in view'}</div>
+              <div className="sub">
+                {content
+                  ? content.tagline
+                  : taglineFromScan(resultScan)}
+              </div>
             </div>
           </div>
           {content && content.title && content.title !== '—' && (
@@ -581,84 +614,40 @@ export function Home() {
               {content.title}
             </div>
           )}
+          {/* Signal rows are the scan record, verbatim: AI likelihood,
+              confidence, the detector that produced it, frame counts
+              where the provider reported them, and how long it took.
+              Previously this branch rendered constants (128 scanned /
+              47 flagged / 0.81 / 1.4s) on every page. */}
           <div>
-            {content
-              ? content.signals.map((s, i) => (
-                  <Row
-                    key={i}
-                    label={s.label}
-                    value={
-                      s.verdict
-                        ? <span style={{ color: colorVarOf(s.verdict) }}>{s.value}</span>
-                        : s.value
-                    }
-                    hint={s.hint ? `(${s.hint})` : undefined}
-                  />
-                ))
-              : (<>
-                  <Row label="Scanned items" value="128" />
-                  <Row label="Flagged items" value="47" hint="(37%)" />
-                  <Row label="Confidence avg" value="0.81" />
-                  <Row label="Scan time" value="1.4s" />
-                </>)
-            }
+            {(content ? content.signals : resultSignals).map((s, i) => (
+              <Row
+                key={i}
+                label={s.label}
+                value={
+                  s.verdict
+                    ? <span style={{ color: colorVarOf(s.verdict) }}>{s.value}</span>
+                    : s.value
+                }
+                hint={s.hint ? `(${s.hint})` : undefined}
+              />
+            ))}
           </div>
+          {resultScan && (
+            <button
+              type="button"
+              className="lib-open-btn"
+              onClick={() => openEditor(resultScan.id)}
+            >
+              <Icon name="external-link" size={12} />
+              Open the full report
+            </button>
+          )}
         </MetricCard>
 
-        {content ? (
-          <CreatorCard content={content} platform={platform} />
-        ) : (
-          <>
-            <MetricCard
-              title="By content type"
-              action={<button className="ghost-btn"><Icon name="filter" size={11} /> Filter</button>}
-            >
-              <div>
-                {BREAKDOWN.map(b => {
-                  const pct = Math.round((b.flagged / b.total) * 100);
-                  const v = verdictOf(pct);
-                  const color = colorVarOf(v);
-                  return (
-                    <div key={b.kind} className="breakdown-row">
-                      <div className="br-icon"><Icon name={b.kind} size={14} /></div>
-                      <div className="br-body">
-                        <div className="br-head">
-                          <span className="br-name">{b.label}</span>
-                          <span className="br-count">
-                            <span className="hit" style={{ color }}>{b.flagged}</span>/{b.total}
-                          </span>
-                        </div>
-                        <div className="br-track">
-                          <div className="br-fill" style={{ width: `${pct}%`, background: color }} />
-                        </div>
-                      </div>
-                      <MiniSpark data={b.spark} verdict={v} />
-                    </div>
-                  );
-                })}
-              </div>
-            </MetricCard>
+        {content && <CreatorCard content={content} platform={platform} />}
 
-            <MetricCard
-              title="Watching"
-              action={<a className="link-action">Manage →</a>}
-            >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {WATCHING.map(s => (
-                  <div key={s.host} className="site-inline">
-                    <span className="host">
-                      <span className="dot" style={{ background: s.status === 'paused' ? 'var(--fg-dim)' : 'var(--human)' }} />
-                      {s.host}
-                    </span>
-                    <span className="count">
-                      {s.status === 'paused' ? 'paused' : `${s.count} scanned`}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </MetricCard>
-          </>
-        )}
+        <WatchingCard sites={sites} />
       </div>
     </div>
   );

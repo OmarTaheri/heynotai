@@ -190,7 +190,7 @@ function clamp0to100(n: number): number {
   return Math.max(0, Math.min(100, Math.round(n)));
 }
 
-/** Wrap a freshly-computed local mock `ScanResult` (from `scan-mock.ts`)
+/** Wrap a freshly-computed `ScanResult`
  *  into the `EngineResultEntry` shape the editor caches keyed by engine
  *  slug. Used by the synthetic editor flows that don't hit the api. */
 export function scanResultToEngineEntry(

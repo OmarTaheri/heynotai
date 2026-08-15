@@ -23,6 +23,12 @@ export interface ScanEntry {
   trustScore: number;
   timestamp: number;
   url: string;
+  /** Backend `scans` record id for this verdict. Lets the drawer fetch
+   *  the full record (detector name, confidence, timings) instead of
+   *  rendering from the four summary fields above — `videoId` is the
+   *  platform's media id on YouTube, so it can't be used for the
+   *  lookup. */
+  scanId?: string;
 }
 
 export interface ContentItem {
@@ -39,8 +45,11 @@ export interface ContentItem {
 export interface Site {
   host: string;
   enabled: boolean;
-  count: number;
-  ai: number;
+  /** Legacy per-site counters. Never populated from real scans — kept
+   *  optional so previously-synced prefs still parse, but no surface
+   *  renders them. */
+  count?: number;
+  ai?: number;
 }
 
 export interface ModelOption {

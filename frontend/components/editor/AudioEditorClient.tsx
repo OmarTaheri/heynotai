@@ -7,7 +7,6 @@ import { EditableTitle } from "@/components/editor/EditableTitle";
 import { AudioCanvas, type AudioCanvasHandle } from "@/components/editor/AudioCanvas";
 import { AudioEditorToolbar } from "@/components/editor/AudioEditorToolbar";
 import { MediaDocMeta } from "@/components/editor/MediaDocMeta";
-import { mockAudioScan } from "@/lib/scan-mock";
 import { rescan as rescanApi, updateScan } from "@/lib/scans-api";
 import {
   engineResultToScanResult,
@@ -90,7 +89,7 @@ export function AudioEditorClient({ scan, fallbackSrc, onRescanQueued }: Props) 
     } else {
       setScanState("done");
       setScanError(null);
-      // Merge — the row may not carry sibling entries yet (e.g. the PB
+      // Merge — the row may not carry sibling entries yet (e.g. the backend
       // migration hasn't been applied). Local in-session cache survives.
       setEngineResults((prev) => ({ ...prev, ...synthesizeEngineResults(scan) }));
     }
@@ -113,26 +112,6 @@ export function AudioEditorClient({ scan, fallbackSrc, onRescanQueued }: Props) 
   const canvasRef = useRef<AudioCanvasHandle>(null);
   const scanRunRef = useRef<{ cleanup: () => void } | null>(null);
 
-  const runLocalScan = useCallback(
-    (withEngineId: string, dur: number) => {
-      scanRunRef.current?.cleanup();
-      scanRunRef.current = null;
-      setScanState("scanning");
-      const start = performance.now();
-      const t = setTimeout(() => {
-        const local = mockAudioScan(dur);
-        setEngineResults((prev) => ({
-          ...prev,
-          [withEngineId]: scanResultToEngineEntry(local, performance.now() - start),
-        }));
-        setScanState("done");
-        scanRunRef.current = null;
-      }, 2000);
-      scanRunRef.current = { cleanup: () => clearTimeout(t) };
-    },
-    [],
-  );
-
   const handleScan = useCallback(async () => {
     if (scanState === "scanning") return;
     if (persisted) {
@@ -144,13 +123,19 @@ export function AudioEditorClient({ scan, fallbackSrc, onRescanQueued }: Props) 
       try {
         await rescanApi(scan.id, engineId);
         onRescanQueued?.();
-      } catch {
-        runLocalScan(engineId, durationMs);
+      } catch (error) {
+        setScanState("failed");
+        setScanError({
+          code: "rescan_failed",
+          message: error instanceof Error ? error.message : "Audio rescan failed",
+        });
       }
       return;
     }
-    runLocalScan(engineId, durationMs);
-  }, [durationMs, engineId, onRescanQueued, persisted, runLocalScan, scan.id, scanState]);
+    // Not a saved scan (the signed-out /editor preview). There is
+    // no detector to run without an account, and the panel says so
+    // via `signInRequired` — this used to synthesise a verdict.
+  }, [durationMs, engineId, onRescanQueued, persisted, scan.id, scanState]);
 
   return (
     <EditorShell
@@ -215,6 +200,7 @@ export function AudioEditorClient({ scan, fallbackSrc, onRescanQueued }: Props) 
       }
       inspector={
         <DetectionPanel
+          signInRequired={!persisted}
           mode="analyzer"
           contentType="aud"
           scanState={scanState}

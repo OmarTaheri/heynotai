@@ -19,12 +19,12 @@ import {
 } from "./settings-api";
 import { useAuth } from "./auth";
 
-/** Loads the user's `extension_prefs` row, subscribes to PB realtime
+/** Loads the user's `extension_prefs` row, subscribes to backend realtime
  *  updates so changes from the drawer (or another tab) appear live,
  *  and exposes a `patch` setter that updates local state immediately
  *  while queueing a save through the registry.
  *
- *  Echo-loop avoidance: PB sometimes fires multiple realtime events
+ *  Echo-loop avoidance: backend sometimes fires multiple realtime events
  *  per save (our own write + the broadcast from another tab). We
  *  remember the `updated` timestamp from our own writes and drop any
  *  inbound event whose timestamp is `<=` that — instead of the older
@@ -95,7 +95,7 @@ export function useExtensionPrefs() {
     setPrefs((prev) => (prev ? { ...prev, ...p } : prev));
   }, []);
 
-  /** Patch + immediately persist to PB. Use this for live controls
+  /** Patch + immediately persist to backend. Use this for live controls
    *  (e.g. the Platforms section) where the user expects instant
    *  propagation to the extension drawer rather than a Save click. */
   const patchAndSave = useCallback(

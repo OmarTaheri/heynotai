@@ -49,6 +49,13 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${inter.variable} ${jetbrainsMono.variable}`}
+      // The extension's content script stamps `data-heynotai-extension`
+      // and `-id` on the document root at `document_idle`, which can land
+      // before React hydrates — the server HTML has neither attribute, so
+      // hydration reports a mismatch on every page load in a browser that
+      // has the extension installed. Suppression here applies only to this
+      // element's own attributes, not to anything under <body>.
+      suppressHydrationWarning
     >
       <body>
         <AuthProvider>{children}</AuthProvider>

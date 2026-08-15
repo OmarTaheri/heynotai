@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { subscribeScans } from "./scans-api";
-import { pb } from "./pocketbase";
+import { backend } from "./backend";
 
-/** Returns a counter that bumps on every PB realtime event in the
+/** Returns a counter that bumps on every backend realtime event in the
  *  user's `scans` collection. Pages add this to their data-fetching
  *  effect's dependency array so an in-flight scan started from the
  *  extension flips status (queued → scanning → done) live, without
@@ -32,17 +32,17 @@ export function useScansRealtime(): number {
           unsub = u;
         })
         .catch(() => {
-          // Auth missing or transient PB error — leave tick alone so
+          // Auth missing or transient backend error — leave tick alone so
           // the page just relies on its initial fetch.
         });
     };
 
-    if (pb.authStore.isValid) start();
+    if (backend.authStore.isValid) start();
 
-    const offAuth = pb.authStore.onChange(() => {
+    const offAuth = backend.authStore.onChange(() => {
       unsub?.();
       unsub = null;
-      if (pb.authStore.isValid) start();
+      if (backend.authStore.isValid) start();
     });
 
     return () => {

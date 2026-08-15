@@ -80,12 +80,10 @@ export function UpdateCard({
                   {item.cta.label}
                   <Icon name="chevron-right" size={12} />
                 </Link>
-              ) : (
-                <button type="button" className={styles.cta}>
-                  {item.cta.label}
-                  <Icon name="chevron-right" size={12} />
-                </button>
-              ))}
+              ) : null)}
+            {/* A CTA with no href used to render as a button that did
+                nothing when clicked. Entries without a destination now
+                render no CTA at all. */}
           </div>
         )}
       </Card>

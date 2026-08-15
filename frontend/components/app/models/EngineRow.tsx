@@ -64,7 +64,7 @@ type Props = {
  * violet / gold) renders on every row so users read tier from card
  * color even when unlocked.
  *
- * API keys are owner-managed in PocketBase, so users see no key/edit
+ * API keys are owner-managed in application backend, so users see no key/edit
  * affordances here — only the model name, accuracy, and per-scan cost.
  */
 export function EngineRow({ engine, selected, onSelect }: Props) {

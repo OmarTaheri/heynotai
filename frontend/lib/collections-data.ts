@@ -23,7 +23,7 @@ export type Collaborator = {
 };
 
 export type CollectionMember = {
-  /** PocketBase row id for the `collection_members` join row. Empty
+  /** application backend row id for the `collection_members` join row. Empty
    *  when synthesized from a freshly-adapted owner row. */
   membershipId?: string;
   initials: string;
@@ -126,7 +126,7 @@ type AdaptRecord = {
   pinned?: boolean;
   created: string;
   updated: string;
-  /** PB id of the user who owns this collection. Used to detect when
+  /** backend id of the user who owns this collection. Used to detect when
    *  the current viewer is an accepted member rather than the owner —
    *  in that case we shouldn't render their own avatar as "Owner". */
   userId?: string;
@@ -160,7 +160,7 @@ const DEFAULT_RULES: CollectionRule[] = [
 ];
 
 /**
- * Shape a PocketBase `collections` record into the rich `Collection`
+ * Shape a application backend `collections` record into the rich `Collection`
  * type the detail page renders. Items + stats are empty until the
  * caller fans out to the `collection_items` join.
  *

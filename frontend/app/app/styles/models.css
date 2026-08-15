@@ -17,3 +17,17 @@
 .models > .page-head {
   margin-bottom: 0;
 }
+
+/* Shown when the detector catalog can't be loaded, or a modality has no
+   enabled engines. Replaces the previous behaviour of rendering a
+   hard-coded engine list on failure. */
+.models-empty {
+  padding: 28px 20px;
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  background: var(--color-surface);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--color-fg-dim);
+  max-width: 60ch;
+}

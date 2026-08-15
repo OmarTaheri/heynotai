@@ -1,11 +1,12 @@
 import type { Plan } from '@heynotai/shared';
-import { pb } from './pocketbase';
+import { backend, backendReady } from './backend';
+import type { EngineType } from './model-selection';
 
 const API_URL =
   (import.meta.env.VITE_API_URL as string | undefined) ??
   'http://localhost:8787';
 
-export type EngineType = 'txt' | 'img' | 'aud' | 'vid';
+export type { EngineType };
 export type EngineCostUnit = '/ scan' | '/ minute';
 
 export interface Engine {
@@ -23,12 +24,23 @@ export interface Engine {
 export interface ModelsCatalog {
   engines: Record<EngineType, Engine[]>;
   defaults: Record<EngineType, string>;
+  /** Non-null when the catalog could not be loaded at all. Lets the UI
+   *  tell "this modality has no models yet" (a real, permanent state —
+   *  audio currently has none enabled) apart from "the request failed",
+   *  which is retryable. Previously both collapsed into an empty
+   *  catalog and the tab always claimed there were no models. */
+  error: string | null;
 }
 
 const EMPTY: ModelsCatalog = {
   engines: { txt: [], img: [], aud: [], vid: [] },
   defaults: { txt: '', img: '', aud: '', vid: '' },
+  error: null,
 };
+
+function failed(error: string): ModelsCatalog {
+  return { ...EMPTY, engines: { txt: [], img: [], aud: [], vid: [] }, error };
+}
 
 interface ApiCatalogEntry {
   slug: string;
@@ -42,7 +54,7 @@ interface ApiCatalogEntry {
 }
 
 function authHeaders(): Record<string, string> {
-  const t = pb.authStore.token;
+  const t = backend.authStore.token;
   return t ? { Authorization: `Bearer ${t}` } : {};
 }
 
@@ -63,12 +75,20 @@ function adapt(entry: ApiCatalogEntry, isDefault: boolean): Engine {
 }
 
 export async function fetchModelsCatalog(): Promise<ModelsCatalog> {
+  // The bearer token is restored from chrome.storage asynchronously.
+  // Reading `authStore.token` before that resolves sent an anonymous
+  // request, `/models` answered 401, and the tab rendered "no models
+  // available" for a signed-in user — the single most common way this
+  // panel came up empty.
+  await backendReady;
+  if (!backend.authStore.token) return failed('signed_out');
   try {
     const [mRes, dRes] = await Promise.all([
       fetch(`${API_URL}/models`, { headers: authHeaders() }),
       fetch(`${API_URL}/models/defaults`, { headers: authHeaders() }),
     ]);
-    if (!mRes.ok || !dRes.ok) return EMPTY;
+    if (!mRes.ok) return failed(mRes.status === 401 ? 'signed_out' : `http_${mRes.status}`);
+    if (!dRes.ok) return failed(dRes.status === 401 ? 'signed_out' : `http_${dRes.status}`);
 
     const mBody = (await mRes.json()) as {
       models: Record<EngineType, ApiCatalogEntry[]>;
@@ -94,8 +114,8 @@ export async function fetchModelsCatalog(): Promise<ModelsCatalog> {
         .sort((a, b) => a.tokenCost - b.tokenCost)
         .map((entry) => adapt(entry, entry.slug === defaultSlug));
     });
-    return { engines, defaults };
+    return { engines, defaults, error: null };
   } catch {
-    return EMPTY;
+    return failed('network');
   }
 }

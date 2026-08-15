@@ -12,7 +12,9 @@ import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import ffmpegPath from "ffmpeg-static";
 import ffmpeg from "fluent-ffmpeg";
+import ffprobeStatic from "ffprobe-static";
 
 import { runOnImage } from "./hf-image.js";
 import {
@@ -26,6 +28,11 @@ import {
 } from "./types.js";
 
 const DEFAULT_FRAME_COUNT = 16;
+
+// Keep video scans portable across local Windows development and Linux
+// deployments instead of relying on system-wide FFmpeg installations.
+if (ffmpegPath) ffmpeg.setFfmpegPath(ffmpegPath);
+ffmpeg.setFfprobePath(ffprobeStatic.path);
 
 export async function detect(
   input: DetectorInput,
@@ -74,7 +81,9 @@ export async function detect(
 function aggregate_(
   perFrame: { verdict: DetectorVerdict; confidence: number }[],
 ): { verdict: DetectorVerdict; confidence: number } {
-  if (perFrame.length === 0) return { verdict: "human", confidence: 0 };
+  if (perFrame.length === 0) {
+    throw new DetectorError(502, "video detector produced no classified frames");
+  }
 
   const counts: Record<DetectorVerdict, { n: number; sum: number }> = {
     human: { n: 0, sum: 0 },

@@ -1,6 +1,6 @@
 "use client";
 
-import { pb } from "./pocketbase";
+import { backend } from "./backend";
 import type {
   Scan,
   ScanOrigin,
@@ -30,7 +30,7 @@ export class ScanApiError extends Error {
 }
 
 function authHeaders(): Record<string, string> {
-  const token = pb.authStore.token;
+  const token = backend.authStore.token;
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
@@ -132,8 +132,8 @@ export async function updateScan(id: string, patch: UpdateScanInput): Promise<Sc
   return unwrap<Scan>(r);
 }
 
-/** Subscribe to PB realtime events on the `scans` collection. Returns
- *  an unsubscribe function. PB collection rules already restrict to
+/** Subscribe to backend realtime events on the `scans` collection. Returns
+ *  an unsubscribe function. backend collection rules already restrict to
  *  records the auth context can read (`userId = @request.auth.id`),
  *  so the callback only fires for the current user's rows.
  *
@@ -143,11 +143,11 @@ export async function updateScan(id: string, patch: UpdateScanInput): Promise<Sc
 export async function subscribeScans(
   cb: (event: ScanRealtimeEvent) => void,
 ): Promise<() => void> {
-  await pb.collection("scans").subscribe<Scan>("*", (e) => {
+  await backend.collection("scans").subscribe<Scan>("*", (e) => {
     cb({ action: e.action as ScanRealtimeAction, record: e.record });
   });
   return () => {
-    void pb.collection("scans").unsubscribe("*");
+    void backend.collection("scans").unsubscribe("*");
   };
 }
 

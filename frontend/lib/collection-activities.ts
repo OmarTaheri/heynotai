@@ -1,7 +1,7 @@
 "use client";
 
-import { type RecordModel } from "pocketbase";
-import { pb } from "./pocketbase";
+import { type BackendRecord as RecordModel } from "@heynotai/shared";
+import { backend } from "./backend";
 
 /** Dot-namespaced event types written into the `type` column. Keep
  *  literal — `formatActivity` switches on these. New events: add the
@@ -65,7 +65,7 @@ export function adaptActivity(
   const avatarFile = actor?.avatar;
   const avatarUrlField = actor?.avatarUrl;
   const actorAvatarSrc = actor && avatarFile
-    ? pb.files.getURL(actor, avatarFile)
+    ? backend.files.getURL(actor, avatarFile)
     : avatarUrlField || null;
   const payload =
     record.payload && typeof record.payload === "object"
@@ -94,10 +94,10 @@ export async function listActivities(
   opts?: { limit?: number },
 ): Promise<CollectionActivity[]> {
   const limit = opts?.limit ?? 200;
-  const result = await pb
+  const result = await backend
     .collection("collection_activities")
     .getList<CollectionActivityRecord>(1, limit, {
-      filter: pb.filter("collection = {:cid}", { cid: collectionId }),
+      filter: backend.filter("collection = {:cid}", { cid: collectionId }),
       sort: "-created",
       expand: "actor",
     });
@@ -115,7 +115,7 @@ export async function recordActivity(input: {
   payload?: Record<string, unknown>;
 }): Promise<void> {
   try {
-    await pb.collection("collection_activities").create(
+    await backend.collection("collection_activities").create(
       {
         collection: input.collectionId,
         actor: input.actorId,

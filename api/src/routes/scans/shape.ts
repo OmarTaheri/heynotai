@@ -1,5 +1,13 @@
-import type { RecordModel } from "pocketbase";
-import { env } from "../../env.js";
+import { storeFileUrl } from "../../db/store-files.js";
+
+type ScanRecord = {
+  id: string;
+  collectionId?: string;
+  collectionName?: string;
+  created?: string;
+  updated?: string;
+  [key: string]: any;
+};
 
 /** Per-engine cached result. The scans collection stores a map keyed by
  *  the engine slug (`engineId`) so that switching the model picker in
@@ -22,16 +30,8 @@ export interface EngineResultEntry {
   creditsUsed: number;
 }
 
-/** Wire shape returned to the frontend. Mirrors the PB record but
- *  materializes `fileUrl` so the client doesn't need to know how to
- *  build PB file URLs.
- *
- *  We construct the URL manually against `POCKETBASE_PUBLIC_URL`
- *  instead of `pb.files.getURL` so deployed environments can keep an
- *  internal `POCKETBASE_URL` (used by the api server to talk to PB)
- *  separate from the publicly reachable host the browser needs to
- *  load `<img>` tags. Falls back to `POCKETBASE_URL` for dev where
- *  both are the same. */
+/** Wire shape returned to the frontend. It materializes a signed `fileUrl`
+ *  so clients do not need to know anything about storage internals. */
 export interface SerializedScan {
   id: string;
   created: string;
@@ -97,17 +97,16 @@ export interface SerializedScan {
   version: number;
 }
 
-function publicFileUrl(record: RecordModel, filename: string): string {
-  const base = env.POCKETBASE_PUBLIC_URL ?? env.POCKETBASE_URL;
-  return `${base.replace(/\/$/, "")}/api/files/${record.collectionId}/${record.id}/${encodeURIComponent(filename)}`;
+function publicFileUrl(record: ScanRecord, filename: string): string {
+  return storeFileUrl(record, filename);
 }
 
-export function serializeScan(record: RecordModel): SerializedScan {
+export function serializeScan(record: ScanRecord): SerializedScan {
   const file: string = record.file ?? "";
   return {
     id: record.id,
-    created: record.created,
-    updated: record.updated,
+    created: record.created ?? "",
+    updated: record.updated ?? "",
     userId: record.userId ?? "",
     archived: !!record.archived,
     pinned: !!record.pinned,

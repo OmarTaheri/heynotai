@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Avatar } from "@/components/ui/Avatar";
 import { useAuth } from "@/lib/auth";
-import { pb } from "@/lib/pocketbase";
+import { backend } from "@/lib/backend";
 import {
   adaptActivity,
   formatActivity,
@@ -41,7 +41,7 @@ export function ActivityPanel({
 
     void (async () => {
       try {
-        const fn = await pb
+        const fn = await backend
           .collection("collection_activities")
           .subscribe<CollectionActivityRecord>(
             "*",
@@ -50,7 +50,7 @@ export function ActivityPanel({
               if (e.record.collection !== collectionId) return;
               // Realtime payloads don't carry expand by default; refetch
               // the row with `expand=actor` so the avatar resolves.
-              void pb
+              void backend
                 .collection("collection_activities")
                 .getOne<CollectionActivityRecord>(e.record.id, {
                   expand: "actor",

@@ -46,3 +46,12 @@
   .modeBar { padding: 12px 18px; }
   .addRow { padding: 12px 18px; flex-wrap: wrap; }
 }
+
+/* Shown when the user has no per-site rules yet. */
+.empty {
+  padding: 24px 22px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--color-fg-dim);
+  max-width: 60ch;
+}

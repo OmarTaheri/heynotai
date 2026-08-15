@@ -1,5 +1,5 @@
 /* Static UI fixtures for the settings page. User-specific data
- * (profile, billing, sessions) now comes from PocketBase via
+ * (profile, billing, sessions) now comes from application backend via
  * lib/settings-api.ts. */
 
 import type { IconName } from "@/components/Icon";

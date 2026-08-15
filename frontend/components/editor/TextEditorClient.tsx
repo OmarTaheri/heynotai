@@ -8,7 +8,6 @@ import { DocMeta } from "@/components/editor/DocMeta";
 import { TextEditorToolbar } from "@/components/editor/TextEditorToolbar";
 import { DetectionPanel, MIN_SCAN_WORDS } from "@/components/editor/DetectionPanel";
 import { ScanText, scanDurationMs as scanDurationFor } from "@/components/editor/ScanText";
-import { mockScan } from "@/lib/scan-mock";
 import { rescan as rescanApi, updateScan } from "@/lib/scans-api";
 import {
   getScanCollection,
@@ -87,7 +86,7 @@ export function TextEditorClient({ scan, onRescanQueued }: Props) {
     } else {
       setScanState("done");
       setScanError(null);
-      // Merge — the row may not carry sibling entries yet (e.g. the PB
+      // Merge — the row may not carry sibling entries yet (e.g. the backend
       // migration hasn't been applied, or the backend hasn't been
       // updated to persist the map). Local in-session cache survives
       // the merge even if the backend forgets.
@@ -110,7 +109,7 @@ export function TextEditorClient({ scan, onRescanQueued }: Props) {
   const scannedAt = activeEntry?.scanCompletedAt;
 
   // Fetch the scan's current collection link (single-link UX in the
-  // editor — first row wins). Skips synthetic scans, which have no PB
+  // editor — first row wins). Skips synthetic scans, which have no backend
   // record. Re-runs whenever the scan id changes (poll-driven re-render
   // keeps the same id, so this only fires once per persisted scan).
   useEffect(() => {
@@ -162,43 +161,16 @@ export function TextEditorClient({ scan, onRescanQueued }: Props) {
     handleSelect(flags[next].id);
   }, [flags, flagIndex, handleSelect]);
 
-  const runLocalScan = useCallback(
-    (text: string, withEngineId: string) => {
-      if (!text.trim()) return;
-      scanRunRef.current?.cleanup();
-      scanRunRef.current = null;
-
-      setSelectedId(null);
-      setScanState("scanning");
-
-      const start = performance.now();
-      const totalMs = scanDurationFor(text);
-      const t = setTimeout(() => {
-        const local = mockScan(text);
-        setEngineResults((prev) => ({
-          ...prev,
-          [withEngineId]: scanResultToEngineEntry(local, performance.now() - start),
-        }));
-        setScanState("done");
-        scanRunRef.current = null;
-      }, totalMs);
-      scanRunRef.current = { cleanup: () => clearTimeout(t) };
-    },
-    [],
-  );
-
-  // Synthetic (non-persisted) scans get a one-shot local mock on mount
-  // so the marketing-hero handoff still animates and lands on a result.
-  // Persisted scans skip this — their result already came from the API.
+  // Non-persisted documents (the marketing-hero handoff for a signed-out
+  // visitor) used to auto-run a client-side mock on mount, so the page
+  // animated for a couple of seconds and then presented invented flags
+  // as a detection result. Detection is server-side and metered, so the
+  // panel now asks the visitor to sign in instead.
   useEffect(() => {
-    if (persisted) return;
-    if (countWords(initialText) < MIN_SCAN_WORDS) return;
-    runLocalScan(initialText, engineId);
     return () => {
       scanRunRef.current?.cleanup();
       scanRunRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleScan = useCallback(async () => {
@@ -217,14 +189,19 @@ export function TextEditorClient({ scan, onRescanQueued }: Props) {
       try {
         await rescanApi(scan.id, engineId);
         onRescanQueued?.();
-      } catch {
-        // Fall through to local mock so the user still sees a result.
-        runLocalScan(initialText, engineId);
+      } catch (error) {
+        setScanState("failed");
+        setScanError({
+          code: "rescan_failed",
+          message: error instanceof Error ? error.message : "Text rescan failed",
+        });
       }
       return;
     }
-    runLocalScan(initialText, engineId);
-  }, [engineId, initialText, onRescanQueued, persisted, runLocalScan, scan.id, scanState]);
+    // Not a saved scan (the signed-out /editor preview). There is
+    // no detector to run without an account, and the panel says so
+    // via `signInRequired` — this used to synthesise a verdict.
+  }, [engineId, initialText, onRescanQueued, persisted, scan.id, scanState]);
 
   const wordCount = useMemo(() => countWords(initialText), [initialText]);
 
@@ -310,6 +287,7 @@ export function TextEditorClient({ scan, onRescanQueued }: Props) {
       }
       inspector={
         <DetectionPanel
+          signInRequired={!persisted}
           scanState={scanState}
           result={result}
           scanError={scanError}

@@ -5,6 +5,7 @@ import { StatGrid, StatTile, type StatTone } from "@/components/ui/StatTile";
 import type { IconName } from "@/components/Icon";
 import { fetchHomeStats, type HomeStats } from "@/lib/stats-api";
 import { useAuth } from "@/lib/auth";
+import { useScansRealtime } from "@/lib/use-scans-realtime";
 
 type Tile = {
   label: string;
@@ -68,6 +69,7 @@ const PLACEHOLDER: Tile[] = [
 export function HomeStats() {
   const { user } = useAuth();
   const userId = user?.id;
+  const realtimeTick = useScansRealtime();
   const [tiles, setTiles] = useState<Tile[]>(PLACEHOLDER);
 
   useEffect(() => {
@@ -85,7 +87,7 @@ export function HomeStats() {
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [userId, realtimeTick]);
 
   return (
     <StatGrid>

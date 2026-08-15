@@ -75,8 +75,11 @@ export function SitesCard({
             <div className="site-globe"><Icon name="globe" size={13} /></div>
             <div className="site-body">
               <div className="site-host">{s.host}</div>
+              {/* Per-site scan counters were never wired to real data —
+                  they came from a fixture and stayed frozen forever.
+                  State of the toggle is the only fact we have here. */}
               <div className="site-meta">
-                {s.enabled ? `${s.count} scanned · ${s.ai} AI` : 'paused'}
+                {s.enabled ? 'auto-scan on' : 'paused'}
               </div>
             </div>
             <Toggle

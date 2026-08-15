@@ -44,8 +44,8 @@ export function MembersPanel({
     else setInternalManageOpen(v);
   };
   // Both "Manage" and "Invite collaborator" are owner-only — non-owner
-  // viewers don't see other members' rows (PB listRule filters them
-  // out) and can't write to `collection_members` (PB createRule + the
+  // viewers don't see other members' rows (backend listRule filters them
+  // out) and can't write to `collection_members` (backend createRule + the
   // `/me/collections/invite` API both reject them). Hide the buttons
   // entirely so the side panel reads as read-only for them.
   const ownerMember =

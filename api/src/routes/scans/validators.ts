@@ -23,16 +23,16 @@ export type ScanOrigin = (typeof ORIGINS)[number];
 export type ScanVisibility = (typeof VISIBILITIES)[number];
 export type ScanSubtype = (typeof SCAN_SUBTYPES)[number];
 
-export const MAX_FILE_BYTES = 256 * 1024 * 1024; // 256MB — matches PB schema cap
+export const MAX_FILE_BYTES = 256 * 1024 * 1024; // 256MB — matches backend schema cap
 export const MAX_CONTENT_BYTES = 1_000_000;
 
 const ACCEPT_PREFIXES = ["text/", "image/", "audio/", "video/"];
 const ACCEPT_EXACT = ["application/pdf"];
 
-/** Validates a MIME against the accept list. PB itself doesn't enforce
- *  this (we set `mimeTypes` empty in the migration so PB allows any),
+/** Validates a MIME against the accept list. backend itself doesn't enforce
+ *  this (we set `mimeTypes` empty in the migration so backend allows any),
  *  so the API is the single point of truth and returns a normalized
- *  error envelope instead of PB's raw one. */
+ *  error envelope instead of backend's raw one. */
 export function isAllowedMime(mime: string | undefined | null): boolean {
   if (!mime) return false;
   if (ACCEPT_EXACT.includes(mime)) return true;

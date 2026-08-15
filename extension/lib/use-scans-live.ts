@@ -5,7 +5,7 @@ import {
   ScanApiError,
   type Scan,
 } from './scans-api';
-import { pb } from './pocketbase';
+import { backend } from './backend';
 
 interface UseScansLive {
   scans: Scan[];
@@ -19,7 +19,7 @@ interface UseScansLive {
 }
 
 /** Live scans list. Fetches the first page on mount + every auth
- *  change, and re-fetches whenever PB realtime reports any
+ *  change, and re-fetches whenever backend realtime reports any
  *  create/update/delete in the user's `scans` collection. The drawer's
  *  Content tab and (eventually) the website's library page share the
  *  same shape so a YouTube scan started anywhere flips to a working
@@ -40,7 +40,7 @@ export function useScansLive(perPage: number): UseScansLive {
 
   useEffect(() => {
     cancelRef.current = false;
-    if (!pb.authStore.isValid) {
+    if (!backend.authStore.isValid) {
       setScans([]);
       setTotalItems(0);
       setLoading(false);
@@ -78,7 +78,7 @@ export function useScansLive(perPage: number): UseScansLive {
   }, [perPage, tick]);
 
   // Realtime sub — independent of the fetch effect so a refresh tick
-  // doesn't tear down + recreate the websocket. Auth-gated: PB
+  // doesn't tear down + recreate the websocket. Auth-gated: backend
   // realtime only delivers events the auth context can read, so
   // subscribing while signed out just produces an erroring SSE.
   useEffect(() => {
@@ -104,12 +104,12 @@ export function useScansLive(perPage: number): UseScansLive {
         });
     };
 
-    if (pb.authStore.isValid) start();
+    if (backend.authStore.isValid) start();
 
-    const offAuth = pb.authStore.onChange(() => {
+    const offAuth = backend.authStore.onChange(() => {
       unsub?.();
       unsub = null;
-      if (pb.authStore.isValid) start();
+      if (backend.authStore.isValid) start();
       setTick((n) => n + 1);
     });
 
@@ -120,7 +120,7 @@ export function useScansLive(perPage: number): UseScansLive {
     };
   }, []);
 
-  // Runtime-message fallback — PB realtime is unreliable from the
+  // Runtime-message fallback — backend realtime is unreliable from the
   // drawer iframe (chrome-extension:// origin → SSE/CORS quirks), so
   // also refetch whenever the background SW broadcasts that a scan
   // has completed. SCAN_COMPLETE is fired for YouTube auto-scans;

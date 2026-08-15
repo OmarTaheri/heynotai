@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { type RecordModel } from "pocketbase";
-import { pb } from "./pocketbase";
+import { type BackendRecord as RecordModel } from "@heynotai/shared";
+import { backend } from "./backend";
 import { lookupUsers } from "./users-lookup";
 import { useAuth } from "./auth";
 
@@ -43,21 +43,21 @@ type ScanRow = RecordModel & { userId: string };
  *  name. Unresolved ids are dropped silently — better to render a smaller
  *  list than to fall over.
  *
- *  Reads are authenticated and the existing PB rules already gate access
+ *  Reads are authenticated and the existing backend rules already gate access
  *  through the same path used by the editor itself, so we don't filter
  *  again here. */
 export async function fetchScanMembers(scanId: string): Promise<ScanMember[]> {
   if (!scanId) return [];
 
-  const scan = await pb.collection("scans").getOne<ScanRow>(scanId, {
+  const scan = await backend.collection("scans").getOne<ScanRow>(scanId, {
     requestKey: null,
   });
   const ownerId = scan.userId;
 
-  const items = await pb
+  const items = await backend
     .collection("collection_items")
     .getFullList<CollectionItemRow>({
-      filter: pb.filter("scanId = {:sid}", { sid: scanId }),
+      filter: backend.filter("scanId = {:sid}", { sid: scanId }),
       requestKey: null,
     });
 
@@ -66,10 +66,10 @@ export async function fetchScanMembers(scanId: string): Promise<ScanMember[]> {
   const memberRows: CollectionMemberRow[] = [];
   await Promise.all(
     collectionIds.map(async (cid) => {
-      const rows = await pb
+      const rows = await backend
         .collection("collection_members")
         .getFullList<CollectionMemberRow>({
-          filter: pb.filter("collection = {:cid} && status = 'accepted'", {
+          filter: backend.filter("collection = {:cid} && status = 'accepted'", {
             cid,
           }),
           expand: "userId",
@@ -130,7 +130,7 @@ function projectExpanded(u: ExpandedUser, isOwner: boolean): ScanMember {
     (u.email ? u.email.split("@")[0] : "") ||
     "user";
   const avatarSrc = u.avatar
-    ? pb.files.getURL(u, u.avatar)
+    ? backend.files.getURL(u, u.avatar)
     : u.avatarUrl || null;
   return {
     id: u.id,
@@ -186,7 +186,7 @@ export function useScanMembers(scanId: string | null): {
     fetchScanMembers(scanId)
       .then((list) => {
         if (cancelled) return;
-        // Make sure the current user always shows up even if PB rules
+        // Make sure the current user always shows up even if backend rules
         // hid the membership row from the response (shouldn't happen if
         // we're on the page, but defensive).
         if (!list.some((m) => m.id === user.id)) list = [me, ...list];

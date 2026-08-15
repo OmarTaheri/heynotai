@@ -52,3 +52,16 @@ export const NAV_SECTIONS: NavSection[] = [
   },
 ];
 
+/** Platform-only navigation. DashboardShell appends this section after
+ * checking the server-owned `systemRole` on the authenticated user. */
+export const ADMIN_NAV_SECTION: NavSection = {
+  label: "Admin",
+  items: [
+    { href: "/app/admin", label: "Overview", icon: "activity", exact: true },
+    { href: "/app/admin/users", label: "Users", icon: "users" },
+    { href: "/app/admin/models", label: "Models", icon: "cube" },
+    { href: "/app/admin/providers", label: "Providers", icon: "key" },
+    { href: "/app/admin/logs", label: "Logs", icon: "file-text" },
+  ],
+};
+

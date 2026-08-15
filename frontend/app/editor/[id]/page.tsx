@@ -22,8 +22,8 @@ const POLL_INTERVAL_MS = 1500;
 // regularly takes 30-90s on top of the HF round-trip.
 const POLL_TIMEOUT_MS = 180_000;
 
-/** Dynamic editor route. Client-component because the PocketBase auth
- *  token only lives in localStorage today (`frontend/lib/pocketbase.ts:8`)
+/** Dynamic editor route. Client-component because the application backend auth
+ *  token only lives in localStorage today (`frontend/lib/backend.ts:8`)
  *  — there's no SSR auth path. On 401 we bounce to the marketing home
  *  with the login modal, mirroring `AuthGuard.tsx:31-33`.
  *

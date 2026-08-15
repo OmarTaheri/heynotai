@@ -7,7 +7,7 @@ import styles from "./ResetExtension.module.css";
 
 /** Single danger row at the bottom of the extension page — clears
  *  the user's extension_prefs row to defaults. The drawer picks up
- *  the change live via PB realtime. */
+ *  the change live via backend realtime. */
 export function ResetExtension() {
   const { reset, saving } = useExtensionPrefsContext();
   const [busy, setBusy] = useState(false);

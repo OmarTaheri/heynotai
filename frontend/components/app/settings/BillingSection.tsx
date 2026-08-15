@@ -13,7 +13,7 @@ import {
   updateProfile,
 } from "@/lib/settings-api";
 import { syncSubscription } from "@/lib/billing-api";
-import { pb, type PBUserRecord } from "@/lib/pocketbase";
+import { backend, type BackendUserRecord } from "@/lib/backend";
 import { useAuth } from "@/lib/auth";
 import type { Invoice, Plan } from "@heynotai/shared";
 import { SettingsSection } from "./SettingsSection";
@@ -25,10 +25,15 @@ export function BillingSection() {
   console.log("[billing] BillingSection render");
   const router = useRouter();
   const { refresh: refreshAuth } = useAuth();
-  const [record, setRecord] = useState<PBUserRecord | null>(null);
+  const [record, setRecord] = useState<BackendUserRecord | null>(null);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [billingEmail, setBillingEmail] = useState("");
   const [originalEmail, setOriginalEmail] = useState("");
+  const [billingAddress, setBillingAddress] = useState("");
+  const [taxId, setTaxId] = useState("");
+  const [originalAddress, setOriginalAddress] = useState("");
+  const [originalTaxId, setOriginalTaxId] = useState("");
+  const [editingAddress, setEditingAddress] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const autoSyncedRef = useRef(false);
 
@@ -48,6 +53,7 @@ export function BillingSection() {
         const email = (fresh.billingEmail as string) ?? "";
         setBillingEmail(email);
         setOriginalEmail(email);
+        seedBillingAddress(fresh);
         try {
           const inv = await getInvoices();
           setInvoices(inv);
@@ -83,7 +89,7 @@ export function BillingSection() {
     }
 
     void (async () => {
-      let r: PBUserRecord | null = null;
+      let r: BackendUserRecord | null = null;
       try {
         r = await getProfile();
         if (cancelled) return;
@@ -91,6 +97,7 @@ export function BillingSection() {
         const e = (r.billingEmail as string) ?? "";
         setBillingEmail(e);
         setOriginalEmail(e);
+        seedBillingAddress(r);
 
         console.log("[billing] BillingSection loaded record", {
           id: r.id,
@@ -116,19 +123,19 @@ export function BillingSection() {
       // driven changes (plan upgrades/cancellations) land in this
       // tab immediately instead of waiting for a reload.
       try {
-        await pb.collection("users").subscribe(r.id, (e) => {
+        await backend.collection("users").subscribe(r.id, (e) => {
           if (cancelled) return;
           if (e.action === "update") {
             console.log("[billing] realtime user update", {
-              plan: (e.record as PBUserRecord).plan,
+              plan: (e.record as BackendUserRecord).plan,
             });
-            setRecord(e.record as PBUserRecord);
+            setRecord(e.record as BackendUserRecord);
             void loadInvoices();
           }
         });
         const id = r.id;
         unsub = () => {
-          void pb.collection("users").unsubscribe(id);
+          void backend.collection("users").unsubscribe(id);
         };
       } catch (err) {
         console.warn("[billing] realtime subscribe failed", err);
@@ -142,19 +149,43 @@ export function BillingSection() {
   }, []);
 
   const dirty = useMemo(
-    () => billingEmail !== originalEmail,
-    [billingEmail, originalEmail],
+    () =>
+      billingEmail !== originalEmail ||
+      billingAddress !== originalAddress ||
+      taxId !== originalTaxId,
+    [
+      billingEmail, originalEmail,
+      billingAddress, originalAddress,
+      taxId, originalTaxId,
+    ],
   );
+
+  function seedBillingAddress(r: BackendUserRecord) {
+    const address = (r.billingAddress as string) ?? "";
+    const tax = (r.taxId as string) ?? "";
+    setBillingAddress(address);
+    setOriginalAddress(address);
+    setTaxId(tax);
+    setOriginalTaxId(tax);
+  }
 
   useRegisterSection("billing", {
     dirty,
     save: async () => {
       if (!dirty) return;
-      const r = await updateProfile({ billingEmail });
+      const r = await updateProfile({ billingEmail, billingAddress, taxId });
       setRecord(r);
       setOriginalEmail(billingEmail);
+      setOriginalAddress(billingAddress);
+      setOriginalTaxId(taxId);
+      setEditingAddress(false);
     },
-    discard: () => setBillingEmail(originalEmail),
+    discard: () => {
+      setBillingEmail(originalEmail);
+      setBillingAddress(originalAddress);
+      setTaxId(originalTaxId);
+      setEditingAddress(false);
+    },
   });
 
   const planId: Plan = (record?.plan as Plan) ?? "check";
@@ -163,7 +194,6 @@ export function BillingSection() {
     ? `${record.paymentBrand ? `${capitalize(record.paymentBrand)} ` : ""}•••• ${record.paymentLast4}`
     : "Not set";
   const paymentExpires = record?.paymentExpires ?? "—";
-  const billingAddress = record?.billingAddress ?? "—";
   const renewsOn = formatRenewal(record?.planRenewsOn);
   const pendingPlan = record?.pendingPlan as Plan | undefined;
   const pendingPlanCycle = record?.pendingPlanCycle as
@@ -337,13 +367,46 @@ export function BillingSection() {
                 />
               }
             />
+            {/* Editable in place. The button used to be inert, so the
+                address could never be set from the UI at all — it just
+                read "—" forever. Both fields ride the section's existing
+                dirty/save machinery, so the shared Save bar applies them. */}
             <FormRow
               label="Billing address & tax ID"
               hint="For VAT-compliant invoicing"
-              control={<span className="settings-readout">{billingAddress}</span>}
+              control={
+                editingAddress ? (
+                  <div className={styles.addressFields}>
+                    <textarea
+                      value={billingAddress}
+                      onChange={(e) => setBillingAddress(e.target.value)}
+                      className="settings-input"
+                      rows={3}
+                      placeholder="Street, city, postal code, country"
+                      aria-label="Billing address"
+                    />
+                    <input
+                      type="text"
+                      value={taxId}
+                      onChange={(e) => setTaxId(e.target.value)}
+                      className="settings-input"
+                      placeholder="VAT / tax ID (optional)"
+                      aria-label="Tax ID"
+                    />
+                  </div>
+                ) : (
+                  <span className="settings-readout">
+                    {[billingAddress, taxId].filter(Boolean).join(" · ") || "—"}
+                  </span>
+                )
+              }
               aux={
-                <Button variant="secondary" size="sm">
-                  Edit
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setEditingAddress((v) => !v)}
+                >
+                  {editingAddress ? "Done" : "Edit"}
                 </Button>
               }
             />

@@ -12,6 +12,11 @@ FROM node:22-alpine AS ext-build
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 WORKDIR /repo
 
+ARG VITE_API_URL
+ARG VITE_FRONTEND_URL
+ENV VITE_API_URL=$VITE_API_URL \
+    VITE_FRONTEND_URL=$VITE_FRONTEND_URL
+
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 COPY api/package.json api/
 COPY shared/package.json shared/
@@ -47,11 +52,9 @@ RUN pnpm install --frozen-lockfile --filter @heynotai/frontend...
 
 # ── build ──────────────────────────────────────────────────────────
 FROM deps AS build
-ARG NEXT_PUBLIC_POCKETBASE_URL
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-ENV NEXT_PUBLIC_POCKETBASE_URL=$NEXT_PUBLIC_POCKETBASE_URL \
-    NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
     NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY \
     NEXT_TELEMETRY_DISABLED=1
 

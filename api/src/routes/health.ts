@@ -1,21 +1,26 @@
 import { Hono } from "hono";
+
+import { databaseHealth } from "../db/client.js";
 import { env } from "../env.js";
 
 export const health = new Hono();
 
 health.get("/", async (c) => {
-  let pbOk = false;
-  try {
-    const r = await fetch(`${env.POCKETBASE_URL}/api/health`, {
-      signal: AbortSignal.timeout(2000),
-    });
-    pbOk = r.ok;
-  } catch {
-    pbOk = false;
-  }
-  return c.json({
-    ok: true,
-    pocketbase: pbOk,
+  const database = await databaseHealth();
+  const payload = {
+    ok: database.ok,
     timestamp: new Date().toISOString(),
-  });
+    services: {
+      api: { ok: true },
+      database,
+      auth: {
+        ok: Boolean(env.AUTH_PASSWORD_PEPPER),
+        googleConfigured: Boolean(
+          env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && env.GOOGLE_REDIRECT_URI,
+        ),
+      },
+      storage: { ok: Boolean(env.UPLOAD_DIR), driver: "filesystem" },
+    },
+  };
+  return database.ok ? c.json(payload) : c.json(payload, 503);
 });

@@ -16,7 +16,7 @@
  * still on fixtures), so we synthesize an alert count from
  * `origin = "mon"` AI/mixed verdicts — the row a real monitor would
  * have produced. */
-import type PocketBase from "pocketbase";
+import type { DatabaseStore } from "../db/store.js";
 
 export type HomeStats = {
   monthLabel: string;
@@ -25,6 +25,9 @@ export type HomeStats = {
   flagged: { count: number; percent: number };
   timeSavedHours: number;
   monitorAlerts: { count: number; newToday: number };
+  /** Rolling 7-day scan count. Drives the extension page's status card,
+   *  which used to print a fixed "298 scans last 7 days". */
+  scansLast7Days: number;
 };
 
 const MONTHS = [
@@ -35,7 +38,7 @@ const MONTHS = [
 const WPM = 250;
 
 export async function getHomeStats(
-  pb: PocketBase,
+  store: DatabaseStore,
   user: { id: string },
 ): Promise<HomeStats> {
   const now = new Date();
@@ -43,11 +46,11 @@ export async function getHomeStats(
   const startPrev = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
   const startToday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 
-  const startPrevIso = pbDate(startPrev);
-  const startCurrIso = pbDate(startCurr);
-  const startTodayIso = pbDate(startToday);
+  const startPrevIso = toBackendDate(startPrev);
+  const startCurrIso = toBackendDate(startCurr);
+  const startTodayIso = toBackendDate(startToday);
 
-  const records = await pb.collection("scans").getFullList({
+  const records = await store.collection("scans").getFullList({
     filter: `userId = "${user.id}" && created >= "${startPrevIso}"`,
     fields: "type,origin,verdict,wordCount,durationMs,created",
     requestKey: null,
@@ -59,9 +62,13 @@ export async function getHomeStats(
   let timeSavedMin = 0;
   let monAlerts = 0;
   let monAlertsToday = 0;
+  let last7Days = 0;
+
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
   for (const r of records) {
     const created = new Date(r.created as string);
+    if (created >= sevenDaysAgo) last7Days++;
     const inCurr = created >= startCurr;
     if (inCurr) {
       currScans++;
@@ -93,6 +100,7 @@ export async function getHomeStats(
     flagged: { count: flaggedCount, percent: flaggedPct },
     timeSavedHours: Math.round((timeSavedMin / 60) * 10) / 10,
     monitorAlerts: { count: monAlerts, newToday: monAlertsToday },
+    scansLast7Days: last7Days,
   };
 }
 
@@ -116,6 +124,6 @@ function manualMinutes(r: Record<string, unknown>): number {
   return 0;
 }
 
-function pbDate(d: Date): string {
+function toBackendDate(d: Date): string {
   return d.toISOString().replace("T", " ").replace("Z", "");
 }

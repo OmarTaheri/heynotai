@@ -7,7 +7,7 @@ import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { Icon } from "@/components/Icon";
 import { SelectionBar } from "@/components/app/library/SelectionBar";
 import { useAuth } from "@/lib/auth";
-import { pb } from "@/lib/pocketbase";
+import { backend } from "@/lib/backend";
 import {
   adaptCollectionRecord,
   type Collaborator,
@@ -33,6 +33,7 @@ import {
   type CollectionActivity as CollectionActivityRow,
 } from "@/lib/collection-activities";
 import { deleteScan } from "@/lib/scans-api";
+import { downloadCsv, slugifyFilename, toCsv } from "@/lib/csv-export";
 import { lookupUsers } from "@/lib/users-lookup";
 import { verdictToneFromAiPct } from "@/lib/verdict-tone";
 import { CollectionHero } from "./CollectionHero";
@@ -52,7 +53,7 @@ import { NewScanModal } from "@/components/app/home/NewScanModal";
 type Status = "loading" | "found" | "missing";
 
 /**
- * Detail-page body. PB-first: tries `pb.collection("collections")`
+ * Detail-page body. backend-first: tries `backend.collection("collections")`
  * then falls back to the legacy mock array (the list page still reads
  * from mocks this round). On both miss, renders an inline 404 card.
  *
@@ -62,7 +63,7 @@ type Status = "loading" | "found" | "missing";
  * page's "Add items" CTA writes through that join, and "Invite
  * collaborator" writes through the members table.
  *
- * Lives in a client component because `pb.authStore` is localStorage-
+ * Lives in a client component because `backend.authStore` is localStorage-
  * only — server components can't see the user's token.
  */
 export function CollectionDetailContent({ slug }: { slug: string }) {
@@ -92,12 +93,12 @@ export function CollectionDetailContent({ slug }: { slug: string }) {
     type: null,
     detector: null,
   });
-  // Whether the currently rendered collection is a real PB record (vs a
+  // Whether the currently rendered collection is a real backend record (vs a
   // legacy mock). The presence of `memberRecords` isn't a reliable
-  // signal — a brand-new PB collection has zero invitees but is still
+  // signal — a brand-new backend collection has zero invitees but is still
   // live and should accept Add-items / Invite actions.
   const [isLive, setIsLive] = useState(false);
-  // Raw owner id from the PB record — kept separately so the hero can
+  // Raw owner id from the backend record — kept separately so the hero can
   // tell whether the current viewer should see "Delete collection" or
   // "Leave collection" in the More menu.
   const [ownerUserId, setOwnerUserId] = useState<string>("");
@@ -137,9 +138,9 @@ export function CollectionDetailContent({ slug }: { slug: string }) {
     (async () => {
       if (user) {
         try {
-          const record = await pb
+          const record = await backend
             .collection("collections")
-            .getFirstListItem(pb.filter("slug = {:slug}", { slug }));
+            .getFirstListItem(backend.filter("slug = {:slug}", { slug }));
           if (cancelled) return;
           const recordUserId = record.userId as string | undefined;
           // Look up the actual owner's profile when we (the viewer)
@@ -179,7 +180,7 @@ export function CollectionDetailContent({ slug }: { slug: string }) {
           if (!cancelled) setInitialActivities(activities);
           return;
         } catch {
-          // PB returned no record (or denied access) — show 404.
+          // backend returned no record (or denied access) — show 404.
         }
       }
 
@@ -245,7 +246,7 @@ export function CollectionDetailContent({ slug }: { slug: string }) {
     itemCount: stats.itemCount || collection.itemCount,
   };
 
-  // Detail records loaded from PB carry their original record id —
+  // Detail records loaded from backend carry their original record id —
   // mocks have a synthetic `id` like "c1". Either way, the value is
   // what we hand to the modals below.
   const collectionDbId = isLive ? collection.id : "";
@@ -269,7 +270,7 @@ export function CollectionDetailContent({ slug }: { slug: string }) {
   const handleDelete = collectionDbId
     ? async () => {
         try {
-          await pb.collection("collections").delete(collectionDbId);
+          await backend.collection("collections").delete(collectionDbId);
           collectionsRefreshBus.publish();
           router.push("/app/collections");
         } catch (err) {
@@ -340,6 +341,45 @@ export function CollectionDetailContent({ slug }: { slug: string }) {
         .filter((d): d is string => Boolean(d) && d !== "—"),
     ),
   ).sort();
+
+  /** Exports exactly what the table is showing — filters and search
+   *  included — so "what I see" and "what I get" match. */
+  const handleExport = () => {
+    const csv = toCsv(
+      [
+        "Name",
+        "Type",
+        "Origin",
+        "Verdict",
+        "AI %",
+        "Confidence %",
+        "Detector",
+        "Model",
+        "Status",
+        "Scanned at",
+        "Tokens used",
+        "Scan ID",
+      ],
+      visibleItems.map((item) => [
+        item.name,
+        item.type,
+        item.origin,
+        verdictToneFromAiPct(item.aiPct ?? item.confidence),
+        item.aiPct ?? item.confidence,
+        item.confidence,
+        item.detector ?? "",
+        item.model ?? "",
+        item.status ?? "",
+        item.whenIso ?? "",
+        item.tokensUsed ?? 0,
+        item.scanId ?? "",
+      ]),
+    );
+    downloadCsv(
+      `${slugifyFilename(collection.title, "collection")}-scans`,
+      csv,
+    );
+  };
 
   const toggleRow = (id: string, next: boolean) => {
     setSelectedIds((prev) => {
@@ -416,6 +456,7 @@ export function CollectionDetailContent({ slug }: { slug: string }) {
             : undefined
         }
         onManageAccess={isOwner ? () => setManageOpen(true) : undefined}
+        onExport={visibleItems.length > 0 ? handleExport : undefined}
       />
 
       <div className="coll-detail-body">

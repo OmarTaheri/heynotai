@@ -1,12 +1,12 @@
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { requireAuth } from "../../middleware/auth.js";
-import { pbAdmin } from "../../lib/pb-admin.js";
+import { getAdminStore } from "../../lib/admin-store.js";
 import { getMonthlyUsage } from "../../lib/usage.js";
 import { runDetectionInBackground } from "../../lib/run-detection.js";
 import { isPlan, PLAN_RANK, tierFromRow, type Plan } from "../../lib/plans.js";
 import { isYoutubeUrl, probeYoutubeDuration } from "../../lib/youtube-download.js";
-import type { DetectorInput, DetectorProvider, ScanKind } from "../../detectors/index.js";
+import type { DetectorInput, ScanKind } from "../../detectors/index.js";
 import {
   createScanFormSchema,
   isAllowedMime,
@@ -14,6 +14,10 @@ import {
   type ScanType,
 } from "./validators.js";
 import { serializeScan } from "./shape.js";
+import {
+  reserveModelUsage,
+  UsageLimitError,
+} from "../../services/usage-ledger.js";
 
 export const create = new Hono();
 
@@ -32,7 +36,7 @@ const DETECTOR_KINDS: ScanKind[] = ["txt", "img", "aud", "vid"];
 // TODO(rate-limit): per-user create-throttle. A logged-in user can spam
 // 256MB uploads today. Defer to a follow-up.
 create.post("/", async (c) => {
-  const pb = c.get("pb");
+  const store = c.get("store");
   const user = c.get("user");
   if (!user) return c.json({ error: "unauthorized" }, 401);
 
@@ -103,7 +107,7 @@ create.post("/", async (c) => {
   const dedupUrl = input.sourceUrl?.trim();
   if (dedupUrl) {
     try {
-      const existing = await pb.collection("scans").getFirstListItem(
+      const existing = await store.collection("scans").getFirstListItem(
         `userId = "${user.id}" && type = "${type}" && ` +
           `sourceUrl = "${dedupUrl.replace(/"/g, '\\"')}" && status != "failed"`,
         { sort: "-created", requestKey: null },
@@ -115,7 +119,7 @@ create.post("/", async (c) => {
   }
 
   // ── Resolve model + token ─────────────────────────────────────────
-  const admin = await pbAdmin();
+  const admin = await getAdminStore();
   const modelRow = await resolveModel(admin, kind, input.modelSlug, user);
   if (!modelRow) return c.json({ error: "no_model_available", type }, 404);
   if (modelRow.enabled === false) return c.json({ error: "model_disabled", slug: modelRow.slug }, 403);
@@ -127,22 +131,8 @@ create.post("/", async (c) => {
       403,
     );
   }
-  // PB returns "" (empty string) for unset select fields, so `??`
-  // wouldn't fall through to the default. Treat anything that isn't
-  // a known non-HF provider as `hf-inference`.
-  const rawProvider = String(modelRow.provider ?? "").trim();
-  const provider: DetectorProvider = rawProvider === "velma" ? "velma" : "hf-inference";
-  const hfToken = provider === "hf-inference" ? await loadHuggingfaceToken(admin) : "";
-  if (provider === "hf-inference" && !hfToken) {
-    return c.json({ error: "detection_unconfigured" }, 503);
-  }
-  const velmaApiKey = provider === "velma" ? await loadVelmaApiKey(admin) : "";
-  if (provider === "velma" && !velmaApiKey) {
-    return c.json({ error: "detection_unconfigured", provider: "velma" }, 503);
-  }
-
   // ── Plan budget — charge upfront so parallel scans can't double-spend ─
-  const usage = await getMonthlyUsage(pb, {
+  const usage = await getMonthlyUsage(store, {
     id: user.id,
     plan: user.plan as string | undefined,
   });
@@ -203,11 +193,8 @@ create.post("/", async (c) => {
   // ── Resolve video frame model ahead of background dispatch ────────
   let videoFrameModelId: string | undefined;
   let videoFrameCount: number | undefined;
-  if (kind === "vid") {
+  if (kind === "vid" && modelRow.videoFrameModelSlug) {
     const frameSlug = modelRow.videoFrameModelSlug;
-    if (!frameSlug) {
-      return c.json({ error: "model_misconfigured", detail: "video model missing videoFrameModelSlug" }, 500);
-    }
     let frameRow: DetectionModelRow | null = null;
     try {
       frameRow = (await admin
@@ -289,17 +276,45 @@ create.post("/", async (c) => {
   form.append("engineId", modelRow.slug);
   form.append("visibility", "private");
   form.append("version", "1");
+  // Written explicitly so the row carries the field the library filter
+  // reads. Without it the record has no `archived` key and every
+  // equality test against it fails.
+  form.append("archived", "false");
+  form.append("pinned", "false");
 
   let record;
   try {
-    record = await pb.collection("scans").create(form);
+    record = await store.collection("scans").create(form);
   } catch (err) {
     const detail =
       err && typeof err === "object" && "message" in err
         ? String((err as { message: unknown }).message)
         : "create_failed";
-    console.error(`[scans/create] PB create failed`, detail, err);
+    console.error(`[scans/create] backend create failed`, detail, err);
     return c.json({ error: "create_failed", detail }, 500);
+  }
+
+  let usageReservation;
+  try {
+    usageReservation = await reserveModelUsage({
+      userId: user.id,
+      modelId: modelRow.id,
+      scanId: record.id,
+      credits: tokensRequired,
+      limit: usage.total,
+      modality: kind,
+    });
+  } catch (error) {
+    await store.collection("scans").delete(record.id).catch(() => undefined);
+    if (error instanceof UsageLimitError) {
+      return c.json({
+        error: "insufficient_tokens",
+        required: error.required,
+        remaining: error.remaining,
+      }, 402);
+    }
+    console.error("[scans/create] usage reservation failed", error);
+    return c.json({ error: "usage_reservation_failed" }, 503);
   }
 
   console.log(
@@ -310,16 +325,15 @@ create.post("/", async (c) => {
   // ── Kick off detection in the background ──────────────────────────
   runDetectionInBackground({
     scanId: record.id,
+    userId: user.id,
     kind,
     detectorInput,
-    provider,
-    hfToken,
-    hfModelId: modelRow.hfModelId ?? "",
-    velmaApiKey,
+    modelId: modelRow.id,
     modelSlug: modelRow.slug,
     videoFrameModelId,
     videoFrameCount,
     tokensCharged: tokensRequired,
+    usageReservationKey: usageReservation.key,
     pendingSourceUrl,
   });
 
@@ -331,7 +345,6 @@ type DetectionModelRow = {
   slug: string;
   type: string;
   enabled?: boolean;
-  provider?: string;
   hfModelId?: string;
   videoFrameModelSlug?: string;
   videoFrameCount?: number;
@@ -342,7 +355,7 @@ type DetectionModelRow = {
 };
 
 async function resolveModel(
-  admin: Awaited<ReturnType<typeof pbAdmin>>,
+  admin: Awaited<ReturnType<typeof getAdminStore>>,
   kind: ScanKind,
   explicitSlug: string | undefined,
   user: { plan?: unknown } | Record<string, unknown>,
@@ -370,36 +383,6 @@ async function resolveModel(
       requestKey: null,
     })) as unknown as DetectionModelRow[];
   return records.find((r) => PLAN_RANK[tierFromRow(r)] <= PLAN_RANK[plan]) ?? null;
-}
-
-async function loadHuggingfaceToken(
-  admin: Awaited<ReturnType<typeof pbAdmin>>,
-): Promise<string> {
-  try {
-    const list = await admin
-      .collection("service_secrets")
-      .getList(1, 1, { sort: "-created" });
-    const row = list.items[0];
-    const tok = (row?.huggingfaceToken as string | undefined)?.trim();
-    return tok ?? "";
-  } catch {
-    return "";
-  }
-}
-
-async function loadVelmaApiKey(
-  admin: Awaited<ReturnType<typeof pbAdmin>>,
-): Promise<string> {
-  try {
-    const list = await admin
-      .collection("service_secrets")
-      .getList(1, 1, { sort: "-created" });
-    const row = list.items[0];
-    const tok = (row?.velmaApiKey as string | undefined)?.trim();
-    return tok ?? "";
-  } catch {
-    return "";
-  }
 }
 
 function estimateMinutes(file: File | null): number {

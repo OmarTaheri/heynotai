@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ClientResponseError, type RecordModel } from "pocketbase";
-import { pb } from "./pocketbase";
+import {
+  BackendResponseError as ClientResponseError,
+  type BackendRecord as RecordModel,
+} from "@heynotai/shared";
+import { backend } from "./backend";
 import { useAuth } from "./auth";
 
 type PresenceRow = RecordModel & {
@@ -38,7 +41,7 @@ export function useScanPresence(scanId: string | null): {
       return;
     }
     if (!scanId) {
-      // Draft scan (no PB id yet) — no realtime, but the local user is
+      // Draft scan (no backend id yet) — no realtime, but the local user is
       // still "here" so the avatar stack renders something sensible.
       lastSeenRef.current.clear();
       setActiveIds(new Set([user.id]));
@@ -75,13 +78,13 @@ export function useScanPresence(scanId: string | null): {
       if (document.hidden) return;
       try {
         if (myRowId) {
-          await pb.collection("presence").update<PresenceRow>(
+          await backend.collection("presence").update<PresenceRow>(
             myRowId,
             { userId: user.id, scanId },
             { requestKey: null },
           );
         } else {
-          const row = await pb
+          const row = await backend
             .collection("presence")
             .create<PresenceRow>(
               { userId: user.id, scanId },
@@ -93,15 +96,15 @@ export function useScanPresence(scanId: string | null): {
         recompute();
       } catch (err) {
         // If create collided with a stale row from a previous tab, look
-        // it up and switch to update mode. PB returns 400 on unique-index
+        // it up and switch to update mode. backend returns 400 on unique-index
         // violation; we don't bother decoding the body and just attempt
         // a recovery fetch.
         if (err instanceof ClientResponseError && err.status === 400 && !myRowId) {
           try {
-            const existing = await pb
+            const existing = await backend
               .collection("presence")
               .getFirstListItem<PresenceRow>(
-                pb.filter("userId = {:uid} && scanId = {:sid}", {
+                backend.filter("userId = {:uid} && scanId = {:sid}", {
                   uid: user.id,
                   sid: scanId,
                 }),
@@ -117,10 +120,10 @@ export function useScanPresence(scanId: string | null): {
 
     const seed = async () => {
       try {
-        const rows = await pb
+        const rows = await backend
           .collection("presence")
           .getFullList<PresenceRow>({
-            filter: pb.filter("scanId = {:sid}", { sid: scanId }),
+            filter: backend.filter("scanId = {:sid}", { sid: scanId }),
             requestKey: null,
           });
         if (cancelled) return;
@@ -163,7 +166,7 @@ export function useScanPresence(scanId: string | null): {
       heartbeatTimer = setInterval(() => void heartbeat(), HEARTBEAT_MS);
       staleTimer = setInterval(recompute, STALE_CHECK_MS);
       try {
-        unsub = await pb
+        unsub = await backend
           .collection("presence")
           .subscribe<PresenceRow>("*", onEvent);
       } catch {
@@ -184,7 +187,7 @@ export function useScanPresence(scanId: string | null): {
       // complete, but the stale-prune cutoff handles that case for
       // viewers on other tabs.
       if (myRowId) {
-        void pb
+        void backend
           .collection("presence")
           .delete(myRowId, { requestKey: null })
           .catch(() => undefined);

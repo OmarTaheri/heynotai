@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "Collection" };
 /**
  * Collection detail — items + members + auto-rules + activity. The
  * actual rendering happens in `<CollectionDetailContent>` which is
- * client-side because PB auth lives in localStorage. The server shell
+ * client-side because backend auth lives in localStorage. The server shell
  * here exists only for SEO / metadata; the human title is set in the
  * hero once the record loads.
  */

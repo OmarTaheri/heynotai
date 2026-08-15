@@ -3,7 +3,7 @@ import { SectionHead } from "@/components/ui/SectionHead";
 import { Greeting } from "@/components/app/home/Greeting";
 import { DropCard } from "@/components/app/home/DropCard";
 import { HomeStats } from "@/components/app/home/HomeStats";
-import { LastScanCardClient } from "@/components/app/home/LastScanCardClient";
+import { LastScanSection } from "@/components/app/home/LastScanSection";
 import { ActivityTableClient } from "@/components/app/home/ActivityTableClient";
 
 export const metadata: Metadata = { title: "Home" };
@@ -11,6 +11,11 @@ export const metadata: Metadata = { title: "Home" };
 /**
  * Home — the dashboard cold-open. Server component, dark theme, same
  * tokens + visual language as the extension popup.
+ *
+ * Everything with a number or a timestamp on it is a client component
+ * that fetches its own data (`Greeting`, `HomeStats`, `LastScanSection`,
+ * `ActivityTableClient`). This page owns layout and nothing else — no
+ * copy here should imply a fact about the user's account.
  *
  * Page-specific compositions live under components/app/home; everything
  * reusable (Card, Pill, Button, ScoreRing, ProgressBar, StatTile,
@@ -22,25 +27,14 @@ export default function HomePage() {
   return (
     <div className="home panel-reveal">
       <section className="home-hero">
-        <Greeting
-          greeting="Good morning"
-          subtitle="Three monitors flagged new AI content overnight, and your last scan finished in 2.1 seconds."
-        />
+        <Greeting />
         <DropCard />
       </section>
 
       <div className="home-feed">
         <HomeStats />
 
-        <section>
-          <SectionHead
-            title="Last scan"
-            subtitle="2 minutes ago"
-            linkLabel="Open full view"
-            linkHref="/app/library"
-          />
-          <LastScanCardClient />
-        </section>
+        <LastScanSection />
 
         <section>
           <SectionHead

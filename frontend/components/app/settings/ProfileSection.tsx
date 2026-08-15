@@ -16,7 +16,7 @@ import {
   updateProfile,
   changeEmail,
 } from "@/lib/settings-api";
-import { avatarUrl, pb, type PBUserRecord } from "@/lib/pocketbase";
+import { avatarUrl, backend, type BackendUserRecord } from "@/lib/backend";
 import {
   profileMetaFromUser,
   type ProfileMetaTone,
@@ -49,7 +49,7 @@ type ProfileForm = {
   language: Language;
 };
 
-function fromRecord(r: PBUserRecord | null): ProfileForm {
+function fromRecord(r: BackendUserRecord | null): ProfileForm {
   return {
     name: r?.name ?? "",
     handle: r?.handle ?? "",
@@ -80,7 +80,7 @@ function detectTimezone(): string {
 
 export function ProfileSection() {
   const { user, refresh } = useAuth();
-  const [record, setRecord] = useState<PBUserRecord | null>(null);
+  const [record, setRecord] = useState<BackendUserRecord | null>(null);
   const [original, setOriginal] = useState<ProfileForm>(() => fromAuthUser(user));
   const [form, setForm] = useState<ProfileForm>(() => fromAuthUser(user));
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -109,7 +109,7 @@ export function ProfileSection() {
         setOriginal(f);
         setForm(f);
       } catch {
-        // not signed in, or PB unreachable — leave the auth-seeded values.
+        // not signed in, or backend unreachable — leave the auth-seeded values.
       }
     })();
     return () => {
@@ -137,25 +137,25 @@ export function ProfileSection() {
     dirty,
     save: async () => {
       // Field-level patch — only send what changed. When the user staged
-      // a new avatar, switch to FormData so PB writes the file too.
-      const fieldPatch: Partial<PBUserRecord> = {};
+      // a new avatar, switch to FormData so backend writes the file too.
+      const fieldPatch: Partial<BackendUserRecord> = {};
       if (form.name !== original.name) fieldPatch.name = form.name;
       if (form.handle !== original.handle) fieldPatch.handle = form.handle;
       if (form.language !== original.language) fieldPatch.language = form.language;
 
       if (!avatarFile && Object.keys(fieldPatch).length === 0) return;
 
-      const userId = pb.authStore.record?.id;
+      const userId = backend.authStore.record?.id;
       if (!userId) return;
 
-      let r: PBUserRecord;
+      let r: BackendUserRecord;
       if (avatarFile) {
         const fd = new FormData();
         for (const [k, v] of Object.entries(fieldPatch)) {
           if (v !== undefined) fd.append(k, String(v));
         }
         fd.append("avatar", avatarFile);
-        r = (await pb.collection("users").update(userId, fd)) as PBUserRecord;
+        r = (await backend.collection("users").update(userId, fd)) as BackendUserRecord;
       } else {
         r = await updateProfile(fieldPatch);
       }
@@ -194,7 +194,7 @@ export function ProfileSection() {
 
   const initials = user?.initials ?? "··";
   // Prefer the staged preview (in-memory blob URL while the user has a
-  // pending change), then the saved avatar from PB, then the URL field.
+  // pending change), then the saved avatar from backend, then the URL field.
   const avatarSrc = avatarPreview ?? avatarUrl(record) ?? user?.avatarSrc ?? null;
 
   return (

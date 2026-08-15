@@ -29,12 +29,12 @@ export type ModelConfig = {
   videoFrameCount?: number;
 };
 
-/** Unified verdict aligned with the existing `scans.verdict` PB enum. */
+/** Unified verdict aligned with the existing `scans.verdict` backend enum. */
 export type DetectorVerdict = "human" | "ai" | "mixed";
 
 export type DetectorResult = {
   verdict: DetectorVerdict;
-  /** 0..100 — matches `scans.confidence` PB field. */
+  /** 0..100 — matches `scans.confidence` backend field. */
   confidence: number;
   /** Provider-reported model id (HF repo). Stored on `scans.model`. */
   model: string;
@@ -83,14 +83,20 @@ export function verdictFromLabels(
   labels: { label: string; score: number }[],
 ): { verdict: DetectorVerdict; confidence: number } {
   if (labels.length === 0) {
-    return { verdict: "human", confidence: 0 };
+    throw new DetectorError(502, "detector returned no classification labels");
   }
 
   // Find the score the model assigns to "this is AI-generated".
-  const aiScore =
-    labels.find((l) => isAiLabel(l.label))?.score ??
-    // If none of the labels look AI-flagged, take 1 - top human label.
-    1 - (labels.find((l) => isHumanLabel(l.label))?.score ?? 0);
+  const aiLabel = labels.find((l) => isAiLabel(l.label));
+  const humanLabel = labels.find((l) => isHumanLabel(l.label));
+  if (!aiLabel && !humanLabel) {
+    throw new DetectorError(502, "detector returned unrecognized classification labels");
+  }
+  const rawAiScore = aiLabel?.score ?? 1 - humanLabel!.score;
+  if (!Number.isFinite(rawAiScore) || rawAiScore < 0 || rawAiScore > 1) {
+    throw new DetectorError(502, "detector returned an invalid classification score");
+  }
+  const aiScore = rawAiScore;
 
   const aiPct = Math.round(aiScore * 100);
 

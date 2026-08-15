@@ -19,9 +19,6 @@ extension/.wxt
 **/.env.*
 !**/.env.example
 
-# PocketBase data — never ship a database into a build context
-pocketbase/pb_data
-
 # Git + editor / OS clutter
 .git
 .gitignore

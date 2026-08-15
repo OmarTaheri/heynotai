@@ -1,4 +1,14 @@
-import { detectionFromScan, simulateDetection } from '@/lib/detector';
+import { extensionFlag, type ExtensionFlagId } from '@heynotai/shared';
+import { detectionFromScan } from '@/lib/detector';
+import {
+  canonicalPageUrl,
+  classifyPage as classifyPageInput,
+  normalizeHost,
+  type PageInfo,
+  type Platform,
+  type Surface,
+} from '@/lib/page-classify';
+import { shouldAutoScan as evaluateScanGate, type ScanPrefs } from '@/lib/scan-gate';
 import {
   sendMessage,
   type ExtensionMessage,
@@ -8,35 +18,8 @@ import type { ScanDetection, ScanEntry, ScanState } from '@/lib/types';
 import { extractYoutubeMeta } from '@/lib/youtube-meta';
 import '@/styles/content.css';
 
-type Platform = 'youtube' | 'instagram' | 'facebook';
-type Surface = 'videos' | 'reels' | 'posts';
-
-interface PageInfo {
-  platform: Platform;
-  surface: Surface;
-  mediaId: string;
-}
-
-/** Canonical URL for the current page. YouTube watch pages strip query
- *  params like `?t=10s` and the playlist tracker, since those vary
- *  freely on the same video and would otherwise look like navigations
- *  to the drawer. The drawer's PAGE_CHANGED handler resets the scanning
- *  UI on URL change — so without canonicalization, clicking "Check
- *  once" (which re-broadcasts with a normalized URL inside
- *  mountWithRetry) flips the drawer back to the idle/paused screen
- *  mid-scan. Other surfaces fall through to the raw href. */
-function canonicalPageUrl(info: PageInfo | null): string {
-  if (info?.platform === 'youtube' && info.surface === 'videos') {
-    return `https://www.youtube.com/watch?v=${info.mediaId}`;
-  }
-  if (info?.platform === 'youtube' && info.surface === 'reels') {
-    return `https://www.youtube.com/shorts/${info.mediaId}`;
-  }
-  return window.location.href;
-}
-
 function pageInfoPayload(info: PageInfo | null): PageInfoPayload {
-  const url = canonicalPageUrl(info);
+  const url = canonicalPageUrl(info, window.location.href);
   const host = window.location.hostname.replace(/^www\./, '');
   if (!info) return { platform: 'other', surface: null, url, host };
   const payload: PageInfoPayload = {
@@ -52,24 +35,52 @@ function pageInfoPayload(info: PageInfo | null): PageInfoPayload {
   return payload;
 }
 
-interface CachedPrefs {
-  platforms?: Record<
-    string,
-    { enabled?: boolean; surfaces?: Record<string, boolean> }
-  >;
-  scanMode?: 'allowlist' | 'manual' | 'everything';
+interface CachedPrefs extends ScanPrefs {
+  /** Named behaviour toggles from the website's Extension page. See
+   *  `EXTENSION_FLAG_IDS` in @heynotai/shared for the ids that matter. */
+  flags?: Record<string, boolean>;
+}
+
+/** The detail panel is built with innerHTML, and some of its values now
+ *  come from the provider (the model id on the Detector row). Escape
+ *  before interpolating so a hostile model name can't inject markup. */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function extractPageText(): string {
+  const text = document.body?.innerText?.replace(/\n{3,}/g, '\n\n').trim() ?? '';
+  return text.slice(0, 1_000_000);
 }
 
 export default defineContentScript({
-  matches: [
-    '*://*.youtube.com/*',
-    '*://*.instagram.com/*',
-    '*://*.facebook.com/*',
-  ],
+  matches: ['<all_urls>'],
   runAt: 'document_idle',
   cssInjectionMode: 'manifest',
 
   main() {
+    // ── Install marker ───────────────────────────────────
+    // Stamp the document root so heynotai.com can tell whether this
+    // browser actually has the extension, and which version. The
+    // website's /app/extension page reads this; before it existed the
+    // page hard-coded "Active · synced 12 seconds ago · v2.4.1"
+    // whether or not anything was installed.
+    try {
+      const root = document.documentElement;
+      root.setAttribute(
+        'data-heynotai-extension',
+        chrome.runtime.getManifest().version,
+      );
+      root.setAttribute('data-heynotai-extension-id', chrome.runtime.id);
+    } catch {
+      // Non-extension context (unit tests, plain-browser preview).
+    }
+
     // ── State ────────────────────────────────────────────
     let currentMediaId: string | null = null;
     let borderEl: HTMLDivElement | null = null;
@@ -108,71 +119,17 @@ export default defineContentScript({
     };
 
     // ── Page classification ─────────────────────────────
+    // Rules live in lib/page-classify.ts so they can be unit-tested
+    // without a DOM; only the Facebook feed fallback needs one.
     function classifyPage(): PageInfo | null {
-      const host = window.location.hostname.replace(/^www\./, '');
-      const path = window.location.pathname;
-
-      if (host.endsWith('youtube.com')) {
-        if (path === '/watch' || path.startsWith('/watch')) {
-          const id = new URLSearchParams(window.location.search).get('v');
-          if (!id) return null;
-          return { platform: 'youtube', surface: 'videos', mediaId: id };
-        }
-        if (path.startsWith('/shorts/')) {
-          const id = path.split('/shorts/')[1]?.split(/[/?#]/)[0] ?? '';
-          if (!id) return null;
-          return { platform: 'youtube', surface: 'reels', mediaId: id };
-        }
-        return null;
-      }
-
-      if (host.endsWith('instagram.com')) {
-        if (path.startsWith('/reel/') || path.startsWith('/reels/')) {
-          const parts = path.split('/').filter(Boolean);
-          const id = parts[1] ?? '';
-          if (!id) return null;
-          return { platform: 'instagram', surface: 'reels', mediaId: id };
-        }
-        if (path.startsWith('/p/')) {
-          const id = path.split('/p/')[1]?.split(/[/?#]/)[0] ?? '';
-          if (!id) return null;
-          return { platform: 'instagram', surface: 'posts', mediaId: id };
-        }
-        return null;
-      }
-
-      if (host.endsWith('facebook.com')) {
-        const isReelPath =
-          path.startsWith('/reel/') ||
-          path.startsWith('/reels/') ||
-          path === '/reel' ||
-          path === '/reels';
-        if (isReelPath) {
-          const parts = path.split('/').filter(Boolean);
-          let id = parts[1] ?? '';
-          if (!id) {
-            // Feed view (no ID in the URL) — pick the most visible
-            // reel card on the page and use its data-video-id.
-            const card = findVisibleReelCard();
-            id = card?.getAttribute('data-video-id') ?? '';
-          }
-          if (!id) return null;
-          return { platform: 'facebook', surface: 'reels', mediaId: id };
-        }
-        if (
-          /^\/[^/]+\/posts\//.test(path) ||
-          path.startsWith('/permalink') ||
-          path.startsWith('/photo') ||
-          path.startsWith('/posts/')
-        ) {
-          // FB post URLs vary too much for a clean ID — use the path so
-          // we still detect SPA changes between distinct posts.
-          return { platform: 'facebook', surface: 'posts', mediaId: path };
-        }
-        return null;
-      }
-
-      return null;
+      return classifyPageInput({
+        hostname: window.location.hostname,
+        pathname: window.location.pathname,
+        search: window.location.search,
+        href: window.location.href,
+        visibleReelId: () =>
+          findVisibleReelCard()?.getAttribute('data-video-id') ?? null,
+      });
     }
 
     // Pick the [data-video-id] card that occupies the most of the
@@ -304,6 +261,17 @@ export default defineContentScript({
       return null;
     }
 
+    /** Behaviour flag with its documented default applied. */
+    function flag(id: ExtensionFlagId): boolean {
+      return extensionFlag(cachedPrefs?.flags, id);
+    }
+
+    /** Verbose tracing, gated on the "Show debug overlay" toggle. The
+     *  scan path used to log unconditionally on every page. */
+    function debugLog(...args: unknown[]): void {
+      if (flag('debug')) console.info(...args);
+    }
+
     // ── Prefs gating (chrome.storage.local mirrored by drawer) ──
     async function loadPrefs(): Promise<void> {
       try {
@@ -312,7 +280,7 @@ export default defineContentScript({
       } catch {
         cachedPrefs = null;
       }
-      console.info('[heynotai/scan] prefs loaded', {
+      debugLog('[heynotai/scan] prefs loaded', {
         scanMode: cachedPrefs?.scanMode,
         platforms: cachedPrefs?.platforms,
       });
@@ -335,37 +303,16 @@ export default defineContentScript({
     }
 
     /** Decide whether the content script should auto-fire a scan for the
-     *  current page. Returns the decision *and* the gate that produced
-     *  it so the caller can log a useful diagnostic — silently dropping
-     *  scans (or silently firing them) was making "why is this video
-     *  scanning when I disabled YouTube?" impossible to debug. */
-    function shouldAutoScan(
-      info: PageInfo,
-    ): { allow: boolean; reason: string } {
-      const prefs = cachedPrefs;
-      // Default-OFF when prefs haven't been loaded yet. Previously
-      // defaulted ON to keep first-install scans working, but that
-      // race-bypassed every user-set "platform off" toggle until the
-      // drawer next ran. Erring on the safe side avoids surprise scans.
-      if (!prefs) return { allow: false, reason: 'prefs_not_loaded' };
-      if (prefs.scanMode === 'manual') {
-        return { allow: false, reason: 'scan_mode_manual' };
-      }
-      // Platform-level off-switch wins in every mode (including
-      // `everything`). Otherwise the per-platform toggle would be
-      // meaningless when the user is in everything-mode but explicitly
-      // disabled, say, YouTube.
-      const p = prefs.platforms?.[info.platform];
-      if (!p) return { allow: false, reason: 'platform_unknown' };
-      if (p.enabled !== true) return { allow: false, reason: 'platform_disabled' };
-      if (prefs.scanMode === 'everything') {
-        return { allow: true, reason: 'mode_everything' };
-      }
-      // allowlist mode → surface toggle gates the auto-scan.
-      if (p.surfaces?.[info.surface] !== true) {
-        return { allow: false, reason: 'surface_disabled' };
-      }
-      return { allow: true, reason: 'allowlist_match' };
+     *  current page. The policy itself lives in lib/scan-gate.ts; this
+     *  just feeds it the cached prefs and the current host. The returned
+     *  `reason` names the gate that decided, so a blocked scan can be
+     *  explained instead of vanishing silently. */
+    function shouldAutoScan(info: PageInfo) {
+      return evaluateScanGate(
+        info,
+        cachedPrefs,
+        normalizeHost(window.location.hostname),
+      );
     }
 
     chrome.storage.onChanged.addListener((changes, area) => {
@@ -373,14 +320,14 @@ export default defineContentScript({
       if (changes.extensionPrefs) {
         cachedPrefs =
           (changes.extensionPrefs.newValue as CachedPrefs | undefined) ?? null;
-        console.info('[heynotai/scan] prefs updated', {
+        debugLog('[heynotai/scan] prefs updated', {
           scanMode: cachedPrefs?.scanMode,
           platforms: cachedPrefs?.platforms,
         });
         const info = classifyPage();
         if (!info) return;
         const decision = shouldAutoScan(info);
-        console.info('[heynotai/scan] re-evaluating after prefs change', {
+        debugLog('[heynotai/scan] re-evaluating after prefs change', {
           info,
           decision,
         });
@@ -459,7 +406,11 @@ export default defineContentScript({
     }
 
     // ── Overlay ─────────────────────────────────────────
+    // Gated on the "Inline verdict overlays" toggle. With it off the
+    // scan still runs and the drawer still shows the verdict; the page
+    // just isn't decorated.
     function injectOverlay(container: HTMLElement, surface: Surface) {
+      if (!flag('inline-overlay')) return;
       attachedContainer = container;
       container.classList.add('hn-video-container-positioned');
       if (surface === 'reels') container.classList.add('hn-vertical');
@@ -506,14 +457,9 @@ export default defineContentScript({
     function openDetailPanel(_anchorEl?: HTMLElement) {
       const info = classifyPage();
       if (!info) return;
-      // Prefer the cached real-backend detection (populated for YouTube
-      // scans that completed). Fall back to the deterministic stub for
-      // platforms that still simulate (IG/FB) or for the brief window
-      // before a real verdict has landed.
-      const result =
-        lastScanDetection && info.mediaId === lastScanResult?.videoId
-          ? lastScanDetection
-          : simulateDetection(info.mediaId);
+      // Never invent a verdict while a real scan is pending or unavailable.
+      if (!lastScanDetection || info.mediaId !== lastScanResult?.videoId) return;
+      const result = lastScanDetection;
 
       if (badgeEl) badgeEl.style.display = 'none';
 
@@ -573,11 +519,11 @@ export default defineContentScript({
             </div>
           </div>
           <div class="hn-details-list">
-            <div class="hn-detail-row"><span class="hn-detail-label">Detection Type</span><span class="hn-detail-value">${result.detectionType}</span></div>
-            <div class="hn-detail-row"><span class="hn-detail-label">Face Analysis</span><span class="hn-detail-value">${result.faceAnalysis}</span></div>
-            <div class="hn-detail-row"><span class="hn-detail-label">Audio Sync</span><span class="hn-detail-value">${result.audioSync}</span></div>
-            <div class="hn-detail-row"><span class="hn-detail-label">Frame Consistency</span><span class="hn-detail-value">${result.frameConsistency}</span></div>
-            <div class="hn-detail-row"><span class="hn-detail-label">Scan Time</span><span class="hn-detail-value">${result.scanTime}s</span></div>
+            <div class="hn-detail-row"><span class="hn-detail-label">Detector</span><span class="hn-detail-value">${escapeHtml(result.detectionType)}</span></div>
+            <div class="hn-detail-row"><span class="hn-detail-label">Face Analysis</span><span class="hn-detail-value">${escapeHtml(result.faceAnalysis)}</span></div>
+            <div class="hn-detail-row"><span class="hn-detail-label">Audio Sync</span><span class="hn-detail-value">${escapeHtml(result.audioSync)}</span></div>
+            <div class="hn-detail-row"><span class="hn-detail-label">Frame Consistency</span><span class="hn-detail-value">${escapeHtml(result.frameConsistency)}</span></div>
+            <div class="hn-detail-row"><span class="hn-detail-label">Scan Time</span><span class="hn-detail-value">${escapeHtml(result.scanTime)}</span></div>
           </div>
         </div>
       `;
@@ -699,7 +645,7 @@ export default defineContentScript({
     function runScan(force = false) {
       const info = classifyPage();
       if (!info) {
-        console.info('[heynotai/scan] runScan skipped: not on a supported page', {
+        debugLog('[heynotai/scan] runScan skipped: not on a supported page', {
           host: window.location.hostname,
           path: window.location.pathname,
         });
@@ -709,13 +655,13 @@ export default defineContentScript({
       }
 
       const decision = shouldAutoScan(info);
-      console.info('[heynotai/scan] runScan', { force, info, decision });
+      debugLog('[heynotai/scan] runScan', { force, info, decision });
 
       // Auto-scan denied (platform/surface paused). The drawer owns
       // the manual-check UI now — no in-page floating button. Just
       // clean up any leftover overlay so the page is unobstructed.
       if (!force && !decision.allow) {
-        console.info('[heynotai/scan] auto-scan blocked', {
+        debugLog('[heynotai/scan] auto-scan blocked', {
           reason: decision.reason,
           info,
         });
@@ -726,14 +672,39 @@ export default defineContentScript({
         return;
       }
 
+      if (info.platform === 'other') {
+        const text = extractPageText();
+        if (!text) {
+          try { sendMessage({ type: 'SCAN_FAILED', error: 'no_readable_text' }); } catch {}
+          return;
+        }
+        currentMediaId = info.mediaId;
+        isScanning = true;
+        try { sendMessage({ type: 'SCAN_STARTED' }); } catch {}
+        try {
+          sendMessage({
+            type: 'PAGE_TEXT_SCAN_REQUEST',
+            text,
+            title: document.title || window.location.hostname,
+            url: window.location.href,
+          });
+        } catch {
+          isScanning = false;
+          try { sendMessage({ type: 'SCAN_FAILED', error: 'scan_dispatch_failed' }); } catch {}
+        }
+        return;
+      }
+
       if (info.mediaId === currentMediaId && borderEl) return;
 
       cleanup();
       currentMediaId = info.mediaId;
-      mountWithRetry(info);
+      mountWithRetry(info, force);
     }
 
-    function mountWithRetry(info: PageInfo, retries = 0) {
+    // `userInitiated` rides along to the backend so a signed-out
+    // auto-scan can stay silent instead of opening the drawer.
+    function mountWithRetry(info: PageInfo, userInitiated: boolean, retries = 0) {
       if (retries > 12) {
         console.warn('[heynotai/scan] mountWithRetry gave up — container never appeared', {
           platform: info.platform,
@@ -748,14 +719,14 @@ export default defineContentScript({
       }
       const container = getContainer(info);
       if (!container) {
-        setTimeout(() => mountWithRetry(info, retries + 1), 500);
+        setTimeout(() => mountWithRetry(info, userInitiated, retries + 1), 500);
         return;
       }
 
       // Container is in the DOM — commit to scanning state. Tell the
       // drawer so it can mirror the scanning UI alongside the page
       // overlay.
-      console.info('[heynotai/scan] mountWithRetry committing', {
+      debugLog('[heynotai/scan] mountWithRetry committing', {
         platform: info.platform,
         surface: info.surface,
         mediaId: info.mediaId,
@@ -768,9 +739,9 @@ export default defineContentScript({
       injectOverlay(container, info.surface);
 
       // YouTube scans flow through the real backend (yt-dlp →
-      // hf-video → PB). The verdict arrives asynchronously via
+      // hf-video → backend). The verdict arrives asynchronously via
       // YT_SCAN_COMPLETE in the message listener below. Other
-      // platforms (IG/FB) still use the deterministic mock.
+      // platforms (IG/FB) report unsupported until a real downloader exists.
       if (info.platform === 'youtube') {
         // Scrape video + channel meta once, at click/scan time —
         // YouTube has fully hydrated by the time the user (or
@@ -779,7 +750,7 @@ export default defineContentScript({
         const ytMeta = extractYoutubeMeta(info.mediaId);
         // Canonical URL — strip ?t=12s, /shorts vs /watch trackers,
         // playlist IDs, etc. so a revisit to the same video reuses
-        // the prior PB scan record instead of creating a new one.
+        // the prior backend scan record instead of creating a new one.
         const canonicalUrl = `https://www.youtube.com/watch?v=${info.mediaId}`;
         // Re-broadcast PAGE_CHANGED with the freshly-captured meta so
         // the drawer's video header + channel card show exactly the
@@ -801,7 +772,7 @@ export default defineContentScript({
           } catch {}
         }
         try {
-          console.info('[heynotai/scan] dispatching YT_SCAN_REQUEST', {
+          debugLog('[heynotai/scan] dispatching YT_SCAN_REQUEST', {
             url: canonicalUrl,
             mediaId: info.mediaId,
           });
@@ -810,6 +781,7 @@ export default defineContentScript({
             url: canonicalUrl,
             mediaId: info.mediaId,
             title: ytMeta?.title,
+            userInitiated,
           });
         } catch (err) {
           // Background SW unreachable. Don't simulate — the user's
@@ -825,25 +797,30 @@ export default defineContentScript({
         return;
       }
 
-      // IG/FB simulation path — kept until those platforms get the
-      // same backend treatment.
-      const scanDelay = 1000 + Math.random() * 1000;
-      setTimeout(() => simulateAndApply(info), scanDelay);
+      // These sources need a server-side downloader before they can be
+      // analyzed honestly. Do not substitute a deterministic fake verdict.
+      isScanning = false;
+      pendingScanMediaId = null;
+      pendingScanInfo = null;
+      cleanup();
+      try { sendMessage({ type: 'SCAN_FAILED', error: 'platform_not_supported' }); } catch {}
     }
 
-    function simulateAndApply(info: PageInfo) {
-      const result = simulateDetection(info.mediaId);
-      applyDetectionResult(info, result);
-    }
-
-    function applyDetectionResult(info: PageInfo, result: ScanDetection) {
+    function applyDetectionResult(
+      info: PageInfo,
+      result: ScanDetection,
+      scanId?: string,
+    ) {
       updateOverlay(result, info.surface);
 
       if (info.platform === 'youtube' && info.surface === 'videos') {
         injectActionButton(result);
       }
 
-      if (result.state === 'authentic') {
+      // Authentic verdicts fade out after a beat so a clean page isn't
+      // permanently decorated — unless the user asked to keep seeing
+      // them ("Show authentic verdicts too").
+      if (result.state === 'authentic' && !flag('show-authentic')) {
         setTimeout(() => {
           borderEl?.classList.add('hn-hidden');
           badgeEl?.classList.add('hn-hidden');
@@ -857,6 +834,7 @@ export default defineContentScript({
         trustScore: result.trustScore,
         timestamp: Date.now(),
         url: window.location.href,
+        scanId,
       };
 
       isScanning = false;
@@ -864,7 +842,7 @@ export default defineContentScript({
       pendingScanInfo = null;
       lastScanResult = entry;
       lastScanDetection = result;
-      // PB is now the source of truth for scan history (queried by
+      // backend is now the source of truth for scan history (queried by
       // both surfaces via useScansLive); the chrome.storage.local
       // mirror was never read back and has been removed.
       try { sendMessage({ type: 'SCAN_COMPLETE', payload: entry }); } catch {}
@@ -908,7 +886,7 @@ export default defineContentScript({
           return; // sync response
         }
         if (msg?.type === 'RESCAN' || msg?.type === 'MANUAL_SCAN') {
-          console.info('[heynotai/scan] manual scan request received', {
+          debugLog('[heynotai/scan] manual scan request received', {
             type: msg.type,
           });
           currentMediaId = null;
@@ -917,7 +895,7 @@ export default defineContentScript({
         }
         if (msg?.type === 'YT_SCAN_COMPLETE') {
           const m = msg as ExtensionMessage & { type: 'YT_SCAN_COMPLETE' };
-          console.info('[heynotai/scan] YT_SCAN_COMPLETE received', {
+          debugLog('[heynotai/scan] YT_SCAN_COMPLETE received', {
             mediaId: m.mediaId,
             verdict: m.scan?.verdict,
             pendingScanMediaId,
@@ -929,7 +907,7 @@ export default defineContentScript({
           // mid-SPA-nav, which previously caused the result to be
           // silently dropped and the drawer stuck on "Analyzing".
           if (pendingScanMediaId && m.mediaId !== pendingScanMediaId) {
-            console.info('[heynotai/scan] dropping stale verdict', {
+            debugLog('[heynotai/scan] dropping stale verdict', {
               expected: pendingScanMediaId,
               got: m.mediaId,
             });
@@ -940,18 +918,18 @@ export default defineContentScript({
               ? pendingScanInfo
               : classifyPage();
           if (!info || info.mediaId !== m.mediaId) {
-            console.info('[heynotai/scan] dropping verdict — page no longer matches', {
+            debugLog('[heynotai/scan] dropping verdict — page no longer matches', {
               info,
               mediaId: m.mediaId,
             });
             return;
           }
           const detection = detectionFromScan(m.scan);
-          console.info('[heynotai/scan] applying detection result', {
+          debugLog('[heynotai/scan] applying detection result', {
             mediaId: m.mediaId,
             state: detection.state,
           });
-          applyDetectionResult(info, detection);
+          applyDetectionResult(info, detection, m.scan?.id);
           return;
         }
         if (msg?.type === 'YT_SCAN_FAILED') {
@@ -989,6 +967,7 @@ export default defineContentScript({
           return;
         }
         if (msg?.type === 'YT_SCAN_AUTH_REQUIRED') {
+          const m = msg as ExtensionMessage & { type: 'YT_SCAN_AUTH_REQUIRED' };
           // The user signed out between scan dispatch and verdict, or
           // the cached `isAuthed` was stale. Either way: no overlay,
           // no fake verdict — same as the pre-flight gate.
@@ -999,7 +978,13 @@ export default defineContentScript({
           pendingScanMediaId = null;
           pendingScanInfo = null;
           try { sendMessage({ type: 'SCAN_FAILED' }); } catch {}
-          try { sendMessage({ type: 'OPEN_DRAWER' }); } catch {}
+          // Only surface the sign-in screen when the user actually asked
+          // for this scan. Auto-scan fires on every YouTube SPA
+          // navigation, so opening the drawer here made the extension
+          // appear to pop open at random while browsing.
+          if (m.userInitiated) {
+            try { sendMessage({ type: 'OPEN_DRAWER' }); } catch {}
+          }
           return;
         }
       });

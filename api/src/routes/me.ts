@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { requireAuth } from "../middleware/auth.js";
-import { pbAdmin } from "../lib/pb-admin.js";
+import { getAdminStore } from "../lib/admin-store.js";
 import { getMonthlyUsage } from "../lib/usage.js";
 import { getHomeStats } from "../lib/stats.js";
 
@@ -18,10 +18,10 @@ me.get("/", (c) => {
  *  pick the slice they need. Aggregates `scans.creditsUsed` for the
  *  current calendar month UTC and looks up the plan cap via PLAN_TOKEN_LIMITS. */
 me.get("/usage", async (c) => {
-  const pb = c.get("pb");
+  const store = c.get("store");
   const user = c.get("user");
   if (!user) return c.json({ error: "unauthorized" }, 401);
-  const usage = await getMonthlyUsage(pb, {
+  const usage = await getMonthlyUsage(store, {
     id: user.id,
     plan: user.plan as string | undefined,
   });
@@ -33,16 +33,16 @@ me.get("/usage", async (c) => {
  *  + share, estimated time saved vs manual review, and monitor alerts
  *  derived from `origin = "mon"` AI verdicts. See lib/stats.ts. */
 me.get("/stats", async (c) => {
-  const pb = c.get("pb");
+  const store = c.get("store");
   const user = c.get("user");
   if (!user) return c.json({ error: "unauthorized" }, 401);
-  const stats = await getHomeStats(pb, { id: user.id });
+  const stats = await getHomeStats(store, { id: user.id });
   return c.json(stats);
 });
 
 /** Look up a single user by **exact email** for the invite flow.
  *
- *  PB's listRule on `users` is closed (protects billing + Stripe data),
+ *  backend's listRule on `users` is closed (protects billing + Stripe data),
  *  and product policy is "don't surface users unless the inviter
  *  already knows their email" — so this endpoint refuses partial
  *  matches and only returns the user whose email is exactly equal to
@@ -65,7 +65,7 @@ me.get("/users/search", async (c) => {
     return c.json({ users: [] });
   }
 
-  const admin = await pbAdmin();
+  const admin = await getAdminStore();
   const filter = admin.filter("email = {:q}", { q: raw });
   const list = await admin
     .collection("users")
@@ -106,7 +106,7 @@ me.get("/users/by-ids", async (c) => {
   // Cap to keep the URL + DB cost bounded.
   const limited = ids.slice(0, 50);
 
-  const admin = await pbAdmin();
+  const admin = await getAdminStore();
   const filter = limited.map((id) => `id="${id}"`).join(" || ");
   const list = await admin
     .collection("users")
@@ -130,7 +130,7 @@ me.get("/users/by-ids", async (c) => {
 
 const ROLE_VALUES = new Set(["editor", "viewer"]);
 
-/** Issue a collaboration invite. Resolves the recipient's PB id via
+/** Issue a collaboration invite. Resolves the recipient's backend id via
  *  superuser (the `users` listRule is closed, so the inviter's own
  *  client can't see anyone else's record), then writes the row.
  *
@@ -168,7 +168,7 @@ me.post("/collections/invite", async (c) => {
     return c.json({ error: "self_invite" }, 400);
   }
 
-  const admin = await pbAdmin();
+  const admin = await getAdminStore();
 
   // Verify the caller owns the target collection. The collection's
   // own listRule already lets the owner read it, but we re-check via

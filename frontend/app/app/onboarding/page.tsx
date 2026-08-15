@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
-import { pb } from "@/lib/pocketbase";
+import { backend } from "@/lib/backend";
 import { ScoreRing, type RingTone } from "@/components/ui/ScoreRing";
 import {
   AvatarCropModal,
@@ -13,7 +13,7 @@ import s from "./onboarding.module.css";
 
 /* heynotai onboarding — 10-step flow ported from
  * heynotai-design-system/project/onboarding-app.jsx (the design bundle).
- * Submits the collected fields to PB on the final step. */
+ * Submits the collected fields to backend on the final step. */
 
 // ── Icons ──────────────────────────────────────────────────────────
 type IconPath = string | string[];
@@ -648,7 +648,7 @@ export default function OnboardingPage() {
     setSaveError(null);
     try {
       // 1. user record. When the user supplied an uploaded+cropped
-      // image, we send multipart FormData so PB writes it to the
+      // image, we send multipart FormData so backend writes it to the
       // `avatar` file field. Without a file, plain JSON is fine.
       if (avatarFile) {
         const fd = new FormData();
@@ -660,9 +660,9 @@ export default function OnboardingPage() {
         fd.append("useCases", JSON.stringify(data.useCases));
         fd.append("onboardingCompleted", "true");
         fd.append("avatar", avatarFile);
-        await pb.collection("users").update(user.id, fd);
+        await backend.collection("users").update(user.id, fd);
       } else {
-        await pb.collection("users").update(user.id, {
+        await backend.collection("users").update(user.id, {
           name: data.name,
           handle: data.handle,
           timezone: data.tz,
@@ -695,7 +695,7 @@ export default function OnboardingPage() {
       // Clear the session and bounce to the login modal.
       const status = (err as { status?: number } | null)?.status;
       if (status === 404 || status === 401) {
-        pb.authStore.clear();
+        backend.authStore.clear();
         router.replace("/?login=1&next=/app/onboarding");
         return;
       }
@@ -807,11 +807,11 @@ async function upsertPrefs(
 ) {
   // Try to find an existing row, then update or create.
   try {
-    const existing = await pb
+    const existing = await backend
       .collection(collection)
       .getFirstListItem(`userId = "${userId}"`);
-    await pb.collection(collection).update(existing.id, fields);
+    await backend.collection(collection).update(existing.id, fields);
   } catch {
-    await pb.collection(collection).create({ userId, ...fields });
+    await backend.collection(collection).create({ userId, ...fields });
   }
 }

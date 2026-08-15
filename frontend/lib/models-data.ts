@@ -6,7 +6,7 @@
    so the constants here are a fallback used only
    by the editor clients (TextEditorClient et al.)
    when offline or pre-hydration. They mirror the
-   seed in `pocketbase/seed-models.sh` so the two
+   seed in `backend/seed-models.sh` so the two
    surfaces don't diverge.
    ───────────────────────────────────────────── */
 

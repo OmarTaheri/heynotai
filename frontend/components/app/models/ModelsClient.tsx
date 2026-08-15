@@ -7,8 +7,6 @@ import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/Icon";
 import { useAuth } from "@/lib/auth";
 import {
-  DEFAULT_SELECTION,
-  ENGINES,
   TYPE_TABS,
   type Engine,
   type EngineType,
@@ -28,24 +26,36 @@ import { ModelsSkeleton } from "./ModelsSkeleton";
  *     across tab switches so a user can configure all four without losing
  *     state)
  *   - the live model catalog from `/models` and per-user token usage from
- *     `/me/usage`. The static `ENGINES`/`DEFAULT_SELECTION` constants are
- *     used as a transient fallback while the fetches are inflight so the
- *     skeleton has shape to render against.
+ *     `/me/usage`.
+ *
+ * There is no seeded engine list behind this any more. When `/models`
+ * can't be reached the page says so — it used to fall back to a
+ * hard-coded catalog, so an API outage showed engines that don't exist
+ * and let the user "select" one.
  *
  * The metadata + page wrapper sits in a sibling server file so we can
  * keep the per-route title.
  */
+const EMPTY_ENGINES: Record<EngineType, Engine[]> = {
+  txt: [], img: [], aud: [], vid: [],
+};
+const EMPTY_DEFAULTS: Record<EngineType, string> = {
+  txt: "", img: "", aud: "", vid: "",
+};
+
 export function ModelsClient() {
   const { user } = useAuth();
   const userPlan: Plan = user?.plan ?? "check";
   const [activeType, setActiveType] = useState<EngineType>("txt");
-  const [engines, setEngines] = useState<Record<EngineType, Engine[]>>(ENGINES);
+  const [engines, setEngines] =
+    useState<Record<EngineType, Engine[]>>(EMPTY_ENGINES);
   const [defaults, setDefaults] =
-    useState<Record<EngineType, string>>(DEFAULT_SELECTION);
+    useState<Record<EngineType, string>>(EMPTY_DEFAULTS);
   const [selectedByType, setSelectedByType] =
-    useState<Record<EngineType, string>>(DEFAULT_SELECTION);
+    useState<Record<EngineType, string>>(EMPTY_DEFAULTS);
   const [usage, setUsage] = useState<TokenUsage | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -55,12 +65,10 @@ export function ModelsClient() {
         fetchMonthlyUsage(),
       ]);
       if (cancelled) return;
-      // Only swap to live engines if the response had any rows — otherwise
-      // keep the seeded fallback so the page never goes empty.
-      const hasAny = (Object.values(catalog.engines) as Engine[][]).some(
-        (list) => list.length > 0,
-      );
-      if (hasAny) {
+      if (!catalog) {
+        setLoadError(true);
+      } else {
+        setLoadError(false);
         setEngines(catalog.engines);
         setDefaults(catalog.defaults);
         setSelectedByType((prev) => {
@@ -122,17 +130,14 @@ export function ModelsClient() {
       <PageHeader
         title="Models"
         subtitle="Pick which engine runs for each content type. Every scan consumes tokens — choose fast engines for high-volume work, premium engines for important verifications."
+        // "Usage history" used to sit here with no handler and no page
+        // behind it. The month-to-date figures live in the band below,
+        // so the only header action left is the one that goes somewhere.
         actions={
-          <>
-            <Button variant="secondary">
-              <Icon name="activity" size={13} />
-              Usage history
-            </Button>
-            <Button variant="primary">
-              <Icon name="plus" size={13} />
-              Buy tokens
-            </Button>
-          </>
+          <Button variant="primary" href="/app/upgrade">
+            <Icon name="plus" size={13} />
+            Buy tokens
+          </Button>
         }
       />
 
@@ -146,6 +151,16 @@ export function ModelsClient() {
 
       {loading ? (
         <ModelsSkeleton rows={sortedEngines[activeType].length || 3} />
+      ) : loadError ? (
+        <p className="models-empty" role="status">
+          Couldn&apos;t load the detector catalog. Check your connection and
+          refresh — no engines are listed until we can confirm what&apos;s
+          actually available.
+        </p>
+      ) : sortedEngines[activeType].length === 0 ? (
+        <p className="models-empty" role="status">
+          No detectors are enabled for this content type yet.
+        </p>
       ) : (
         <EngineSection
           type={activeType}

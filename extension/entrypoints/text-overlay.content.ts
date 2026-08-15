@@ -30,6 +30,16 @@ export default defineContentScript({
     const PILL_ID = 'heynotai-text-pill';
     const AUTO_DISMISS_MS = 30_000;
 
+    // The background worker re-injects this file when a TEXT_SCAN_*
+    // message can't be delivered (extension reloaded after the page
+    // loaded). If the original instance is in fact alive, bail rather
+    // than registering a second set of listeners — two listeners on one
+    // pill element means doubled drag handlers and a close button that
+    // needs two clicks.
+    const marker = window as Window & { __heynotaiTextOverlay?: boolean };
+    if (marker.__heynotaiTextOverlay) return;
+    marker.__heynotaiTextOverlay = true;
+
     let anchorRect: DOMRect | null = null;
     let dismissTimer: number | null = null;
     // Cached during the contextmenu event so we still have the rect

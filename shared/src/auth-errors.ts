@@ -1,6 +1,6 @@
-// User-facing messages for PocketBase auth failures.
+// User-facing messages for application backend auth failures.
 //
-// PB's default `Failed to authenticate.` is what every wrong-password,
+// backend's default `Failed to authenticate.` is what every wrong-password,
 // banned-account, or rate-limited request gets reduced to in the UI.
 // This helper unpacks `status`, network failures, and the per-field
 // validation map (`response.data`) so the form can show something the
@@ -26,7 +26,7 @@ type PbErrorShape = {
 export type AuthErrorInfo = {
   /** Single sentence safe to render in a toast or inline banner. */
   message: string;
-  /** Field → message map, when PB returned per-field validation errors. */
+  /** Field → message map, when backend returned per-field validation errors. */
   fields?: Record<string, string>;
 };
 
@@ -41,7 +41,7 @@ export function describeAuthError(
 
   const status = typeof e.status === "number" ? e.status : undefined;
 
-  // status 0 in PocketBase's SDK means the request never reached the
+  // status 0 in application backend's SDK means the request never reached the
   // server — DNS, offline, CORS, or mixed-content blocked it.
   if (status === 0) {
     return {
@@ -52,6 +52,17 @@ export function describeAuthError(
 
   const body = e.response ?? e.data ?? {};
   const rawMsg = (e.message ?? body.message ?? "").trim();
+
+  // Native fetch failures do not carry an HTTP status. They mean the API was
+  // unreachable, CORS rejected the origin, or the browser was offline.
+  if (
+    status === undefined &&
+    (/failed to fetch/i.test(rawMsg) || e instanceof TypeError)
+  ) {
+    return {
+      message: "Can't reach the API. Start it with npm run dev, then try again.",
+    };
+  }
 
   const fieldEntries = body.data && typeof body.data === "object"
     ? Object.entries(body.data).filter(

@@ -1,22 +1,32 @@
 import type { MiddlewareHandler } from "hono";
-import { pbForRequest } from "../lib/pb.js";
 
-/** Verifies the caller's JWT against PocketBase and stashes the
- *  authenticated PB client + user record on the context. Routes that
- *  need the user can read `c.get("pb")` / `c.get("user")`. */
+import { storeForUser, type StoreActor } from "../db/store.js";
+import {
+  authenticateAccessToken,
+  extractBearerToken,
+} from "../services/auth.js";
+import { requestMetadata } from "./session-auth.js";
+
+/** Authenticate an API-owned opaque session and populate both the canonical
+ * session context and the legacy `store`/`user` compatibility context. */
 export const requireAuth: MiddlewareHandler = async (c, next) => {
-  const pb = pbForRequest(c.req.header("authorization") ?? null);
-  if (!pb.authStore.isValid) {
-    return c.json({ error: "unauthorized" }, 401);
-  }
-  try {
-    // Refresh validates the token server-side. Cheaper than authRefresh
-    // when we don't need a new token, but does the same verification.
-    await pb.collection("users").authRefresh();
-  } catch {
-    return c.json({ error: "unauthorized" }, 401);
-  }
-  c.set("pb", pb);
-  c.set("user", pb.authStore.record);
+  const token = extractBearerToken(c.req.header("authorization"));
+  if (!token) return c.json({ error: "unauthorized" }, 401);
+
+  const auth = await authenticateAccessToken(token, requestMetadata(c));
+  if (!auth) return c.json({ error: "unauthorized" }, 401);
+
+  const actor: StoreActor = {
+    id: auth.user.id,
+    email: auth.user.email,
+    role: auth.user.systemRole,
+    systemRole: auth.user.systemRole,
+    system_role: auth.user.systemRole,
+  };
+  c.set("sessionUser", auth.user);
+  c.set("appSession", auth.session);
+  c.set("isAdmin", auth.isAdmin);
+  c.set("user", actor);
+  c.set("store", storeForUser(actor));
   await next();
 };

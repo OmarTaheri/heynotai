@@ -27,7 +27,7 @@ export function ExtensionClient() {
           title="Extension"
           subtitle="Configure how Detect runs in your browser. Choose what gets scanned, when, and how alerts behave."
           actions={
-            <Button variant="secondary">
+            <Button variant="secondary" href="/install">
               <Icon name="info" size={13} />
               What&apos;s this?
             </Button>

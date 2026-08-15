@@ -7,37 +7,11 @@ import { useAuth } from '@/lib/auth-state';
 import { FRONTEND_URL } from '@/lib/scans-api';
 import { useScansLive } from '@/lib/use-scans-live';
 import { scanToRow, type LibraryRowItem } from '@/lib/library';
-import { CONTENT_ITEMS } from '@/lib/sample-data';
-import type { ContentItem, Verdict } from '@/lib/types';
+import type { Verdict } from '@/lib/types';
 
 type Filter = 'all' | Verdict;
 
 const PER_PAGE = 12;
-
-/** Map the legacy mock CONTENT_ITEMS into the new row shape so guests
- *  see the same layout as signed-in users. */
-function mockToRow(item: ContentItem): LibraryRowItem {
-  const type =
-    item.kind === 'text' ? 'txt'
-    : item.kind === 'image' ? 'img'
-    : item.kind === 'audio' ? 'aud'
-    : 'vid';
-  const meta =
-    type === 'txt' ? { wordCount: item.snip }
-    : type === 'img' ? { size: item.snip }
-    : { length: item.snip };
-  return {
-    id: `mock-${item.id}`,
-    type,
-    name: item.author,
-    origin: 'ext',
-    meta,
-    confidence: item.score,
-    verdict: item.verdict,
-    model: item.model,
-    when: item.when,
-  };
-}
 
 function openLibrary() {
   const url = `${FRONTEND_URL}/app/library`;
@@ -46,7 +20,7 @@ function openLibrary() {
 }
 
 function openEditor(id: string) {
-  if (id.startsWith('mock-') || id.startsWith('pending:')) return openLibrary();
+  if (id.startsWith('pending:')) return openLibrary();
   const url = `${FRONTEND_URL}/editor/${encodeURIComponent(id)}`;
   if (chrome?.tabs?.create) chrome.tabs.create({ url });
   else window.open(url, '_blank', 'noopener,noreferrer');
@@ -58,11 +32,8 @@ export function Content() {
   const [filter, setFilter] = useState<Filter>('all');
   const live = useScansLive(PER_PAGE);
 
-  // Mock rows for the signed-out preview state.
-  const mockRows = useMemo(() => CONTENT_ITEMS.map(mockToRow), []);
-
   // Optimistic in-flight row. Inserted at the top while the host page
-  // is mid-scan and the PB realtime `create` event hasn't reached us
+  // is mid-scan and the backend realtime `create` event hasn't reached us
   // yet. Once the real record arrives via realtime, the dedupe by
   // canonical YouTube URL hides this synthetic row so we don't show
   // the same video twice. Stays visible until the real row is `done`
@@ -92,12 +63,14 @@ export function Content() {
     [live.scans],
   );
 
-  // Compose final rows. When auth fails or guest, fall back to mock
-  // preview. Otherwise: optimistic row (if any) at the top, deduped
+  // Compose final rows. Signed-out users see an empty list with a
+  // sign-in prompt — this used to render six fabricated scans
+  // ("Mira Okafor · 92% · GPT-4o (est.)") that looked like the user's
+  // own history. Otherwise: optimistic row (if any) at the top, deduped
   // against any real row that already represents the same video.
   const rows: LibraryRowItem[] = useMemo(() => {
-    if (!user) return mockRows;
-    if (live.error === 'auth') return mockRows;
+    if (!user) return [];
+    if (live.error === 'auth') return [];
     if (live.error === 'fetch') return [];
     if (!optimisticRow) return liveRows;
     const optimisticUrl = optimisticRow.link;
@@ -111,7 +84,7 @@ export function Content() {
       return rowSourceUrl(r) === optimisticUrl;
     });
     return dup ? liveRows : [optimisticRow, ...liveRows];
-  }, [user, live.error, liveRows, mockRows, optimisticRow]);
+  }, [user, live.error, liveRows, optimisticRow]);
 
   const counts = useMemo(() => ({
     all: rows.length,
@@ -129,7 +102,7 @@ export function Content() {
   const showLoading = !authLoading && user && live.loading && rows.length === 0;
   const errorMessage =
     live.error === 'fetch' ? "Couldn't load your recent content." : null;
-  const totalItems = user ? live.totalItems : mockRows.length;
+  const totalItems = user ? live.totalItems : 0;
   const moreAvailable = user && totalItems > rows.length;
 
   return (
@@ -175,7 +148,7 @@ export function Content() {
 }
 
 /** Recover the original sourceUrl from a row so we can dedupe the
- *  optimistic in-flight row against the real PB record. `link` is
+ *  optimistic in-flight row against the real backend record. `link` is
  *  populated for social subtypes — see scanToRow / library.ts. */
 function rowSourceUrl(row: LibraryRowItem): string | undefined {
   return row.link;

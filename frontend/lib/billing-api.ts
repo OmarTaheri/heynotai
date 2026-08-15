@@ -1,6 +1,6 @@
 "use client";
 
-import { pb } from "./pocketbase";
+import { backend } from "./backend";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8787";
@@ -27,7 +27,7 @@ export async function startCheckout(body: CheckoutBody): Promise<CheckoutRespons
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${pb.authStore.token}`,
+      Authorization: `Bearer ${backend.authStore.token}`,
     },
     body: JSON.stringify(body),
   });
@@ -38,7 +38,7 @@ export async function startCheckout(body: CheckoutBody): Promise<CheckoutRespons
   return (await r.json()) as CheckoutResponse;
 }
 
-/** Tells the backend the PaymentIntent succeeded so it can sync PB
+/** Tells the backend the PaymentIntent succeeded so it can sync backend
  *  with the new plan/cycle/last4 immediately, without waiting on the
  *  webhook. The webhook is still the canonical source of truth. */
 export async function confirmCheckout(subscriptionId: string): Promise<void> {
@@ -46,7 +46,7 @@ export async function confirmCheckout(subscriptionId: string): Promise<void> {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${pb.authStore.token}`,
+      Authorization: `Bearer ${backend.authStore.token}`,
     },
     body: JSON.stringify({ subscriptionId }),
   });
@@ -65,7 +65,7 @@ export async function syncSubscription(): Promise<void> {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${pb.authStore.token}`,
+      Authorization: `Bearer ${backend.authStore.token}`,
     },
   });
   if (!r.ok) {
@@ -100,7 +100,7 @@ export async function previewChange(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${pb.authStore.token}`,
+      Authorization: `Bearer ${backend.authStore.token}`,
     },
     body: JSON.stringify(targets ? { targets } : {}),
   });
@@ -131,7 +131,7 @@ export async function changeSubscription(body: {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${pb.authStore.token}`,
+      Authorization: `Bearer ${backend.authStore.token}`,
     },
     body: JSON.stringify(body),
   });
@@ -152,7 +152,7 @@ export async function cancelSubscription(): Promise<{
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${pb.authStore.token}`,
+      Authorization: `Bearer ${backend.authStore.token}`,
     },
   });
   if (!r.ok) {
@@ -168,7 +168,7 @@ export async function undoCancelSubscription(): Promise<void> {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${pb.authStore.token}`,
+      Authorization: `Bearer ${backend.authStore.token}`,
     },
   });
   if (!r.ok) {

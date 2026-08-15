@@ -1,5 +1,5 @@
-import { ClientResponseError } from "pocketbase";
-import { pb } from "./pocketbase";
+import { BackendResponseError as ClientResponseError } from "@heynotai/shared";
+import { backend } from "./backend";
 import { slugify } from "./collections-slug";
 import { recordActivity } from "./collection-activities";
 import type {
@@ -16,7 +16,7 @@ export type CreateCollectionInput = {
 };
 
 /**
- * Create a collection record in PocketBase. Slug is derived from the
+ * Create a collection record in application backend. Slug is derived from the
  * title; on a unique-index collision, append `-2`, `-3`, etc. and
  * retry. We don't pre-check uniqueness because there's a race window
  * between check and create; letting the DB reject is the only correct
@@ -27,7 +27,7 @@ export async function createCollection(input: CreateCollectionInput) {
   for (let i = 0; i < 20; i++) {
     const slug = i === 0 ? base : `${base}-${i + 1}`;
     try {
-      const record = await pb.collection("collections").create({
+      const record = await backend.collection("collections").create({
         userId: input.userId,
         slug,
         title: input.title.trim(),

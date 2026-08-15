@@ -2,7 +2,7 @@
  * Shared types + zod schemas for heynotai.
  *
  * Consumed by `frontend/` and `extension/`. No runtime logic — only the
- * contracts that describe what the PocketBase collections look like and
+ * contracts that describe what the application backend collections look like and
  * the small enums that both clients need to keep in sync.
  */
 
@@ -13,6 +13,17 @@ export {
   type AuthErrorContext,
   type AuthErrorInfo,
 } from "./auth-errors";
+
+export {
+  BackendAuthStore,
+  BackendClient,
+  BackendResponseError,
+  type AuthPersistence,
+  type AuthRecord,
+  type BackendRecord,
+  type ListResult,
+  type RealtimeEvent,
+} from "./backend-client";
 
 /* ── Plans ──────────────────────────────────────────────────── */
 
@@ -56,7 +67,7 @@ export const LANGUAGES = ["en", "es", "fr", "de", "zh", "ar", "ja"] as const;
 export const languageSchema = z.enum(LANGUAGES);
 export type Language = z.infer<typeof languageSchema>;
 
-/* ── User profile (extends PB built-in `users` auth collection) ─ */
+/* ── User profile (extends backend built-in `users` auth collection) ─ */
 
 export const ROLES = [
   "journalist",
@@ -230,8 +241,11 @@ export type Platforms = z.infer<typeof platformsSchema>;
 export const siteSchema = z.object({
   host: z.string(),
   enabled: z.boolean(),
-  count: z.number().default(0),
-  ai: z.number().default(0),
+  /* Legacy per-site counters. Nothing ever incremented them, so the UI
+   * no longer renders them; they stay optional so previously-synced
+   * rows still parse instead of failing validation. */
+  count: z.number().optional(),
+  ai: z.number().optional(),
 });
 export type Site = z.infer<typeof siteSchema>;
 
@@ -288,6 +302,46 @@ export const extensionPrefsSchema = z.object({
   flags: z.record(z.boolean()).default({}),
 });
 export type ExtensionPrefs = z.infer<typeof extensionPrefsSchema>;
+
+/** Flag ids the browser extension actually reads. Anything not listed
+ *  here changes nothing at runtime, so the settings UI must not offer
+ *  it — a toggle that saves but does nothing is worse than no toggle.
+ *
+ *  - `right-click`     → registers the context-menu entries
+ *  - `inline-overlay`  → draws the in-page verdict border + badge
+ *  - `show-authentic`  → keeps that overlay up for human verdicts too
+ *  - `badge-counter`   → paints the verdict on the toolbar icon
+ *  - `debug`           → verbose console tracing from the content script
+ *  - `sync`            → reserved; gated to Team plans in the UI
+ */
+export const EXTENSION_FLAG_IDS = [
+  "right-click",
+  "inline-overlay",
+  "show-authentic",
+  "badge-counter",
+  "debug",
+  "sync",
+] as const;
+export type ExtensionFlagId = (typeof EXTENSION_FLAG_IDS)[number];
+
+export const DEFAULT_EXTENSION_FLAGS: Record<ExtensionFlagId, boolean> = {
+  "right-click": true,
+  "inline-overlay": true,
+  "show-authentic": false,
+  "badge-counter": true,
+  debug: false,
+  sync: false,
+};
+
+/** Read a flag with its default applied. Used by every extension
+ *  surface so "unset" and "explicitly off" can't diverge. */
+export function extensionFlag(
+  flags: Record<string, boolean> | null | undefined,
+  id: ExtensionFlagId,
+): boolean {
+  const value = flags?.[id];
+  return typeof value === "boolean" ? value : DEFAULT_EXTENSION_FLAGS[id];
+}
 
 export const DEFAULT_EXTENSION_PREFS: Omit<ExtensionPrefs, "userId" | "id"> = {
   mode: "normal",
@@ -432,7 +486,7 @@ export const teamMemberSchema = z.object({
 });
 export type TeamMember = z.infer<typeof teamMemberSchema>;
 
-/* ── Sessions (informational mirror — sourced from PB authStore + auth-origins) ── */
+/* ── Sessions (informational mirror — sourced from backend authStore + auth-origins) ── */
 
 export type Session = {
   id: string;

@@ -67,7 +67,7 @@ export function UpdatesFilters({
           <Icon name="check" size={12} />
           Mark all read
         </Button>
-        <Button variant="secondary" size="sm">
+        <Button variant="secondary" size="sm" href="/updates/rss.xml">
           <Icon name="share" size={12} />
           RSS
         </Button>

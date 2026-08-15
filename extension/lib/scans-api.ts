@@ -1,4 +1,4 @@
-import { pb } from './pocketbase';
+import { backend } from './backend';
 
 const API_URL =
   (import.meta.env.VITE_API_URL as string | undefined) ??
@@ -54,7 +54,13 @@ export interface Scan {
   confidence: number;
   /** Unified 0..100 AI-generated probability across detector shapes. */
   aiPct: number;
+  /** Provider-reported model id (e.g. the Hugging Face repo). */
   model: string;
+  /** Slug of the detection model the API resolved for this run. Set at
+   *  create time, so it is present even before a verdict lands. */
+  engineId: string;
+  /** Wall-clock time the detector call took, in ms. */
+  scanDurationMs: number;
   analysis: Record<string, unknown> | null;
   /** Per-scan flags (suspect spans, cues, etc). The drawer surfaces
    *  the count as the "N detections" sub-label. */
@@ -85,7 +91,7 @@ export class ScanApiError extends Error {
 }
 
 function authHeaders(): Record<string, string> {
-  const t = pb.authStore.token;
+  const t = backend.authStore.token;
   return t ? { Authorization: `Bearer ${t}` } : {};
 }
 
@@ -112,20 +118,33 @@ export async function listScans(
   return (await r.json()) as ScansListPage;
 }
 
+/** Fetch a single scan by id. The drawer uses this to turn the summary
+ *  payload a completed scan broadcasts (`ScanEntry`) into the full
+ *  record, so the result card can name the detector that ran and show
+ *  the real confidence/timing instead of only a percentage. */
+export async function getScan(id: string): Promise<Scan | null> {
+  if (!backend.authStore.isValid) return null;
+  const r = await fetch(`${API_URL}/scans/${encodeURIComponent(id)}`, {
+    headers: authHeaders(),
+  });
+  if (!r.ok) return null;
+  return (await r.json()) as Scan;
+}
+
 /** Look up the most recent successful scan for a given YouTube URL.
  *  Used by the content script to short-circuit re-scanning a video that
  *  the user already verified — auto-scan is supposed to feel like
  *  "this video has been checked" forever, not "let me re-bill you".
  *
- *  PB collection rules already restrict to the current user, so the
+ *  backend collection rules already restrict to the current user, so the
  *  filter doesn't need to mention userId. Returns null on miss. */
 export async function findExistingYouTubeScan(
   sourceUrl: string,
 ): Promise<Scan | null> {
-  if (!pb.authStore.isValid) return null;
+  if (!backend.authStore.isValid) return null;
   const escaped = sourceUrl.replace(/"/g, '\\"');
   try {
-    const record = await pb
+    const record = await backend
       .collection('scans')
       .getFirstListItem<Scan>(
         `sourceUrl = "${escaped}" && status = "done"`,
@@ -138,7 +157,7 @@ export async function findExistingYouTubeScan(
   }
 }
 
-/** Realtime subscription on the `scans` collection. PB filters events
+/** Realtime subscription on the `scans` collection. backend filters events
  *  to records the auth context can read, which (per migration) means
  *  only the user's own scans. Returns an unsubscribe fn.
  *
@@ -154,10 +173,10 @@ export interface ScanRealtimeEvent {
 export async function subscribeScans(
   cb: (event: ScanRealtimeEvent) => void,
 ): Promise<() => void> {
-  await pb.collection('scans').subscribe<Scan>('*', (e) => {
+  await backend.collection('scans').subscribe<Scan>('*', (e) => {
     cb({ action: e.action as ScanRealtimeAction, record: e.record });
   });
   return () => {
-    void pb.collection('scans').unsubscribe('*');
+    void backend.collection('scans').unsubscribe('*');
   };
 }

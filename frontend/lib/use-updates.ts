@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { pb } from "./pocketbase";
+import { backend } from "./backend";
 import type {
   AccuracyCompare,
   ModelPreview,
@@ -50,7 +50,7 @@ function toItem(r: PBUpdateRecord): UpdateItem {
   };
 }
 
-/** Loads `/app/updates` content from the PocketBase `updates` collection
+/** Loads `/app/updates` content from the application backend `updates` collection
  *  and subscribes to realtime so admin edits appear without a refresh.
  *  Sorts by `sortOrder` (ascending) — the seed assigns 1..N matching
  *  the original static order. */
@@ -63,7 +63,7 @@ export function useUpdates() {
 
     const load = async () => {
       try {
-        const res = await pb
+        const res = await backend
           .collection("updates")
           .getFullList<PBUpdateRecord>({ sort: "sortOrder,-publishedAt" });
         if (cancelled) return;
@@ -79,7 +79,7 @@ export function useUpdates() {
     void load();
 
     let unsub: (() => void) | null = null;
-    void pb
+    void backend
       .collection("updates")
       .subscribe<PBUpdateRecord>("*", () => {
         // Re-fetch the full list on any change. The collection is small

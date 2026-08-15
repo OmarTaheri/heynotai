@@ -587,6 +587,28 @@ body.theme-dark .skeleton-block::after {
   border-radius: 3px;
   transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
 }
+/* Pending twin of the result card — no verdict colour, and a bar that
+   travels instead of filling, so it never implies a partial score. */
+.text-result-card.text-result-pending {
+  border-color: color-mix(in oklab, var(--info) 26%, var(--line));
+}
+.text-result-bar-fill.text-result-bar-indeterminate {
+  width: 40%;
+  background: var(--info);
+  transition: none;
+  animation: text-result-slide 1.3s ease-in-out infinite;
+}
+@keyframes text-result-slide {
+  0%   { transform: translateX(-110%); }
+  100% { transform: translateX(260%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .text-result-bar-fill.text-result-bar-indeterminate {
+    animation: none;
+    width: 100%;
+    opacity: 0.45;
+  }
+}
 .text-result-bar-fill.verdict-human { background: var(--human); }
 .text-result-bar-fill.verdict-ai    { background: var(--ai); }
 .text-result-bar-fill.verdict-mixed { background: var(--mixed); }

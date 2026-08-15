@@ -1,15 +1,18 @@
 import type { IconName } from '@/components/Icon';
-import {
-  YOUTUBE_CONTENT,
-  FACEBOOK_CONTENT,
-  INSTAGRAM_CONTENT,
-  type PlatformContent,
-} from '@/lib/sample-data';
 import type { Platform } from '@/lib/platform';
 import type { YoutubeMeta } from '@/lib/messaging';
 import { FRONTEND_URL } from '@/lib/scans-api';
 import type { Scan } from '@/lib/scans-api';
+import {
+  PLACEHOLDER,
+  signalsFromScan,
+  taglineFromScan,
+  type PageContent,
+} from '@/lib/page-content';
 import type { Verdict } from '@/lib/types';
+
+export type { PageContent, Signal, Creator } from '@/lib/page-content';
+export { detectorLabel, clampPct } from '@/lib/page-content';
 
 export function platformIcon(p: string): IconName {
   return p === 'facebook' || p === 'youtube' || p === 'instagram'
@@ -17,67 +20,63 @@ export function platformIcon(p: string): IconName {
     : 'globe';
 }
 
-export function contentFor(p: Platform, yt?: YoutubeMeta): PlatformContent | null {
-  if (p === 'youtube')   return youtubeContentFromMeta(yt);
-  if (p === 'facebook')  return FACEBOOK_CONTENT;
-  if (p === 'instagram') return INSTAGRAM_CONTENT;
+/** Build the drawer's content card for the current page.
+ *
+ *  Only YouTube has a metadata scraper (`extractYoutubeMeta`), so it is
+ *  the only platform that gets a titled card. Instagram and Facebook
+ *  return `null`: the content script reports `platform_not_supported`
+ *  for both, and this used to hand back a fully-populated fixture
+ *  (creator stats, "Voice cloning · ElevenLabs-like", a 92% score) that
+ *  had nothing to do with the page on screen. */
+export function contentFor(
+  p: Platform,
+  yt: YoutubeMeta | undefined,
+  scan: Scan | null,
+): PageContent | null {
+  if (p === 'youtube') return youtubeContentFromMeta(yt, scan);
   return null;
 }
 
-/** Build the drawer's YouTube content card from real DOM-scraped meta.
- *  When `meta` is undefined (YouTube hasn't hydrated yet, or we're on
- *  a non-watch page), we still return a card so the layout doesn't
- *  jump — fields fall back to '—' to make missing data visible rather
- *  than masked behind sample text. */
-export function youtubeContentFromMeta(meta: YoutubeMeta | undefined): PlatformContent {
-  // Use the sample as a base for fields we don't yet derive from real
-  // data (verdict, score, signals — those come from the scan record).
-  const base = YOUTUBE_CONTENT;
+/** Build the YouTube card from real DOM-scraped meta plus whatever the
+ *  backend scan reported. When `meta` is undefined (YouTube hasn't
+ *  hydrated yet, or we're on a non-watch page) fields fall back to an
+ *  em-dash so missing data is visible rather than masked. */
+export function youtubeContentFromMeta(
+  meta: YoutubeMeta | undefined,
+  scan: Scan | null,
+): PageContent {
+  const signals = signalsFromScan(scan);
+  const tagline = taglineFromScan(scan);
+
   if (!meta) {
     return {
-      ...base,
-      title: '—',
-      author: '—',
-      meta: '—',
-      creator: {
-        ...base.creator,
-        displayName: '—',
-        handle: '—',
-        sub: '—',
-        // Zero the historical stats so CreatorCard's `hasStats` gate
-        // hides the rows. Otherwise the sample 47/29/71% leaks through
-        // before YouTube meta has hydrated and the user sees fake
-        // numbers in the channel card.
-        scanned: 0,
-        flagged: 0,
-        avgAi: 0,
-        lastChecked: '',
-      },
+      title: PLACEHOLDER,
+      author: PLACEHOLDER,
+      meta: PLACEHOLDER,
+      tagline,
+      signals,
+      creator: null,
+      creatorCardTitle: 'Channel',
     };
   }
 
   const metaParts = [meta.duration, meta.views, meta.age].filter(Boolean);
 
   return {
-    ...base,
-    title: meta.title,
-    author: meta.channelHandle || meta.channelName,
-    meta: metaParts.join(' · ') || '—',
-    creator: {
-      ...base.creator,
-      displayName: meta.channelName || '—',
-      handle: meta.channelHandle || '',
-      verified: meta.channelVerified,
-      sub: meta.channelSubs || '',
-      // Stats below are not derivable from a single page view —
-      // they'd require querying the user's historical scans by
-      // channel. Until that lands, hide the rows by zeroing them
-      // out; CreatorCard renders blanks for zeros below.
-      scanned: 0,
-      avgAi: 0,
-      flagged: 0,
-      lastChecked: '',
-    },
+    title: meta.title || PLACEHOLDER,
+    author: meta.channelHandle || meta.channelName || PLACEHOLDER,
+    meta: metaParts.join(' · ') || PLACEHOLDER,
+    tagline,
+    signals,
+    creator: meta.channelName
+      ? {
+          displayName: meta.channelName,
+          handle: meta.channelHandle || '',
+          verified: meta.channelVerified,
+          sub: meta.channelSubs || '',
+        }
+      : null,
+    creatorCardTitle: 'Channel',
   };
 }
 

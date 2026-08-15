@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { SectionHead } from "@/components/ui/SectionHead";
 import { useAuth } from "@/lib/auth";
-import { pb } from "@/lib/pocketbase";
+import { backend } from "@/lib/backend";
 import {
   adaptCollectionRecord,
   type Collection,
@@ -20,9 +20,9 @@ import { computeCollectionStats } from "./collection-stats";
 
 /**
  * Pinned + "All collections" grid on `/app/collections`. Fetches the
- * real collections the user owns or is a member of from PocketBase
+ * real collections the user owns or is a member of from application backend
  * and splits them into the two sections by `pinned`. The pin toggle
- * on each card flips the bool on PB and refreshes via the shared bus.
+ * on each card flips the bool on backend and refreshes via the shared bus.
  */
 export function CollectionsList() {
   const { user, loading: authLoading } = useAuth();
@@ -31,7 +31,7 @@ export function CollectionsList() {
   const refresh = useCallback(async () => {
     if (!user) return;
     try {
-      const records = await pb
+      const records = await backend
         .collection("collections")
         .getFullList({ sort: "-created" });
 
@@ -129,7 +129,7 @@ export function CollectionsList() {
   const handleTogglePin = useCallback(
     (id: string, next: boolean) => {
       // Flip locally so the card jumps sections immediately, then write
-      // through to PB. Revert on failure so the UI doesn't lie.
+      // through to backend. Revert on failure so the UI doesn't lie.
       setReal((prev) =>
         prev.map((c) => (c.id === id ? { ...c, pinned: next } : c)),
       );

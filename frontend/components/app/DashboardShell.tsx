@@ -5,7 +5,8 @@ import { usePathname } from "next/navigation";
 import { AuthGuard } from "./AuthGuard";
 import { AppShell } from "./AppShell";
 import type { NavItem, NavSection } from "./Sidebar";
-import { HOME_ITEM, NAV_SECTIONS } from "@/lib/app-nav";
+import { ADMIN_NAV_SECTION, HOME_ITEM, NAV_SECTIONS } from "@/lib/app-nav";
+import { isPlatformAdmin, useAuth } from "@/lib/auth";
 import { recordAppRoute } from "@/lib/last-app-route";
 import { useSidebarCounts } from "@/lib/use-sidebar-counts";
 
@@ -32,14 +33,19 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
 function NavShell({ children }: { children: ReactNode }) {
   const counts = useSidebarCounts();
+  const { user } = useAuth();
 
   const sections = useMemo<NavSection[]>(
-    () =>
-      NAV_SECTIONS.map((section) => ({
+    () => {
+      const visibleSections = isPlatformAdmin(user)
+        ? [...NAV_SECTIONS, ADMIN_NAV_SECTION]
+        : NAV_SECTIONS;
+      return visibleSections.map((section) => ({
         ...section,
         items: section.items.map((item) => applyCount(item, counts)),
-      })),
-    [counts],
+      }));
+    },
+    [counts, user],
   );
 
   return (

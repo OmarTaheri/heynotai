@@ -17,7 +17,7 @@ export function AuthModal({
   onSwitchMode: (mode: AuthMode) => void;
   /** Fired after a successful sign-in. The caller is expected to navigate
    *  the user somewhere — typically `?next` or `/app`. */
-  onAuthenticated?: () => void;
+  onAuthenticated?: (systemRole: "user" | "admin") => void;
 }) {
   useEffect(() => {
     const prev = document.body.style.overflow;

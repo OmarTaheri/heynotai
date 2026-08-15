@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { pb } from "./pocketbase";
+import { backend } from "./backend";
 import { useAuth } from "./auth";
 import { useUpdates } from "./use-updates";
 import { listScans } from "./scans-api";
@@ -17,9 +17,9 @@ export type SidebarCounts = {
  * dimension that hasn't loaded (or failed) so the caller can skip
  * rendering a stale "0" instead of flashing one.
  *
- *   collections    — total collections the viewer can see (PB realtime)
+ *   collections    — total collections the viewer can see (backend realtime)
  *   library        — total scans owned by the viewer (REST `totalItems`)
- *   updatesUnread  — unread updates feed entries (PB realtime via useUpdates)
+ *   updatesUnread  — unread updates feed entries (backend realtime via useUpdates)
  *
  * Library has no realtime channel today, so we re-fetch when the tab
  * regains focus — cheap and matches users' mental model of "freshen on
@@ -48,7 +48,7 @@ export function useSidebarCounts(): SidebarCounts {
 
     const load = async () => {
       try {
-        const list = await pb.collection("collections").getFullList({
+        const list = await backend.collection("collections").getFullList({
           fields: "id",
           requestKey: "sidebar-collections",
         });
@@ -61,7 +61,7 @@ export function useSidebarCounts(): SidebarCounts {
     void load();
 
     let unsub: (() => void) | null = null;
-    void pb
+    void backend
       .collection("collections")
       .subscribe("*", () => {
         void load();

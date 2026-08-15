@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import type { RecordModel } from "pocketbase";
+import type { BackendRecord as RecordModel } from "@heynotai/shared";
 import { Icon } from "@/components/Icon";
 import { useAuth } from "@/lib/auth";
 import { addScansToCollection } from "@/lib/collection-items";
-import { pb } from "@/lib/pocketbase";
+import { backend } from "@/lib/backend";
 
 type CollectionRow = RecordModel & { slug?: string; title?: string };
 
@@ -21,7 +21,7 @@ export function AddToCollectionModal({
   onClose,
   onAdded,
 }: {
-  /** Persisted PocketBase scan ids to add. Demo seed rows are filtered
+  /** Persisted application backend scan ids to add. Demo seed rows are filtered
    *  out by the parent before they reach this modal. */
   scanIds: string[];
   onClose: () => void;
@@ -53,9 +53,9 @@ export function AddToCollectionModal({
     let cancelled = false;
     setError(null);
     setList(null);
-    pb.collection("collections")
+    backend.collection("collections")
       .getFullList<CollectionRow>({
-        filter: pb.filter("userId = {:uid}", { uid: user.id }),
+        filter: backend.filter("userId = {:uid}", { uid: user.id }),
         sort: "-updated",
         requestKey: null,
       })

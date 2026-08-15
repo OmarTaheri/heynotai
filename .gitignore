@@ -15,6 +15,7 @@ frontend/public/downloads/*.zip
 .env
 .env.local
 .env.*.local
+.env.local-stack
 *.env
 !*.env.example
 
@@ -33,9 +34,12 @@ Thumbs.db
 *.swp
 *.swo
 
-# PocketBase data
-pocketbase/pb_data/
-pocketbase/pb_data/**
+# API-managed local uploads
+api/data/
+
+# Credentials handed to the Chrome Web Store review team — real production
+# logins, kept out of git the same way .env.local is.
+*.secret.md
 
 # Misc
 coverage/

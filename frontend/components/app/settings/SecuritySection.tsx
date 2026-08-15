@@ -15,13 +15,13 @@ import {
   signInWithGoogle,
 } from "@/lib/settings-api";
 import type { Session } from "@heynotai/shared";
-import type { PBUserRecord } from "@/lib/pocketbase";
+import type { BackendUserRecord } from "@/lib/backend";
 import { SettingsSection } from "./SettingsSection";
 import styles from "./SecuritySection.module.css";
 
 export function SecuritySection() {
   const { user, refresh } = useAuth();
-  const [record, setRecord] = useState<PBUserRecord | null>(null);
+  const [record, setRecord] = useState<BackendUserRecord | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -101,7 +101,7 @@ export function SecuritySection() {
         />
         <FormRow
           label="Two-factor authentication"
-          hint="Configured at the workspace level via PocketBase"
+          hint="Configured by your platform administrator"
           control={
             <span className="settings-readout">
               <StatusDot tone={mfaEnabled ? "ok" : "warn"} size="sm" />

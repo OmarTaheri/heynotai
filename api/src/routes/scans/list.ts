@@ -8,7 +8,7 @@ export const list = new Hono();
 list.use("*", requireAuth);
 
 list.get("/", async (c) => {
-  const pb = c.get("pb");
+  const store = c.get("store");
   const user = c.get("user");
   if (!user) return c.json({ error: "unauthorized" }, 401);
 
@@ -30,7 +30,12 @@ list.get("/", async (c) => {
   if (archived === "true") {
     conds.push("archived = true");
   } else {
-    conds.push("(archived = false || archived = null)");
+    // `!= true` rather than `= false || = null`: rows created before the
+    // field existed (and every row created without an explicit archived
+    // flag) carry no `archived` key at all, and the store's `=` operator
+    // is a strict comparison — `undefined = false` and `undefined = null`
+    // are both false, which silently emptied the whole library.
+    conds.push("archived != true");
   }
   if (type) {
     conds.push("type = {:type}");
@@ -45,10 +50,10 @@ list.get("/", async (c) => {
     params.q = q.trim();
   }
 
-  const filter = pb.filter(conds.join(" && "), params);
+  const filter = store.filter(conds.join(" && "), params);
 
   try {
-    const result = await pb
+    const result = await store
       .collection("scans")
       .getList(page, perPage, { filter, sort: "-created" });
     return c.json({

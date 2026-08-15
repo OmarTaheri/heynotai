@@ -6,10 +6,10 @@ export const del = new Hono();
 del.use("*", requireAuth);
 
 del.delete("/:id", async (c) => {
-  const pb = c.get("pb");
+  const store = c.get("store");
   const id = c.req.param("id");
   try {
-    await pb.collection("scans").delete(id);
+    await store.collection("scans").delete(id);
     return c.body(null, 204);
   } catch (err) {
     const status =

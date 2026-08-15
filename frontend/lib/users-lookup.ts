@@ -1,19 +1,19 @@
 "use client";
 
-import { pb } from "./pocketbase";
+import { backend } from "./backend";
 import type { SearchedUser } from "./users-search";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8787";
 
 /** Resolve a batch of user ids to public profile fields. Goes through
- *  the API server because the PB `users` listRule is closed. The API
+ *  the API server because the backend `users` listRule is closed. The API
  *  uses superuser to look up and returns only the public-safe fields.
  *  Caller must be authenticated. */
 export async function lookupUsers(ids: string[]): Promise<SearchedUser[]> {
   const unique = Array.from(new Set(ids.filter(Boolean)));
   if (unique.length === 0) return [];
-  const token = pb.authStore.token;
+  const token = backend.authStore.token;
   const r = await fetch(
     `${API_URL}/me/users/by-ids?ids=${encodeURIComponent(unique.join(","))}`,
     {

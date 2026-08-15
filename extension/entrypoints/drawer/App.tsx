@@ -15,7 +15,7 @@ import { Settings } from './tabs/Settings';
 
 function Shell() {
   const { view, setView } = useApp();
-  const { user, loading } = useAuth();
+  const { user, loading, connecting, signIn } = useAuth();
   const inOverlay = view !== 'main';
   const needsLogin = !loading && !user && view !== 'account';
 
@@ -44,14 +44,22 @@ function Shell() {
               <div className="signin-lock"><Icon name="lock" size={20} /></div>
               <div className="signin-title">Sign in required</div>
               <div className="signin-desc">
-                Sign in to use heynotai, sync your scan history, and pick up where you left off.
+                Sign in on heynotai.com to use the extension, sync your scan
+                history, and pick up where you left off.
               </div>
               <button
                 type="button"
                 className="btn-primary login-gate-btn"
-                onClick={() => setView('account')}
+                disabled={connecting}
+                onClick={async () => {
+                  // Straight into the website flow. Only fall back to the
+                  // account tab when the handoff couldn't complete, so the
+                  // user gets the error and the retry in one place.
+                  const r = await signIn();
+                  if (!r.ok) setView('account');
+                }}
               >
-                Sign in
+                {connecting ? 'Waiting for heynotai.com…' : 'Sign in'}
               </button>
             </div>
           </div>

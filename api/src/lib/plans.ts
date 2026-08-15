@@ -26,7 +26,7 @@ export function isChargeablePlan(plan: string): plan is ChargeablePlan {
   return CHARGEABLE_PLANS.includes(plan as ChargeablePlan);
 }
 
-/** All plan tiers a user can be on. Mirrors the `users.plan` PB enum
+/** All plan tiers a user can be on. Mirrors the `users.plan` backend enum
  *  and `frontend/lib/plans-data.ts`. */
 export type Plan = "check" | "verify" | "certify" | "team";
 

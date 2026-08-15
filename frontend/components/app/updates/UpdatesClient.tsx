@@ -9,9 +9,9 @@ import { SubscribeFooter } from "./SubscribeFooter";
 
 /**
  * Client shell for /app/updates. Owns the kind filter and the per-id
- * read set. Data comes from the PocketBase `updates` collection via
+ * read set. Data comes from the application backend `updates` collection via
  * `useUpdates`, which also subscribes to realtime so admin edits in
- * the PB UI appear here without a page refresh.
+ * the backend UI appear here without a page refresh.
  */
 export function UpdatesClient() {
   const { items, loading } = useUpdates();

@@ -3,7 +3,7 @@ import { z } from "zod";
 import type Stripe from "stripe";
 import { requireAuth } from "../middleware/auth.js";
 import { stripe } from "../lib/stripe.js";
-import { pbAdmin } from "../lib/pb-admin.js";
+import { getAdminStore } from "../lib/admin-store.js";
 import {
   CHARGEABLE_PLANS,
   isChargeablePlan,
@@ -80,7 +80,7 @@ billing.post("/checkout", requireAuth, async (c) => {
   const user = c.get("user");
   if (!user) return c.json({ error: "unauthorized" }, 401);
 
-  const pb = c.get("pb");
+  const store = c.get("store");
 
   // Ensure a Stripe Customer for this user; create + persist on first call.
   let stripeCustomerId = (user.stripeCustomerId as string | undefined) ?? "";
@@ -97,7 +97,7 @@ billing.post("/checkout", requireAuth, async (c) => {
         : undefined,
     });
     stripeCustomerId = customer.id;
-    await pb.collection("users").update(user.id, {
+    await store.collection("users").update(user.id, {
       stripeCustomerId,
       ...(billingAddress ? { billingAddress } : {}),
       ...(billingCountry ? { billingCountry } : {}),
@@ -105,14 +105,14 @@ billing.post("/checkout", requireAuth, async (c) => {
       ...(billingEmail ? { billingEmail } : {}),
     });
   } else if (billingAddress || billingCountry || taxId || billingEmail) {
-    // Update Stripe customer + persist on PB user.
+    // Update Stripe customer + persist on backend user.
     await stripe().customers.update(stripeCustomerId, {
       ...(billingEmail ? { email: billingEmail } : {}),
       address: billingAddress
         ? { line1: billingAddress, country: billingCountry || undefined }
         : undefined,
     });
-    await pb.collection("users").update(user.id, {
+    await store.collection("users").update(user.id, {
       ...(billingAddress ? { billingAddress } : {}),
       ...(billingCountry ? { billingCountry } : {}),
       ...(taxId ? { taxId } : {}),
@@ -155,7 +155,7 @@ billing.post("/checkout", requireAuth, async (c) => {
  *
  *  Called by the frontend after `stripe.confirmPayment()` resolves.
  *  We verify the subscription is active/trialing on Stripe's side and
- *  sync the user record in PB. The webhook is the canonical source —
+ *  sync the user record in backend. The webhook is the canonical source —
  *  this exists to give the user immediate feedback without waiting on
  *  webhook delivery. */
 const confirmBody = z.object({ subscriptionId: z.string().min(1) });
@@ -194,8 +194,8 @@ billing.post("/confirm", requireAuth, async (c) => {
     );
   }
 
-  const pb = c.get("pb");
-  const updated = await pb.collection("users").update(user.id, patch);
+  const store = c.get("store");
+  const updated = await store.collection("users").update(user.id, patch);
 
   return c.json({ user: updated });
 });
@@ -205,7 +205,7 @@ billing.post("/confirm", requireAuth, async (c) => {
  *  Body: none.
  *
  *  Self-heal: pulls the live subscription from Stripe by the user's
- *  stripeCustomerId and writes the canonical fields into PB. Used
+ *  stripeCustomerId and writes the canonical fields into backend. Used
  *  when the webhook misfired or `/confirm` never landed (e.g. user
  *  closed the tab mid-payment). Safe to call repeatedly. */
 billing.post("/sync", requireAuth, async (c) => {
@@ -244,11 +244,11 @@ billing.post("/sync", requireAuth, async (c) => {
     (s) => s.status === "active" || s.status === "trialing",
   );
 
-  const pb = c.get("pb");
+  const store = c.get("store");
 
   if (!live) {
     console.log("[billing] /sync: no active/trialing sub — writing plan=check");
-    const updated = await pb.collection("users").update(user.id, {
+    const updated = await store.collection("users").update(user.id, {
       plan: "check",
       planCycle: "",
       planBadge: "FREE",
@@ -271,7 +271,7 @@ billing.post("/sync", requireAuth, async (c) => {
   }
 
   console.log("[billing] /sync writing patch", patch);
-  const updated = await pb.collection("users").update(user.id, patch);
+  const updated = await store.collection("users").update(user.id, patch);
 
   // Backfill invoices from Stripe. The webhook handler is the
   // canonical writer, but if it was misconfigured during a prior
@@ -284,7 +284,7 @@ billing.post("/sync", requireAuth, async (c) => {
       customer: stripeCustomerId,
       limit: 100,
     });
-    const adminPb = await pbAdmin();
+    const adminPb = await getAdminStore();
     let backfilled = 0;
     let alreadyPresent = 0;
     const errors: string[] = [];
@@ -306,7 +306,7 @@ billing.post("/sync", requireAuth, async (c) => {
         backfilled++;
       } catch (err) {
         const msg = (err as { message?: string })?.message ?? String(err);
-        // PB returns 400 for unique-index violations; everything else
+        // backend returns 400 for unique-index violations; everything else
         // is a real error worth surfacing.
         if (
           /validation_not_unique|unique constraint/i.test(msg) ||
@@ -459,7 +459,7 @@ billing.post("/preview", requireAuth, async (c) => {
  *  In-place change of an existing subscription. Upgrades + cycle
  *  bumps fire immediately with `always_invoice` proration; downgrades
  *  defer to period end via Stripe subscription schedules. Either way,
- *  PB is updated synchronously; the webhook lands an idempotent
+ *  backend is updated synchronously; the webhook lands an idempotent
  *  re-write seconds later. */
 const changeBody = z.object({
   plan: z.enum(["verify", "certify"]),
@@ -513,7 +513,7 @@ billing.post("/change", requireAuth, async (c) => {
     cycle === "monthly";
   const isDeferred = isPlanDowngrade || isCycleDowngrade;
 
-  const pb = c.get("pb");
+  const store = c.get("store");
 
   if (!isDeferred) {
     // Upgrade or cycle-up: immediate switch, prorated charge today.
@@ -528,7 +528,7 @@ billing.post("/change", requireAuth, async (c) => {
     }
     // Clear any previously scheduled downgrade — the immediate change
     // supersedes it.
-    const updated = await pb.collection("users").update(user.id, {
+    const updated = await store.collection("users").update(user.id, {
       ...patch,
       pendingPlan: "",
       pendingPlanCycle: "",
@@ -597,7 +597,7 @@ billing.post("/change", requireAuth, async (c) => {
   });
 
   const effectiveDate = new Date(periodEnd * 1000).toISOString().slice(0, 10);
-  const updated = await pb.collection("users").update(user.id, {
+  const updated = await store.collection("users").update(user.id, {
     pendingPlan: plan,
     pendingPlanCycle: cycle,
     pendingPlanEffective: effectiveDate,
@@ -653,8 +653,8 @@ billing.post("/cancel", requireAuth, async (c) => {
     Math.floor(Date.now() / 1000);
   const effectiveDate = new Date(periodEnd * 1000).toISOString().slice(0, 10);
 
-  const pb = c.get("pb");
-  const updated = await pb.collection("users").update(user.id, {
+  const store = c.get("store");
+  const updated = await store.collection("users").update(user.id, {
     pendingPlan: "check",
     pendingPlanCycle: "",
     pendingPlanEffective: effectiveDate,
@@ -695,8 +695,8 @@ billing.post("/cancel/undo", requireAuth, async (c) => {
     cancel_at_period_end: false,
   });
 
-  const pb = c.get("pb");
-  const updated = await pb.collection("users").update(user.id, {
+  const store = c.get("store");
+  const updated = await store.collection("users").update(user.id, {
     pendingPlan: "",
     pendingPlanCycle: "",
     pendingPlanEffective: "",
@@ -705,7 +705,7 @@ billing.post("/cancel/undo", requireAuth, async (c) => {
   return c.json({ cancelled: false, user: updated });
 });
 
-/** Build the PB user patch from a Stripe Subscription. Shared by
+/** Build the backend user patch from a Stripe Subscription. Shared by
  *  `/confirm` and `/sync` so the two write paths can't drift. Returns
  *  null when the subscription is missing the `plan` metadata tag —
  *  callers should surface that as an error rather than guessing. */
@@ -744,7 +744,7 @@ function subscriptionToUserPatch(
 /** POST /billing/webhook
  *  Public; verified via STRIPE_WEBHOOK_SECRET.
  *
- *  Mirrors subscription state into PB asynchronously. This is the
+ *  Mirrors subscription state into backend asynchronously. This is the
  *  authoritative path: even if the user closes the tab during
  *  /confirm, the webhook will land state correctly. */
 billing.post("/webhook", async (c) => {
@@ -816,9 +816,9 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
     });
     return;
   }
-  const pb = await pbAdmin();
+  const store = await getAdminStore();
   try {
-    await pb.collection("invoices").create({
+    await store.collection("invoices").create({
       userId,
       amount: (invoice.amount_paid ?? 0) / 100,
       currency: invoice.currency?.toUpperCase() ?? "USD",
@@ -862,14 +862,14 @@ async function syncSubscription(sub: Stripe.Subscription) {
   const plan = sub.metadata?.plan ?? "verify";
   const periodEnd = item?.current_period_end ?? Math.floor(Date.now() / 1000);
   const renewsOn = new Date(periodEnd * 1000).toISOString().slice(0, 10);
-  const pb = await pbAdmin();
+  const store = await getAdminStore();
 
   // If the user had a deferred downgrade scheduled and this update
   // brings the active plan/cycle in line with what was pending, the
   // schedule transition just landed — clear the pending hints.
   let clearPending = false;
   try {
-    const userRec = await pb.collection("users").getOne(userId);
+    const userRec = await store.collection("users").getOne(userId);
     if (
       userRec &&
       userRec.pendingPlan &&
@@ -882,7 +882,7 @@ async function syncSubscription(sub: Stripe.Subscription) {
     // best effort — if we can't read the user, don't crash the webhook
   }
 
-  await pb.collection("users").update(userId, {
+  await store.collection("users").update(userId, {
     plan: sub.status === "active" || sub.status === "trialing" ? plan : "check",
     planCycle: cycle,
     planRenewsOn: renewsOn,
@@ -900,8 +900,8 @@ async function syncSubscription(sub: Stripe.Subscription) {
 async function downgradeOnCancel(sub: Stripe.Subscription) {
   const userId = sub.metadata?.userId;
   if (!userId) return;
-  const pb = await pbAdmin();
-  await pb.collection("users").update(userId, {
+  const store = await getAdminStore();
+  await store.collection("users").update(userId, {
     plan: "check",
     planCycle: "",
     stripeSubscriptionId: "",

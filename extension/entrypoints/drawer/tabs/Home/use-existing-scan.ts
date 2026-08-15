@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth-state';
-import { pb } from '@/lib/pocketbase';
+import { backend } from '@/lib/backend';
 import { findExistingYouTubeScan, type Scan } from '@/lib/scans-api';
 
 /** Look up a previously-completed scan for the given canonical source
@@ -34,7 +34,7 @@ export function useExistingScan(sourceUrl: string | null): Scan | null {
 
   // Realtime: if a scan for this URL completes (or the verdict is
   // updated by a rescan), reflect it without making the user reopen
-  // the drawer. PB's collection rules limit events to the user's own
+  // the drawer. backend's collection rules limit events to the user's own
   // records, so the source-URL filter is enough.
   useEffect(() => {
     if (!user || !sourceUrl) return;
@@ -42,7 +42,7 @@ export function useExistingScan(sourceUrl: string | null): Scan | null {
     let unsub: (() => void) | null = null;
     (async () => {
       try {
-        const u = await pb.collection('scans').subscribe('*', (e) => {
+        const u = await backend.collection('scans').subscribe('*', (e) => {
           const r = e.record as unknown as Scan & { userId?: string };
           if (!r || r.userId !== user.id) return;
           if (r.sourceUrl !== sourceUrl) return;
@@ -53,13 +53,13 @@ export function useExistingScan(sourceUrl: string | null): Scan | null {
           });
         });
         if (unsubscribed) {
-          void pb.collection('scans').unsubscribe('*');
+          void backend.collection('scans').unsubscribe('*');
           return;
         }
         unsub = () => {
           const result = u as unknown;
           if (typeof result === 'function') (result as () => void)();
-          else void pb.collection('scans').unsubscribe('*');
+          else void backend.collection('scans').unsubscribe('*');
         };
       } catch {
         // Realtime unavailable — initial fetch already provided the value.

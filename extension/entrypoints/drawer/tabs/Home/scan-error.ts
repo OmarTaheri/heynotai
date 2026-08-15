@@ -66,6 +66,18 @@ export function describeScanError(code: string): {
       body: "heynotai's helper isn't running on this tab — that usually happens when the extension reloaded after the page was already open. Refresh the tab and try again.",
     };
   }
+  if (code === 'platform_not_supported') {
+    return {
+      title: 'This platform isn\'t supported yet',
+      body: 'Only YouTube videos and Shorts can be checked in-page today — Instagram and Facebook media need a server-side downloader that isn\'t built yet. You can still select text on the page and use the right-click "AI check this text" option.',
+    };
+  }
+  if (code === 'no_readable_text') {
+    return {
+      title: 'Nothing to check on this page',
+      body: "heynotai couldn't find readable text here. Select the passage you want checked and use the right-click \"AI check this text\" option instead.",
+    };
+  }
   if (code === 'container_not_found') {
     return {
       title: "Couldn't anchor the overlay",

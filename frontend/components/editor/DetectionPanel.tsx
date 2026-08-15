@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { isModelLocked, type Plan } from "@heynotai/shared";
 import { Icon } from "@/components/Icon";
 import { Pill } from "@/components/ui/Pill";
@@ -55,12 +56,18 @@ interface Props {
   contentType?: EngineType;
   /** "full" shows tabs (analyzer/findings/plag); "analyzer" shows only the verdict. */
   mode?: "full" | "analyzer";
+  /** True on the anonymous `/editor` preview, where the document is not
+   *  a saved scan and there is no detector to run against it. The panel
+   *  asks the visitor to sign in instead of showing a verdict — this
+   *  path used to fabricate one client-side via `mockScan()`. */
+  signInRequired?: boolean;
 }
 
 export function DetectionPanel({
   scanState,
   result,
   scanError,
+  signInRequired,
   selectedId,
   onSelect,
   engineId,
@@ -147,6 +154,7 @@ export function DetectionPanel({
           <VerdictTab
             scanState={scanState}
             result={result}
+            signInRequired={signInRequired}
             scanError={scanError ?? null}
             plagScanning={plagScanning}
             onDeepScan={startDeepScan}
@@ -278,6 +286,7 @@ function VerdictTab({
   scanState,
   result,
   scanError,
+  signInRequired,
   plagScanning,
   onDeepScan,
   onRetest,
@@ -287,6 +296,7 @@ function VerdictTab({
   scanState: ScanState;
   result: ScanResult | null;
   scanError: { code?: string; message?: string; status?: number } | null;
+  signInRequired?: boolean;
   plagScanning: boolean;
   onDeepScan: () => void;
   onRetest: () => void;
@@ -297,6 +307,7 @@ function VerdictTab({
   // verdict — if the user already scanned and then trimmed text we want
   // to keep the prior verdict visible rather than wipe it. The gate is
   // opt-in: image/audio/video panels don't pass a wordCount.
+  if (!result && signInRequired) return <SignInRequiredState />;
   if (!result && typeof wordCount === "number" && wordCount < MIN_SCAN_WORDS) {
     return <TooShortState wordCount={wordCount} />;
   }
@@ -312,6 +323,29 @@ function VerdictTab({
       <VerdictCard result={result} />
       {showDeepScan && <DeepScanCta onClick={onDeepScan} scanning={plagScanning} locked />}
     </>
+  );
+}
+
+/** Shown on the signed-out `/editor` preview. Detection runs server-side
+ *  against a real model and is metered per account, so there is nothing
+ *  honest to display here until the visitor has one. */
+function SignInRequiredState() {
+  return (
+    <div className={styles.empty}>
+      <div className={styles.emptyIcon}>
+        <Icon name="lock" size={20} />
+      </div>
+      <div className={styles.emptyTitle}>Sign in to run this check</div>
+      <div className={styles.emptySub}>
+        Your text stays here. Detection runs against a real model on our
+        servers, so it needs an account — the free tier includes 100 checks
+        a month.
+      </div>
+      <Link href="/?login=1&next=/app" className={styles.retestBtn}>
+        <Icon name="bolt" size={12} />
+        Sign in and check it
+      </Link>
+    </div>
   );
 }
 

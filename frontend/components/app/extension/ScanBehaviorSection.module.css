@@ -1,0 +1,31 @@
+/* Mode picker bar that sits above the behaviour toggles. Mirrors the
+   per-site rules bar so the two sections read as one system. */
+.modeBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 14px 22px;
+  background: var(--color-surface-alt);
+}
+
+.modeBarL {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.modeQ {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-fg);
+}
+
+.modeHelp {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--color-fg-dim);
+  max-width: 52ch;
+}

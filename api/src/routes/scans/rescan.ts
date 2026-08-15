@@ -1,12 +1,18 @@
 import { Hono } from "hono";
 import { requireAuth } from "../../middleware/auth.js";
-import { pbAdmin } from "../../lib/pb-admin.js";
+import { getAdminStore } from "../../lib/admin-store.js";
 import { getMonthlyUsage } from "../../lib/usage.js";
 import { runDetectionInBackground } from "../../lib/run-detection.js";
 import { isPlan, PLAN_RANK, tierFromRow, type Plan } from "../../lib/plans.js";
-import type { DetectorInput, DetectorProvider, ScanKind } from "../../detectors/index.js";
+import type { DetectorInput, ScanKind } from "../../detectors/index.js";
+import { loadStoredFile } from "../../db/store-files.js";
 import type { ScanType } from "./validators.js";
 import { serializeScan } from "./shape.js";
+import {
+  refundModelUsage,
+  reserveModelUsage,
+  UsageLimitError,
+} from "../../services/usage-ledger.js";
 
 export const rescan = new Hono();
 
@@ -24,13 +30,13 @@ const DETECTOR_KINDS: ScanKind[] = ["txt", "img", "aud", "vid"];
  *  pick a different engine in the editor's dropdown and re-test against
  *  it without re-uploading. */
 rescan.post("/:id/rescan", async (c) => {
-  const pb = c.get("pb");
+  const store = c.get("store");
   const user = c.get("user");
   if (!user) return c.json({ error: "unauthorized" }, 401);
 
   let parent;
   try {
-    parent = await pb.collection("scans").getOne(c.req.param("id"));
+    parent = await store.collection("scans").getOne(c.req.param("id"));
   } catch {
     return c.json({ error: "not_found" }, 404);
   }
@@ -53,7 +59,7 @@ rescan.post("/:id/rescan", async (c) => {
   const kind = type as ScanKind;
 
   // ── Resolve model + token ─────────────────────────────────────────
-  const admin = await pbAdmin();
+  const admin = await getAdminStore();
   const modelRow = await resolveModel(admin, kind, modelSlug, user);
   if (!modelRow) return c.json({ error: "no_model_available", type }, 404);
   if (modelRow.enabled === false) {
@@ -67,18 +73,7 @@ rescan.post("/:id/rescan", async (c) => {
       403,
     );
   }
-  // PB returns "" for unset select fields — `??` would let it through.
-  const rawProvider = String(modelRow.provider ?? "").trim();
-  const provider: DetectorProvider = rawProvider === "velma" ? "velma" : "hf-inference";
-  const hfToken = provider === "hf-inference" ? await loadHuggingfaceToken(admin) : "";
-  if (provider === "hf-inference" && !hfToken) {
-    return c.json({ error: "detection_unconfigured" }, 503);
-  }
-  const velmaApiKey = provider === "velma" ? await loadVelmaApiKey(admin) : "";
-  if (provider === "velma" && !velmaApiKey) {
-    return c.json({ error: "detection_unconfigured", provider: "velma" }, 503);
-  }
-
+  // backend returns "" for unset select fields — `??` would let it through.
   // ── Build detector input from the parent ──────────────────────────
   let detectorInput: DetectorInput;
   if (kind === "txt") {
@@ -90,37 +85,38 @@ rescan.post("/:id/rescan", async (c) => {
     if (!parent.file) {
       return c.json({ error: "parent_missing_file" }, 400);
     }
-    const url = pb.files.getURL(parent, parent.file);
-    const r = await fetch(url);
-    if (!r.ok) {
+    const stored = await store.files.find("scans", parent.id, String(parent.file));
+    if (!stored) {
       return c.json({ error: "parent_file_unreadable" }, 502);
     }
-    const blob = await r.blob();
-    const buf = Buffer.from(await blob.arrayBuffer());
-    detectorInput = { kind, bytes: buf, mime: parent.mimeType || blob.type } as DetectorInput;
+    const buf = await loadStoredFile(stored);
+    detectorInput = {
+      kind,
+      bytes: buf,
+      mime: String(parent.mimeType || stored.mimeType),
+    } as DetectorInput;
   }
 
   // ── Plan budget — refund the parent's existing creditsUsed before
   //    checking the new cost. We're overwriting the same row, so the
   //    monthly tally should reflect the new cost only, not old + new. ─
-  const usage = await getMonthlyUsage(pb, {
+  const usage = await getMonthlyUsage(store, {
     id: user.id,
     plan: user.plan as string | undefined,
   });
   const tokenCost = typeof modelRow.tokenCost === "number" ? modelRow.tokenCost : 1;
   const tokensRequired =
     modelRow.costUnit === "per_minute"
-      ? tokenCost * Math.max(1, Math.ceil((parent.sizeBytes ?? 0) / (3 * 1024 * 1024)))
+      ? tokenCost * Math.max(1, Math.ceil(Number(parent.sizeBytes ?? 0) / (3 * 1024 * 1024)))
       : tokenCost;
-  const previousCost =
-    typeof parent.creditsUsed === "number" ? parent.creditsUsed : 0;
-  const projectedUsed = usage.used - previousCost + tokensRequired;
+  const previousCost = typeof parent.creditsUsed === "number" ? parent.creditsUsed : 0;
+  const projectedUsed = usage.used + tokensRequired;
   if (usage.total !== null && projectedUsed > usage.total) {
     return c.json(
       {
         error: "insufficient_tokens",
         required: tokensRequired,
-        remaining: usage.total - (usage.used - previousCost),
+        remaining: usage.total - usage.used,
       },
       402,
     );
@@ -129,9 +125,8 @@ rescan.post("/:id/rescan", async (c) => {
   // ── Resolve video frame model ─────────────────────────────────────
   let videoFrameModelId: string | undefined;
   let videoFrameCount: number | undefined;
-  if (kind === "vid") {
+  if (kind === "vid" && modelRow.videoFrameModelSlug) {
     const frameSlug = modelRow.videoFrameModelSlug;
-    if (!frameSlug) return c.json({ error: "model_misconfigured" }, 500);
     let frameRow: DetectionModelRow | null = null;
     try {
       frameRow = (await admin
@@ -144,9 +139,30 @@ rescan.post("/:id/rescan", async (c) => {
       typeof modelRow.videoFrameCount === "number" ? modelRow.videoFrameCount : undefined;
   }
 
+  let usageReservation;
+  try {
+    usageReservation = await reserveModelUsage({
+      userId: user.id,
+      modelId: modelRow.id,
+      scanId: parent.id,
+      credits: tokensRequired,
+      limit: usage.total,
+      modality: kind,
+    });
+  } catch (error) {
+    if (error instanceof UsageLimitError) {
+      return c.json({
+        error: "insufficient_tokens",
+        required: error.required,
+        remaining: error.remaining,
+      }, 402);
+    }
+    return c.json({ error: "usage_reservation_failed" }, 503);
+  }
+
   // ── Update the existing row in place. Clear the prior verdict so the
   //    editor's `scanToResult` doesn't render stale data while the new
-  //    HF call is in flight. The PB JS SDK accepts JSON for non-file
+  //    HF call is in flight. The backend JS SDK accepts JSON for non-file
   //    updates — we have no new file to upload here. ──────────────────
   // Preserve client-extracted metadata (image width/height) across the
   // rescan; the underlying file hasn't changed. Provider-derived fields
@@ -161,7 +177,7 @@ rescan.post("/:id/rescan", async (c) => {
     Object.keys(preservedAnalysis).length > 0 ? preservedAnalysis : null;
   let updated;
   try {
-    updated = await pb.collection("scans").update(parent.id, {
+    updated = await store.collection("scans").update(parent.id, {
       status: "queued",
       engineId: modelRow.slug,
       creditsUsed: tokensRequired,
@@ -175,7 +191,8 @@ rescan.post("/:id/rescan", async (c) => {
       scanDurationMs: 0,
     });
   } catch (err) {
-    console.error(`[scans/rescan] PB update failed`, err);
+    await refundModelUsage(usageReservation.key, "scan_update_failed");
+    console.error(`[scans/rescan] backend update failed`, err);
     return c.json({ error: "rescan_failed" }, 500);
   }
 
@@ -186,16 +203,15 @@ rescan.post("/:id/rescan", async (c) => {
 
   runDetectionInBackground({
     scanId: parent.id,
+    userId: user.id,
     kind,
     detectorInput,
-    provider,
-    hfToken,
-    hfModelId: modelRow.hfModelId ?? "",
-    velmaApiKey,
+    modelId: modelRow.id,
     modelSlug: modelRow.slug,
     videoFrameModelId,
     videoFrameCount,
     tokensCharged: tokensRequired,
+    usageReservationKey: usageReservation.key,
   });
 
   return c.json(serializeScan(updated), 200);
@@ -205,7 +221,6 @@ type DetectionModelRow = {
   id: string;
   slug: string;
   enabled?: boolean;
-  provider?: string;
   hfModelId?: string;
   videoFrameModelSlug?: string;
   videoFrameCount?: number;
@@ -216,7 +231,7 @@ type DetectionModelRow = {
 };
 
 async function resolveModel(
-  admin: Awaited<ReturnType<typeof pbAdmin>>,
+  admin: Awaited<ReturnType<typeof getAdminStore>>,
   kind: ScanKind,
   explicitSlug: string | undefined,
   user: { plan?: unknown } | Record<string, unknown>,
@@ -242,30 +257,4 @@ async function resolveModel(
       requestKey: null,
     })) as unknown as DetectionModelRow[];
   return records.find((r) => PLAN_RANK[tierFromRow(r)] <= PLAN_RANK[plan]) ?? null;
-}
-
-async function loadHuggingfaceToken(
-  admin: Awaited<ReturnType<typeof pbAdmin>>,
-): Promise<string> {
-  try {
-    const list = await admin
-      .collection("service_secrets")
-      .getList(1, 1, { sort: "-created" });
-    return ((list.items[0]?.huggingfaceToken as string | undefined) ?? "").trim();
-  } catch {
-    return "";
-  }
-}
-
-async function loadVelmaApiKey(
-  admin: Awaited<ReturnType<typeof pbAdmin>>,
-): Promise<string> {
-  try {
-    const list = await admin
-      .collection("service_secrets")
-      .getList(1, 1, { sort: "-created" });
-    return ((list.items[0]?.velmaApiKey as string | undefined) ?? "").trim();
-  } catch {
-    return "";
-  }
 }

@@ -48,7 +48,12 @@ export function EngineRow({
               {TIER_LABEL[engine.tier]}
             </span>
           )}
-          {engine.isDefault && <span className="mo-tag mo-tag-default">DEFAULT</span>}
+          {/* `isDefault` and `autoPicked` are both "the API would pick
+              this one", so rendering both on the same row just says the
+              same thing twice. Auto-pick wins when auto mode is on. */}
+          {engine.isDefault && !autoPicked && (
+            <span className="mo-tag mo-tag-default">DEFAULT</span>
+          )}
           {autoPicked && <span className="mo-tag mo-tag-auto">auto-pick</span>}
         </div>
         {engine.description && <div className="mo-spec">{engine.description}</div>}

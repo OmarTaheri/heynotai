@@ -31,13 +31,17 @@ export function PerSiteRulesSection() {
   const updateSites = (next: Array<Site & { mode?: SiteMode }>) =>
     patch({ sites: next });
 
+  // `enabled` is what the extension's content script actually gates on
+  // (see `shouldAutoScan` in entrypoints/content.ts), so keep it in step
+  // with the mode chip — otherwise flipping a rule to "Auto-scan" here
+  // left the browser still refusing to scan the site.
   const cycleMode = (host: string) => {
     updateSites(
-      sites.map((s) =>
-        s.host === host
-          ? { ...s, mode: NEXT_MODE[s.mode ?? "click"] }
-          : s,
-      ),
+      sites.map((s) => {
+        if (s.host !== host) return s;
+        const mode = NEXT_MODE[s.mode ?? "click"];
+        return { ...s, mode, enabled: mode === "auto" };
+      }),
     );
   };
 
@@ -46,11 +50,14 @@ export function PerSiteRulesSection() {
     if (!clean) return;
     if (sites.some((s) => s.host === clean)) return;
     updateSites([
-      { host: clean, enabled: true, count: 0, ai: 0, mode: defaultMode },
+      { host: clean, enabled: defaultMode !== "off", mode: defaultMode },
       ...sites,
     ]);
     setAdding("");
   };
+
+  const removeSite = (host: string) =>
+    updateSites(sites.filter((s) => s.host !== host));
 
   return (
     <SettingsSection
@@ -95,22 +102,29 @@ export function PerSiteRulesSection() {
         </div>
 
         <div>
-          {sites.map((s) => (
-            <SiteRow
-              key={s.host}
-              rule={{
-                domain: s.host,
-                initial: s.host[0]?.toUpperCase() ?? "·",
-                brand: "x",
-                scans7d: s.count ?? 0,
-                flagged7d: s.ai ?? 0,
-                mode: (s.mode ?? "click") as SiteMode,
-                types: ["txt", "img", "vid"],
-                typesOff: [],
-              }}
-              onCycleMode={cycleMode}
-            />
-          ))}
+          {sites.length === 0 ? (
+            <p className={styles.empty}>
+              No per-site rules yet. Add a domain above, or use “Add to
+              allow-list” from the extension drawer while you&apos;re on a
+              site.
+            </p>
+          ) : (
+            sites.map((s) => (
+              <SiteRow
+                key={s.host}
+                rule={{
+                  domain: s.host,
+                  initial: s.host[0]?.toUpperCase() ?? "·",
+                  brand: "x",
+                  mode: (s.mode ?? (s.enabled ? "auto" : "off")) as SiteMode,
+                  types: ["txt", "img", "vid"],
+                  typesOff: [],
+                }}
+                onCycleMode={cycleMode}
+                onRemove={removeSite}
+              />
+            ))
+          )}
         </div>
       </Card>
     </SettingsSection>
