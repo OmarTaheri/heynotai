@@ -65,14 +65,38 @@ app.onError((error, c) => {
   return c.json({ error: "internal_error", requestId: c.get("requestId") }, 500);
 });
 
-await initializeDatabase();
+/** Host of DATABASE_URL, for log lines. Never the credentials. */
+function databaseHost(): string {
+  try {
+    return new URL(env.DATABASE_URL).host;
+  } catch {
+    return "<unparseable DATABASE_URL>";
+  }
+}
+
+// A database that cannot be reached used to surface as an unhandled
+// rejection and a container restart loop, which says nothing about what is
+// wrong. Name the host and the usual causes instead, then exit.
+try {
+  await initializeDatabase();
+} catch (error) {
+  console.error(`[boot] could not reach postgres at ${databaseHost()}`);
+  console.error(`[boot] ${error instanceof Error ? error.message : String(error)}`);
+  console.error(
+    "[boot] check that DATABASE_URL is correct and that this container shares a " +
+      "docker network with that host — a managed database in another project is " +
+      "not resolvable by default",
+  );
+  process.exit(1);
+}
+
 // No-ops unless REVIEWER_EMAIL/REVIEWER_PASSWORD are set. Runs after
 // migrations so the users table is guaranteed to exist.
 await seedReviewerAccount();
 
 const server = serve({ fetch: app.fetch, port: env.PORT }, (info) => {
   console.log(`api -> http://localhost:${info.port}`);
-  console.log(`postgres -> ${new URL(env.DATABASE_URL).host}`);
+  console.log(`postgres -> ${databaseHost()}`);
 });
 
 let stopping = false;
