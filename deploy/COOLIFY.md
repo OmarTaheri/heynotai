@@ -74,9 +74,19 @@ extension.
 The first extension ID is the one the Chrome Web Store assigned; the second is
 the pinned dev/local-test ID. Sign-in redirects to
 `https://<extension-id>.chromiumapp.org/website-auth`, and
-`validateExtensionRedirect` rejects any ID not in this list. `GOOGLE_REDIRECT_URI`
-must match the authorized redirect URI in Google Cloud **exactly** — Google
-compares strings, including the trailing path.
+`validateExtensionRedirect` rejects any ID not in this list.
+
+**Google Cloud needs nothing per-extension.** `beginGoogleOAuth` sends Google
+`redirect_uri = GOOGLE_REDIRECT_URI` and keeps the chromiumapp.org URL in the
+`oauth_states` row, applying it only after Google has returned to the API's own
+callback. Google never sees an extension ID, and the extension itself holds no
+client ID and never calls `chrome.identity.getAuthToken`. The one thing that
+must match Google Cloud exactly, path included, is `GOOGLE_REDIRECT_URI`.
+
+Do check the **OAuth consent screen publishing status**: while it is in
+*Testing*, only accounts added as test users can sign in with Google, and
+everyone else is blocked. The app requests `openid email profile` only — all
+non-sensitive — so publishing does not require Google's verification review.
 
 ### Detection providers
 
