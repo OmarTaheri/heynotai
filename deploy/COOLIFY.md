@@ -23,11 +23,20 @@ variables to delete, is in `deploy/coolify-env.secret.md` (git-ignored).
 
 ### Database
 
-Leave `DATABASE_URL` unset to use the bundled `postgres` service, or set it to
-a managed database (a Coolify Postgres resource, for example) to use that
-instead. `POSTGRES_PASSWORD` stays mandatory either way, because the bundled
-service still starts; delete the `postgres:` service block and the api's
-`depends_on:` if you want it gone.
+The api uses the bundled `postgres` service. `docker-compose.yaml` builds its
+connection string from `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB`
+and the service name, so **there is no `DATABASE_URL` variable to set** — do
+not add one back in Coolify's UI. To use a managed database instead, edit the
+`DATABASE_URL:` line in the compose file to the literal URL; leaving it as an
+`${...}` interpolation is what makes Coolify treat the variable as
+compose-managed and refuse to let you delete it.
+
+`POSTGRES_PASSWORD` is now a real credential rather than a formality, and it is
+interpolated into a URL — keep it to characters that need no percent-encoding
+(letters, digits, `-`, `.`, `_`, `~`). Postgres applies it only when it
+initializes an empty data directory, so once `postgres_data` exists, changing
+the variable locks the api out with `password authentication failed`. Rotating
+it means dumping, deleting the volume, and restoring.
 
 ### Secrets — generate fresh, never reuse across environments
 

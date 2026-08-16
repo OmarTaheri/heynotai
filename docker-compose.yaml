@@ -33,10 +33,15 @@ services:
       - uploads_data:/data/uploads
     environment:
       PORT: "8787"
-      # Set DATABASE_URL to point at an external/managed Postgres (a Coolify
-      # database resource, for instance); leave it unset to use the bundled
-      # `postgres` service below.
-      DATABASE_URL: ${DATABASE_URL:-postgres://${POSTGRES_USER:-heynotai}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heynotai}}
+      # Built from the bundled `postgres` service above, reachable at that
+      # service name on the compose network. There is deliberately no
+      # environment override: a host platform that sees the variable
+      # interpolated here (Coolify does) treats it as compose-managed and
+      # refuses to let you delete it from the UI. To move to a managed
+      # database, replace this line with the URL itself.
+      # POSTGRES_PASSWORD lands inside a URL, so keep it to characters that
+      # need no percent-encoding: letters, digits, and - . _ ~
+      DATABASE_URL: postgres://${POSTGRES_USER:-heynotai}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heynotai}
       DATABASE_POOL_SIZE: ${DATABASE_POOL_SIZE:-10}
       UPLOAD_DIR: /data/uploads
       API_PUBLIC_URL: ${API_PUBLIC_URL:-${SERVICE_URL_API:-http://localhost:8787}}
